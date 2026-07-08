@@ -1,4 +1,4 @@
-package militatry_test
+package military_test
 
 /*
 "MILITARY ADDRESSES
