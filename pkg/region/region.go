@@ -2,7 +2,12 @@ package region
 
 import (
 	"fmt"
+	"maps"
+	"regexp"
+	"slices"
 	"strings"
+
+	"github.com/hbollon/go-edlib"
 )
 
 /*
@@ -298,13 +303,40 @@ var regionMap = map[string]string{
 	"AA":                                             "AA",
 }
 
-func NormalizeRegion(r string) (string, error) {
-	// TODO: clean out any punctuation
-	capitalized := strings.ToUpper(r)
-	abrev, ok := regionMap[capitalized]
+var regionKeys = slices.Collect(maps.Keys(regionMap))
+var alphaspace = regexp.MustCompile("[^a-ZA-Z ]+")
+
+func normalizeRegion(r string, fuzzy bool) (string, error) {
+	// clean out any punctuation
+	clean := alphaspace.ReplaceAllString(r, "")
+	// capitalize
+	capitalized := strings.ToUpper(clean)
+	// if requested, fuzzy match keys
+	rkey := capitalized
+	if fuzzy && len(capitalized) > 3 {
+		matched, err := edlib.FuzzySearchThreshold(capitalized, regionKeys, 0.7, edlib.DamerauLevenshtein)
+		if err != nil {
+			// TODO: figure out how to let the user control logging in this library
+			// log warn "Unable to fuzzy match supplied region string"
+			matched = capitalized
+		} else {
+			rkey = matched
+		}
+	}
+
+	// look up the abbreviation
+	abrev, ok := regionMap[rkey]
 	if !ok {
 		return "", fmt.Errorf("Unrecognized state, possession, Canadian provice, or US Armed Forces region")
 	}
 
 	return abrev, nil
+}
+
+func NormalizeRegion(r string) (string, error) {
+	return normalizeRegion(r, false)
+}
+
+func FuzzyNormalizeRegion(r string) (string, error) {
+	return normalizeRegion(r, true)
 }
