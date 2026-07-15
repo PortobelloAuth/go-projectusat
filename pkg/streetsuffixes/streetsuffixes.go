@@ -1518,7 +1518,7 @@ var streetSuffixShortMap = maps.Collect(func(yield func(string, string) bool) {
 })
 var streetSuffixKeys = slices.Collect(maps.Keys(streetSuffixPrimaryMap))
 
-var alphaspace = regexp.MustCompile("[^a-ZA-Z ]+")
+var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
 
 func normalizeStreetSuffix(r string, primary bool, fuzzy bool) (string, error) {
 	// clean out any punctuation

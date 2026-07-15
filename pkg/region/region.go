@@ -304,7 +304,7 @@ var regionMap = map[string]string{
 }
 
 var regionKeys = slices.Collect(maps.Keys(regionMap))
-var alphaspace = regexp.MustCompile("[^a-ZA-Z ]+")
+var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
 
 func normalizeRegion(r string, fuzzy bool) (string, error) {
 	// clean out any punctuation
