@@ -5,7 +5,7 @@ This module implements the
 (which is an extension of the USPS publication 28 standard) for US Address
 Normalization directly in Go.
 
-## This implementation is currently incomplete and its API should be considered unstable.**
+## This implementation is currently incomplete and its API should be considered unstable.
 
 This implementation is incomplete and has not reached release status. It is
 being built in public to facilitate feedback from potential users and support
