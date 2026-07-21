@@ -13,13 +13,15 @@ from potential backers.
 
 **What works today:** structured `Address` normalization (`Normalize` /
 `NormalizeWithOptions`), free-text `Parse` (multi-line / comma-separated; overseas
-military APO/FPO/DPO fast path; rural route / PO Box free-text rewrite; reverse-token
-street componentization), street/last-line formatting, military street lines through
-`Normalize`/`Format`, and component packages under `pkg/` (regions, street suffixes,
-directionals, secondary units, diacritics, highways, military, Puerto Rico, text helpers).
+military APO/FPO/DPO fast path; rural route / PO Box free-text rewrite; multi-token
+directionals; leading secondary / `#` reorder; reverse-token street componentization),
+street/last-line formatting, military street lines through `Normalize`/`Format`, and
+component packages under `pkg/` (regions, street suffixes, directionals, secondary units,
+diacritics, highways, military, Puerto Rico, text helpers).
 
-**Not yet:** secondary-before-primary reordering, Puerto Rico vocabulary in `Parse`,
-and full C#-parity street-line edge cases. Use `pkg/puertorico` directly for Spanish
+**Not yet:** Puerto Rico vocabulary in `Parse`, same-line business/pre-street detection,
+double-suffix / state-as-street-name edge cases (landing next), grid/fractional narrative
+forms, and full C#-parity street-line edge cases. Use `pkg/puertorico` directly for Spanish
 street/unit vocabulary until it is wired into the root parse pipeline.
 
 **Prefer content form** (`Normalize`) when writing patient records; use
@@ -66,8 +68,10 @@ addr, err = goprojectusat.Parse("PO Box 11890\nSpringfield IL 62701")
 
 `Parse` is conservative: it splits on newlines and commas, peels last-line
 city/region/postal, rewrites rural route / PO Box street lines when matched,
-reverse-token peels common street components, and uses a military fast path when
-both street and last lines match APO/FPO/DPO forms. It does not call `Normalize`;
+merges multi-token directionals (`SOUTH WEST` → `SW`), reorders a leading secondary
+designator or `#` + unit number to the end of the street line, reverse-token peels
+common street components, and uses a military fast path when both street and last
+lines match APO/FPO/DPO forms. It does not call `Normalize`;
 compose `Normalize(Parse(raw))` for content form. Ambiguous or unrecognizable
 input returns an error rather than inventing structure.
 

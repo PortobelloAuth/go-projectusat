@@ -218,6 +218,10 @@ func parseStreetLine(line string) (Address, error) {
 	// and postdirectionals resolve as single compound abbreviations.
 	tokens = mergeDirectionTokens(tokens)
 
+	// Move leading secondary designator/# + number to the end so reverse peels
+	// see them as trailing (e.g. "APT 4 123 MAIN ST" → "123 MAIN ST APT 4").
+	tokens = reorderLeadingSecondary(tokens)
+
 	var out Address
 	tokens = peelSecondary(tokens, &out)
 
@@ -279,6 +283,53 @@ func expandHashTokens(tokens []string) []string {
 	return out
 }
 
+// reorderLeadingSecondary moves a leading secondary designator (or #) plus its
+// unit number to the end of the token slice so reverse-token peels can capture
+// them. Patterns:
+//
+//	DESIGNATOR + NUMBER + rest  →  rest + DESIGNATOR + NUMBER
+//	# + NUMBER + rest           →  rest + # + NUMBER
+//
+// Glued "#NUMBER" is already split by expandHashTokens. Numbered designators
+// without a following number are left unchanged (no invented unit number).
+// Non-numbered designators at the start are not reordered.
+func reorderLeadingSecondary(tokens []string) []string {
+	if len(tokens) < 3 {
+		// Need designator/number plus at least one rest token to move.
+		return tokens
+	}
+
+	// "# NUMBER rest…"
+	if tokens[0] == "#" && looksLikeSecondaryNumber(tokens[1]) {
+		rest := tokens[2:]
+		out := make([]string, 0, len(tokens))
+		out = append(out, rest...)
+		out = append(out, "#", tokens[1])
+		return out
+	}
+
+	// "APT NUMBER rest…" (numbered secondary designator only)
+	if info, err := secondaryunit.Info(tokens[0]); err == nil && info.Numbered {
+		if looksLikeSecondaryNumber(tokens[1]) {
+			rest := tokens[2:]
+			out := make([]string, 0, len(tokens))
+			out = append(out, rest...)
+			out = append(out, tokens[0], tokens[1])
+			return out
+		}
+		// Numbered designator with no unit number — do not invent.
+	}
+
+	return tokens
+}
+
+// looksLikeSecondaryNumber reports whether tok is a plausible unit number
+// (contains a digit). Pure alpha tokens are not treated as unit numbers so
+// "APT SOUTH …" is not reordered.
+func looksLikeSecondaryNumber(tok string) bool {
+	return looksLikePrimaryNumber(tok)
+}
+
 // peelSecondary removes a trailing secondary designator and optional number.
 func peelSecondary(tokens []string, out *Address) []string {
 	if len(tokens) == 0 {
@@ -289,7 +340,7 @@ func peelSecondary(tokens []string, out *Address) []string {
 	if len(tokens) >= 2 && tokens[len(tokens)-2] == "#" {
 		out.SecondaryDesignator = "#"
 		out.SecondaryNumber = tokens[len(tokens)-1]
-		return tokens[:len(tokens)-2]
+		return peelTrailingNonNumberedSecondary(tokens[:len(tokens)-2], out)
 	}
 
 	// Numbered designator + unit number (e.g. APT 4). Overseas military
@@ -299,7 +350,7 @@ func peelSecondary(tokens []string, out *Address) []string {
 		if info, err := secondaryunit.Info(tokens[len(tokens)-2]); err == nil && info.Numbered {
 			out.SecondaryDesignator = info.Short
 			out.SecondaryNumber = tokens[len(tokens)-1]
-			return tokens[:len(tokens)-2]
+			return peelTrailingNonNumberedSecondary(tokens[:len(tokens)-2], out)
 		}
 	}
 
@@ -309,6 +360,26 @@ func peelSecondary(tokens []string, out *Address) []string {
 		return tokens[:len(tokens)-1]
 	}
 
+	return tokens
+}
+
+// peelTrailingNonNumberedSecondary peels one more trailing non-numbered
+// secondary designator (e.g. UPPER/REAR) after a numbered secondary was taken.
+// Appended to SecondaryNumber so Format yields "UNIT 3200 UPPR".
+func peelTrailingNonNumberedSecondary(tokens []string, out *Address) []string {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil && !info.Numbered {
+		if out.SecondaryNumber != "" {
+			out.SecondaryNumber = out.SecondaryNumber + " " + info.Short
+		} else if out.SecondaryDesignator != "" {
+			out.SecondaryDesignator = out.SecondaryDesignator + " " + info.Short
+		} else {
+			out.SecondaryDesignator = info.Short
+		}
+		return tokens[:len(tokens)-1]
+	}
 	return tokens
 }
 

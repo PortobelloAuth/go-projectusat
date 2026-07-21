@@ -404,3 +404,164 @@ func TestMergeDirectionTokens(t *testing.T) {
 		}
 	}
 }
+
+func TestParseLeadingSecondaryApartment(t *testing.T) {
+	raw := "Apartment 3200 152 South Tech Drive\nMiami FL 33101"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "152" {
+		t.Errorf("PrimaryNumber = %q, want 152", got.PrimaryNumber)
+	}
+	if got.Predirectional != "S" {
+		t.Errorf("Predirectional = %q, want S", got.Predirectional)
+	}
+	if got.StreetName != "TECH" {
+		t.Errorf("StreetName = %q, want TECH", got.StreetName)
+	}
+	if got.StreetSuffix != "DR" {
+		t.Errorf("StreetSuffix = %q, want DR", got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "APT" || got.SecondaryNumber != "3200" {
+		t.Errorf("secondary = %q %q, want APT 3200", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "152 S TECH DR APT 3200\nMIAMI FL 33101"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+
+func TestParseLeadingHashNoPrimary(t *testing.T) {
+	raw := "#3200 South Tech Drive\nMiami FL 33101"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "" {
+		t.Errorf("PrimaryNumber = %q, want empty", got.PrimaryNumber)
+	}
+	if got.Predirectional != "S" {
+		t.Errorf("Predirectional = %q, want S", got.Predirectional)
+	}
+	if got.StreetName != "TECH" {
+		t.Errorf("StreetName = %q, want TECH", got.StreetName)
+	}
+	if got.StreetSuffix != "DR" {
+		t.Errorf("StreetSuffix = %q, want DR", got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "#" || got.SecondaryNumber != "3200" {
+		t.Errorf("secondary = %q %q, want # 3200", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "S TECH DR # 3200\nMIAMI FL 33101"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+
+func TestParseLeadingHashWithPrimary(t *testing.T) {
+	raw := "#3200 152 South Tech Drive\nMiami FL 33101"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "152" {
+		t.Errorf("PrimaryNumber = %q, want 152", got.PrimaryNumber)
+	}
+	if got.Predirectional != "S" {
+		t.Errorf("Predirectional = %q, want S", got.Predirectional)
+	}
+	if got.StreetName != "TECH" {
+		t.Errorf("StreetName = %q, want TECH", got.StreetName)
+	}
+	if got.StreetSuffix != "DR" {
+		t.Errorf("StreetSuffix = %q, want DR", got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "#" || got.SecondaryNumber != "3200" {
+		t.Errorf("secondary = %q %q, want # 3200", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "152 S TECH DR # 3200\nMIAMI FL 33101"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+
+func TestParseLeadingUnitWithTrailingUpper(t *testing.T) {
+	raw := "Unit 3200 152 Tech Drive Upper\nMiami FL 33101"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "152" {
+		t.Errorf("PrimaryNumber = %q, want 152", got.PrimaryNumber)
+	}
+	if got.StreetName != "TECH" {
+		t.Errorf("StreetName = %q, want TECH", got.StreetName)
+	}
+	if got.StreetSuffix != "DR" {
+		t.Errorf("StreetSuffix = %q, want DR", got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "UNIT" {
+		t.Errorf("SecondaryDesignator = %q, want UNIT", got.SecondaryDesignator)
+	}
+	// Trailing non-numbered UPPER peels after UNIT 3200; appended for Format.
+	if got.SecondaryNumber != "3200 UPPR" {
+		t.Errorf("SecondaryNumber = %q, want %q", got.SecondaryNumber, "3200 UPPR")
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "152 TECH DR UNIT 3200 UPPR\nMIAMI FL 33101"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+
+func TestParseLeadingSecondaryNoNumberNotReordered(t *testing.T) {
+	// Numbered designator without a following unit number must not invent one.
+	// "Apartment" alone at the start should not be reordered as secondary+number.
+	raw := "Apartment South Tech Drive\nMiami FL 33101"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	// Without a unit number, leading APT is not moved; SOUTH may be predirectional
+	// or name tokens absorb APARTMENT.
+	if got.SecondaryNumber != "" {
+		t.Errorf("SecondaryNumber = %q, want empty (no invented number)", got.SecondaryNumber)
+	}
+}
+
+
+func TestParseMilitaryNotBrokenByLeadingUnit(t *testing.T) {
+	// Military "UNIT N BOX N" must stay on the military fast path.
+	raw := "UNIT 2050 BOX 4190\nAPO AP 96278-2050"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "UNIT 2050 BOX 4190" {
+		t.Errorf("StreetName = %q, want military street line intact", got.StreetName)
+	}
+	if got.SecondaryDesignator != "" || got.PrimaryNumber != "" {
+		t.Errorf("expected no civilian secondary/primary peels on military, got sec=%q primary=%q",
+			got.SecondaryDesignator, got.PrimaryNumber)
+	}
+}
