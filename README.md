@@ -11,6 +11,20 @@ This implementation is incomplete and has not reached release status. It is
 being built in public to facilitate feedback from potential users and support
 from potential backers.
 
+**What works today:** structured `Address` normalization (`Normalize` /
+`NormalizeWithOptions`), street/last-line formatting, and component packages
+under `pkg/` (regions, street suffixes, directionals, secondary units, diacritics,
+highways, text helpers).
+
+**Not yet:** free-text multi-line address parsing (`Parse`), and root-level
+orchestration of Puerto Rico or military address flows. Use `pkg/puertorico` and
+`pkg/military` directly for those vocabularies and line helpers until they are
+wired into the root pipeline.
+
+**Prefer content form** (`Normalize`) when writing patient records; use
+`NormalizeWithOptions` when preparing addresses for match/exchange (see Options
+below).
+
 ## Normalization of Input vs. Normalization for Comparison
 
 The
