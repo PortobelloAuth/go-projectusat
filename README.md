@@ -47,6 +47,20 @@ abbreviations for each primary suffix, but, since they do not exist in the
 specification, this implementation cannot create its own distinct standard
 abbreviations for these cases.)
 
+### Options (content vs exchange)
+
+- **`Normalize`** — content form for storage: exact controlled vocabulary, preserves
+  diacritics, keeps secondary designators as standard abbreviations (`APT`, `STE`, …).
+- **`NormalizeWithOptions`** — same pipeline with exchange/matching knobs:
+  - `Fuzzy` — mild typos on region and street suffix via package `Fuzzy*` helpers
+  - `SecondaryAsHash` — rewrite secondary designators to `#` for comparison only
+    (not correct for content storage)
+  - `DiacriticMode` — `""` leave as-is; `"substitute"` / `"transliterate"` strip or
+    map diacritics on free-text fields (then uppercased again)
+
+Prefer content form when writing patient records; use options when preparing
+addresses for match/exchange.
+
 ## Alternatives and related technologies
 
 There are several related technologies that could be used instead of or in

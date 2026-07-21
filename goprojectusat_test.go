@@ -483,3 +483,155 @@ func TestFormatAfterNormalize(t *testing.T) {
 		t.Fatalf("Format(Normalize(...)) = %q, want %q", got, want)
 	}
 }
+
+func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
+	in := Address{
+		PrimaryNumber:       "123",
+		StreetName:          "Main",
+		StreetSuffix:        "Street",
+		SecondaryDesignator: "Apartment",
+		SecondaryNumber:     "4",
+		City:                "Springfield",
+		Region:              "Illinois",
+		Postal:              "62701",
+	}
+	// Content form keeps APT.
+	content, err := Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if content.SecondaryDesignator != "APT" {
+		t.Fatalf("content SecondaryDesignator = %q, want APT", content.SecondaryDesignator)
+	}
+
+	// Exchange/matching form rewrites to #.
+	got, err := NormalizeWithOptions(in, Options{SecondaryAsHash: true})
+	if err != nil {
+		t.Fatalf("NormalizeWithOptions: %v", err)
+	}
+	if got.SecondaryDesignator != "#" {
+		t.Fatalf("SecondaryAsHash SecondaryDesignator = %q, want #", got.SecondaryDesignator)
+	}
+	if got.SecondaryNumber != "4" {
+		t.Errorf("SecondaryNumber = %q, want 4", got.SecondaryNumber)
+	}
+	// Suite also becomes #.
+	suite, err := NormalizeWithOptions(Address{
+		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
+		SecondaryDesignator: "Suite", SecondaryNumber: "100",
+	}, Options{SecondaryAsHash: true})
+	if err != nil {
+		t.Fatalf("Suite: %v", err)
+	}
+	if suite.SecondaryDesignator != "#" {
+		t.Fatalf("Suite SecondaryAsHash = %q, want #", suite.SecondaryDesignator)
+	}
+}
+
+func TestNormalizeWithOptionsFuzzy(t *testing.T) {
+	// Mild typos: Californa → CA, Avenu → AVE (Fuzzy* threshold 0.7).
+	in := Address{
+		PrimaryNumber: "10",
+		StreetName:    "Oak",
+		StreetSuffix:  "Avenu",
+		City:          "Sacramento",
+		Region:        "Californa",
+		Postal:        "95814",
+	}
+	// Exact mode fails.
+	if _, err := Normalize(in); err == nil {
+		t.Fatal("expected error without Fuzzy for mild typos")
+	}
+	if _, err := NormalizeWithOptions(in, Options{}); err == nil {
+		t.Fatal("expected error with zero Options for mild typos")
+	}
+
+	got, err := NormalizeWithOptions(in, Options{Fuzzy: true})
+	if err != nil {
+		t.Fatalf("Fuzzy: unexpected error: %v", err)
+	}
+	if got.Region != "CA" {
+		t.Errorf("Region = %q, want CA", got.Region)
+	}
+	if got.StreetSuffix != "AVE" {
+		t.Errorf("StreetSuffix = %q, want AVE", got.StreetSuffix)
+	}
+}
+
+func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
+	in := Address{
+		StreetName:   "José",
+		StreetSuffix: "Street",
+		City:         "San José",
+		BusinessName: "Café",
+		Region:       "CA",
+		Postal:       "95112",
+	}
+
+	// Default / empty: preserve diacritics (content form).
+	preserved, err := NormalizeWithOptions(in, Options{})
+	if err != nil {
+		t.Fatalf("empty DiacriticMode: %v", err)
+	}
+	if preserved.StreetName != "JOSÉ" || preserved.City != "SAN JOSÉ" || preserved.BusinessName != "CAFÉ" {
+		t.Fatalf("preserve: StreetName=%q City=%q BusinessName=%q",
+			preserved.StreetName, preserved.City, preserved.BusinessName)
+	}
+
+	// substitute: strip Project US@ diacritics then re-upper (Substitute returns lower).
+	sub, err := NormalizeWithOptions(in, Options{DiacriticMode: "substitute"})
+	if err != nil {
+		t.Fatalf("substitute: %v", err)
+	}
+	if sub.StreetName != "JOSE" {
+		t.Errorf("substitute StreetName = %q, want JOSE", sub.StreetName)
+	}
+	if sub.City != "SAN JOSE" {
+		t.Errorf("substitute City = %q, want SAN JOSE", sub.City)
+	}
+	if sub.BusinessName != "CAFE" {
+		t.Errorf("substitute BusinessName = %q, want CAFE", sub.BusinessName)
+	}
+
+	// transliterate: anyascii path then upper.
+	tr, err := NormalizeWithOptions(in, Options{DiacriticMode: "transliterate"})
+	if err != nil {
+		t.Fatalf("transliterate: %v", err)
+	}
+	if tr.StreetName != "JOSE" {
+		t.Errorf("transliterate StreetName = %q, want JOSE", tr.StreetName)
+	}
+	if tr.City != "SAN JOSE" {
+		t.Errorf("transliterate City = %q, want SAN JOSE", tr.City)
+	}
+	if tr.BusinessName != "CAFE" {
+		t.Errorf("transliterate BusinessName = %q, want CAFE", tr.BusinessName)
+	}
+
+	// Invalid mode errors.
+	if _, err := NormalizeWithOptions(in, Options{DiacriticMode: "bogus"}); err == nil {
+		t.Fatal("expected error for unknown DiacriticMode")
+	}
+}
+
+func TestNormalizeDelegatesToZeroOptions(t *testing.T) {
+	// Normalize is content form: equivalent to NormalizeWithOptions(..., Options{}).
+	in := Address{
+		PrimaryNumber:       "123",
+		StreetName:          "Main",
+		StreetSuffix:        "Street",
+		SecondaryDesignator: "Apartment",
+		SecondaryNumber:     "4",
+		City:                "Springfield",
+		Region:              "Illinois",
+		Postal:              "62701",
+	}
+	a, err1 := Normalize(in)
+	b, err2 := NormalizeWithOptions(in, Options{})
+	if err1 != nil || err2 != nil {
+		t.Fatalf("errors: Normalize=%v WithOptions=%v", err1, err2)
+	}
+	if a != b {
+		t.Fatalf("Normalize = %+v, NormalizeWithOptions(zero) = %+v", a, b)
+	}
+}

@@ -2,7 +2,8 @@
 //
 // Unknown fields are blank. The token UNKNOWN (any case) is treated as empty.
 // Alphabetical content is uppercased. Diacritics are not stripped by default;
-// callers may pre-run diacritics.Substitute when mapping is required.
+// callers may pre-run diacritics.Substitute when mapping is required, or set
+// Options.DiacriticMode on NormalizeWithOptions for exchange/matching.
 package goprojectusat
 
 import (
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
@@ -40,6 +42,19 @@ type Address struct {
 	Country string // optional; often blank for domestic
 }
 
+// Options controls exchange/matching variants of normalization.
+// Zero value is content form (same as Normalize).
+type Options struct {
+	// Fuzzy enables FuzzyNormalize* for region and street suffix.
+	Fuzzy bool
+	// SecondaryAsHash rewrites secondary designators to "#" for matching
+	// (not correct for content storage; for exchange/matching only).
+	SecondaryAsHash bool
+	// DiacriticMode: "" = leave as-is, "substitute" = diacritics.Substitute then upper,
+	// "transliterate" = diacritics.Transliterate (anyascii) then upper.
+	DiacriticMode string
+}
+
 // usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
 var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
@@ -47,17 +62,38 @@ var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 // Diacritics are preserved; callers may pre-run diacritics.Substitute if needed.
 // Empty optional fields stay blank. Unrecognized non-empty controlled vocabulary
 // (region, directionals, street suffix, secondary designator) returns an error.
+//
+// Equivalent to NormalizeWithOptions(a, Options{}).
 func Normalize(a Address) (Address, error) {
+	return NormalizeWithOptions(a, Options{})
+}
+
+// NormalizeWithOptions is like Normalize but applies exchange/matching options.
+// Use for patient matching / comparison; prefer Normalize for content storage.
+func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 	var out Address
 
-	out.BusinessName = baseField(a.BusinessName)
-	out.PrimaryNumber = baseField(a.PrimaryNumber)
-	out.SecondaryNumber = baseField(a.SecondaryNumber)
-	out.City = baseField(a.City)
-	out.Country = baseField(a.Country)
+	var err error
+	if out.BusinessName, err = freeTextField(a.BusinessName, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("business name: %w", err)
+	}
+	if out.PrimaryNumber, err = freeTextField(a.PrimaryNumber, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("primary number: %w", err)
+	}
+	if out.SecondaryNumber, err = freeTextField(a.SecondaryNumber, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("secondary number: %w", err)
+	}
+	if out.City, err = freeTextField(a.City, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("city: %w", err)
+	}
+	if out.Country, err = freeTextField(a.Country, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("country: %w", err)
+	}
 	out.Postal = normalizePostal(a.Postal)
 
-	if sn := baseField(a.StreetName); sn != "" {
+	if sn, err := freeTextField(a.StreetName, opts.DiacriticMode); err != nil {
+		return Address{}, fmt.Errorf("street name: %w", err)
+	} else if sn != "" {
 		// Highway forms normalize; ordinary free-text street names pass through uppercased.
 		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
 		if hw, err := highways.NormalizeStreetName(sn); err == nil {
@@ -84,7 +120,13 @@ func Normalize(a Address) (Address, error) {
 	}
 
 	if v := baseField(a.StreetSuffix); v != "" {
-		abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(v)
+		var abbr string
+		var err error
+		if opts.Fuzzy {
+			abbr, err = streetsuffixes.FuzzyNormalizeStreetSuffixAbreviation(v)
+		} else {
+			abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
+		}
 		if err != nil {
 			return Address{}, fmt.Errorf("street suffix: %w", err)
 		}
@@ -96,11 +138,21 @@ func Normalize(a Address) (Address, error) {
 		if err != nil {
 			return Address{}, fmt.Errorf("secondary designator: %w", err)
 		}
-		out.SecondaryDesignator = abbr
+		if opts.SecondaryAsHash {
+			out.SecondaryDesignator = "#"
+		} else {
+			out.SecondaryDesignator = abbr
+		}
 	}
 
 	if v := baseField(a.Region); v != "" {
-		abbr, err := region.NormalizeRegion(v)
+		var abbr string
+		var err error
+		if opts.Fuzzy {
+			abbr, err = region.FuzzyNormalizeRegion(v)
+		} else {
+			abbr, err = region.NormalizeRegion(v)
+		}
 		if err != nil {
 			return Address{}, fmt.Errorf("region: %w", err)
 		}
@@ -108,6 +160,31 @@ func Normalize(a Address) (Address, error) {
 	}
 
 	return out, nil
+}
+
+// freeTextField collapses whitespace, blanks UNKNOWN, uppercases, then optionally
+// applies DiacriticMode and re-uppers (Substitute/Transliterate return lowercase).
+func freeTextField(s, diacriticMode string) (string, error) {
+	s = baseField(s)
+	if s == "" || diacriticMode == "" {
+		return s, nil
+	}
+	var (
+		out string
+		err error
+	)
+	switch diacriticMode {
+	case "substitute":
+		out, err = diacritics.Substitute(s)
+	case "transliterate":
+		out, err = diacritics.Transliterate(s)
+	default:
+		return "", fmt.Errorf("unknown DiacriticMode %q (want \"\", \"substitute\", or \"transliterate\")", diacriticMode)
+	}
+	if err != nil {
+		return "", err
+	}
+	return textutil.Upper(out), nil
 }
 
 // baseField collapses whitespace, then blanks UNKNOWN and uppercases.
