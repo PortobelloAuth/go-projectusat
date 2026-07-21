@@ -113,9 +113,10 @@ var regionMap = map[string]string{
 	"CO":                             "CO",
 	"CONNECTICUT":                    "CT",
 	"CT":                             "CT",
-	"DELEWARE":                       "DE",
+	"DELAWARE":                       "DE",
+	"DELEWARE":                       "DE", // common misspelling
 	"DE":                             "DE",
-	"DISTRICT OF COLUMBIA":           "DE",
+	"DISTRICT OF COLUMBIA":           "DC",
 	"DC":                             "DC",
 	"FEDERATED STATES OF MICRONESIA": "FM",
 	"MICRONESIA":                     "FM",
