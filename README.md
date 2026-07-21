@@ -12,18 +12,50 @@ being built in public to facilitate feedback from potential users and support
 from potential backers.
 
 **What works today:** structured `Address` normalization (`Normalize` /
-`NormalizeWithOptions`), street/last-line formatting, and component packages
+`NormalizeWithOptions`), free-text `Parse` (multi-line / comma-separated; overseas
+military APO/FPO/DPO fast path; reverse-token street componentization), street/last-line
+formatting, military street lines through `Normalize`/`Format`, and component packages
 under `pkg/` (regions, street suffixes, directionals, secondary units, diacritics,
-highways, text helpers).
+highways, military, Puerto Rico, text helpers).
 
-**Not yet:** free-text multi-line address parsing (`Parse`), and root-level
-orchestration of Puerto Rico or military address flows. Use `pkg/puertorico` and
-`pkg/military` directly for those vocabularies and line helpers until they are
-wired into the root pipeline.
+**Not yet:** rural route / PO Box free-text rewrite, secondary-before-primary reordering,
+Puerto Rico vocabulary in `Parse`, and full C#-parity street-line edge cases. Use
+`pkg/puertorico` directly for Spanish street/unit vocabulary until it is wired into
+the root parse pipeline.
 
 **Prefer content form** (`Normalize`) when writing patient records; use
 `NormalizeWithOptions` when preparing addresses for match/exchange (see Options
-below).
+below). Use `Parse` when the input is a free-text multi-line or comma-separated
+address string, then `Normalize` for content form.
+
+### Parse (free-text)
+
+```go
+addr, err := goprojectusat.Parse("123 North Main Street Apt 4\nSpringfield IL 62701")
+if err != nil {
+	// handle
+}
+norm, err := goprojectusat.Normalize(addr)
+// Format(norm) =>
+// 123 N MAIN ST APT 4
+// SPRINGFIELD IL 62701
+```
+
+Overseas military:
+
+```go
+addr, err := goprojectusat.Parse("PSC 3 BOX 4120\nAPO AE 09021-0002")
+norm, err := goprojectusat.Normalize(addr)
+// Format(norm) =>
+// PSC 3 BOX 4120
+// APO AE 09021-0002
+```
+
+`Parse` is conservative: it splits on newlines and commas, peels last-line
+city/region/postal, reverse-token peels common street components, and uses a
+military fast path when both street and last lines match APO/FPO/DPO forms. It
+does not call `Normalize`; compose `Normalize(Parse(raw))` for content form.
+Ambiguous or unrecognizable input returns an error rather than inventing structure.
 
 ## Normalization of Input vs. Normalization for Comparison
 
