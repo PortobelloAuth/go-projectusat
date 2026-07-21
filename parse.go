@@ -5,8 +5,12 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
+	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/military"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
+	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
+	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
@@ -80,13 +84,15 @@ func parseCivilian(lines []string) (Address, error) {
 	if len(lines) > 2 {
 		business = strings.ToUpper(textutil.CollapseSpace(strings.Join(lines[:len(lines)-2], " ")))
 	}
-	return Address{
-		BusinessName: business,
-		StreetName:   strings.ToUpper(textutil.CollapseSpace(streetLine)),
-		City:         city,
-		Region:       reg,
-		Postal:       zip,
-	}, nil
+	street, err := parseStreetLine(streetLine)
+	if err != nil {
+		return Address{}, err
+	}
+	street.BusinessName = business
+	street.City = city
+	street.Region = reg
+	street.Postal = zip
+	return street, nil
 }
 
 // parseLastLine extracts city, region (abbreviated), and postal from a last line
@@ -132,7 +138,7 @@ func peelPostal(tokens []string) (postal string, rest []string, ok bool) {
 	if len(tokens) >= 2 {
 		prev := tokens[len(tokens)-2]
 		// Two-token US ZIP+4: 62701 1234
-		if usZIPCompact.MatchString(prev + last) || usZIPCompact.MatchString(prev+"-"+last) {
+		if usZIPCompact.MatchString(prev+last) || usZIPCompact.MatchString(prev+"-"+last) {
 			return normalizePostal(prev + "-" + last), tokens[:len(tokens)-2], true
 		}
 		// Canadian two-token: K1A 0B1
@@ -157,7 +163,8 @@ func containsLetter(s string) bool {
 }
 
 // parseSingleLineCivilian peels postal + region + single-token city from the
-// right; remainder becomes StreetName. Multi-word cities require multi-line form.
+// right; remainder is componentized as a street line. Multi-word cities require
+// multi-line form.
 func parseSingleLineCivilian(line string) (Address, error) {
 	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
 	postal, rest, ok := peelPostal(tokens)
@@ -175,13 +182,133 @@ func parseSingleLineCivilian(line string) (Address, error) {
 			// Conservative: last token of before = city; rest = street.
 			city := before[len(before)-1]
 			streetToks := before[:len(before)-1]
-			return Address{
-				StreetName: strings.Join(streetToks, " "),
-				City:       city,
-				Region:     abbr,
-				Postal:     postal,
-			}, nil
+			street, err := parseStreetLine(strings.Join(streetToks, " "))
+			if err != nil {
+				return Address{}, err
+			}
+			street.City = city
+			street.Region = abbr
+			street.Postal = postal
+			return street, nil
 		}
 	}
 	return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
+}
+
+// parseStreetLine reverse-token peels secondary, postdirectional, and suffix,
+// then peels primary number and predirectional from the left. Residual tokens
+// form StreetName (with highway rewrite when applicable).
+func parseStreetLine(line string) (Address, error) {
+	cleaned := strings.ToUpper(textutil.CollapseSpace(
+		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true, KeepSlash: true}),
+	))
+	tokens := expandHashTokens(strings.Fields(cleaned))
+	if len(tokens) == 0 {
+		return Address{}, fmt.Errorf("empty street line")
+	}
+
+	var out Address
+	tokens = peelSecondary(tokens, &out)
+
+	// Postdirectional (right)
+	if len(tokens) > 1 {
+		if abbr, err := directionals.AbbreviateDirectional(tokens[len(tokens)-1]); err == nil {
+			out.Postdirectional = abbr
+			tokens = tokens[:len(tokens)-1]
+		}
+	}
+
+	// Street suffix (right) — only if something remains for the street body.
+	if len(tokens) >= 2 {
+		if abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); err == nil {
+			out.StreetSuffix = abbr
+			tokens = tokens[:len(tokens)-1]
+		}
+	}
+
+	// Primary number (left)
+	if len(tokens) > 0 && looksLikePrimaryNumber(tokens[0]) {
+		out.PrimaryNumber = tokens[0]
+		tokens = tokens[1:]
+	}
+
+	// Predirectional (left) only when a street-name token remains after it.
+	if len(tokens) > 1 {
+		if abbr, err := directionals.AbbreviateDirectional(tokens[0]); err == nil {
+			out.Predirectional = abbr
+			tokens = tokens[1:]
+		}
+	}
+
+	if len(tokens) == 0 {
+		return Address{}, fmt.Errorf("unrecognized street line: %q", line)
+	}
+
+	name := strings.Join(tokens, " ")
+	// highways.NormalizeStreetName always succeeds for non-empty input: it
+	// rewrites highway forms and otherwise returns the uppercased pass-through.
+	if hw, err := highways.NormalizeStreetName(name); err == nil {
+		out.StreetName = hw
+	} else {
+		out.StreetName = name
+	}
+	return out, nil
+}
+
+// expandHashTokens splits glued forms like "#12" into "#", "12".
+func expandHashTokens(tokens []string) []string {
+	out := make([]string, 0, len(tokens)+1)
+	for _, t := range tokens {
+		if strings.HasPrefix(t, "#") && len(t) > 1 {
+			out = append(out, "#", t[1:])
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// peelSecondary removes a trailing secondary designator and optional number.
+func peelSecondary(tokens []string, out *Address) []string {
+	if len(tokens) == 0 {
+		return tokens
+	}
+
+	// "# 12" or "#12" (already expanded)
+	if len(tokens) >= 2 && tokens[len(tokens)-2] == "#" {
+		out.SecondaryDesignator = "#"
+		out.SecondaryNumber = tokens[len(tokens)-1]
+		return tokens[:len(tokens)-2]
+	}
+
+	// Numbered designator + unit number
+	if len(tokens) >= 2 {
+		if info, err := secondaryunit.Info(tokens[len(tokens)-2]); err == nil && info.Numbered {
+			// Avoid treating "UNIT 2050 BOX 4190"-style military as secondary:
+			// if second-to-last is UNIT and last is digits but earlier tokens
+			// remain with BOX pattern, leave alone — military path handles those.
+			out.SecondaryDesignator = info.Short
+			out.SecondaryNumber = tokens[len(tokens)-1]
+			return tokens[:len(tokens)-2]
+		}
+	}
+
+	// Designator alone (non-numbered, or numbered without a number)
+	if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil {
+		out.SecondaryDesignator = info.Short
+		return tokens[:len(tokens)-1]
+	}
+
+	return tokens
+}
+
+// looksLikePrimaryNumber reports whether tok is a plausible primary address number
+// (contains a digit; hyphenated ranges like 112-10 qualify).
+func looksLikePrimaryNumber(tok string) bool {
+	for _, r := range tok {
+		if unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
