@@ -241,3 +241,245 @@ func TestNormalizeEmptyAddress(t *testing.T) {
 		t.Fatalf("got %+v, want empty Address", got)
 	}
 }
+
+func TestFormatStreetLine(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Address
+		want string
+	}{
+		{
+			name: "full order PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM",
+			in: Address{
+				PrimaryNumber:       "123",
+				Predirectional:      "N",
+				StreetName:          "MAIN",
+				StreetSuffix:        "ST",
+				Postdirectional:     "SW",
+				SecondaryDesignator: "APT",
+				SecondaryNumber:     "4",
+			},
+			want: "123 N MAIN ST SW APT 4",
+		},
+		{
+			name: "omits blank elements",
+			in: Address{
+				PrimaryNumber: "100",
+				StreetName:    "OAK",
+				StreetSuffix:  "AVE",
+			},
+			want: "100 OAK AVE",
+		},
+		{
+			name: "secondary without designator still emits number",
+			in: Address{
+				PrimaryNumber:   "50",
+				StreetName:      "ELM",
+				StreetSuffix:    "RD",
+				SecondaryNumber: "2B",
+			},
+			want: "50 ELM RD 2B",
+		},
+		{
+			name: "empty address",
+			in:   Address{},
+			want: "",
+		},
+		{
+			name: "only street name",
+			in:   Address{StreetName: "BROADWAY"},
+			want: "BROADWAY",
+		},
+		{
+			name: "highway style no suffix",
+			in: Address{
+				PrimaryNumber:   "100",
+				Predirectional:  "N",
+				StreetName:      "US HIGHWAY 41",
+				Postdirectional: "SW",
+			},
+			want: "100 N US HIGHWAY 41 SW",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FormatStreetLine(tc.in)
+			if got != tc.want {
+				t.Fatalf("FormatStreetLine = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatLastLine(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Address
+		want string
+	}{
+		{
+			name: "city region postal",
+			in: Address{
+				City:   "SPRINGFIELD",
+				Region: "IL",
+				Postal: "62701",
+			},
+			want: "SPRINGFIELD IL 62701",
+		},
+		{
+			name: "ZIP+4",
+			in: Address{
+				City:   "MIAMI",
+				Region: "FL",
+				Postal: "33101-1234",
+			},
+			want: "MIAMI FL 33101-1234",
+		},
+		{
+			name: "omits blank city",
+			in: Address{
+				Region: "IL",
+				Postal: "62701",
+			},
+			want: "IL 62701",
+		},
+		{
+			name: "omits blank postal",
+			in: Address{
+				City:   "SPRINGFIELD",
+				Region: "IL",
+			},
+			want: "SPRINGFIELD IL",
+		},
+		{
+			name: "empty",
+			in:   Address{},
+			want: "",
+		},
+		{
+			name: "canadian postal spaced",
+			in: Address{
+				City:   "OTTAWA",
+				Region: "ON",
+				Postal: "K1A 0B1",
+			},
+			want: "OTTAWA ON K1A 0B1",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FormatLastLine(tc.in)
+			if got != tc.want {
+				t.Fatalf("FormatLastLine = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormat(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Address
+		want string
+	}{
+		{
+			name: "business street last",
+			in: Address{
+				BusinessName:        "ACME CORP",
+				PrimaryNumber:       "123",
+				StreetName:          "MAIN",
+				StreetSuffix:        "ST",
+				SecondaryDesignator: "APT",
+				SecondaryNumber:     "4",
+				City:                "SPRINGFIELD",
+				Region:              "IL",
+				Postal:              "62701",
+			},
+			want: "ACME CORP\n123 MAIN ST APT 4\nSPRINGFIELD IL 62701",
+		},
+		{
+			name: "no business line",
+			in: Address{
+				PrimaryNumber: "100",
+				StreetName:    "OAK",
+				StreetSuffix:  "AVE",
+				City:          "MIAMI",
+				Region:        "FL",
+				Postal:        "33101",
+			},
+			want: "100 OAK AVE\nMIAMI FL 33101",
+		},
+		{
+			name: "street only omits empty last",
+			in: Address{
+				PrimaryNumber: "50",
+				StreetName:    "ELM",
+				StreetSuffix:  "RD",
+			},
+			want: "50 ELM RD",
+		},
+		{
+			name: "last line only",
+			in: Address{
+				City:   "SPRINGFIELD",
+				Region: "IL",
+				Postal: "62701",
+			},
+			want: "SPRINGFIELD IL 62701",
+		},
+		{
+			name: "business and last no street",
+			in: Address{
+				BusinessName: "ACME",
+				City:         "CHICAGO",
+				Region:       "IL",
+				Postal:       "60601",
+			},
+			want: "ACME\nCHICAGO IL 60601",
+		},
+		{
+			name: "empty address",
+			in:   Address{},
+			want: "",
+		},
+		{
+			name: "business only",
+			in:   Address{BusinessName: "ACME"},
+			want: "ACME",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Format(tc.in)
+			if got != tc.want {
+				t.Fatalf("Format = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatAfterNormalize(t *testing.T) {
+	// Integration: Normalize then Format yields content-form multiline address.
+	in := Address{
+		BusinessName:        "Acme Corp",
+		PrimaryNumber:       "123",
+		Predirectional:      "North",
+		StreetName:          "Main",
+		StreetSuffix:        "Street",
+		Postdirectional:     "Southwest",
+		SecondaryDesignator: "Apartment",
+		SecondaryNumber:     "4",
+		City:                "Springfield",
+		Region:              "Illinois",
+		Postal:              "62701",
+	}
+	norm, err := Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	got := Format(norm)
+	want := "ACME CORP\n123 N MAIN ST SW APT 4\nSPRINGFIELD IL 62701"
+	if got != want {
+		t.Fatalf("Format(Normalize(...)) = %q, want %q", got, want)
+	}
+}
