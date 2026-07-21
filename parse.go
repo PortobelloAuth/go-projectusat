@@ -214,6 +214,9 @@ func parseStreetLine(line string) (Address, error) {
 	if len(tokens) == 0 {
 		return Address{}, fmt.Errorf("empty street line")
 	}
+	// Merge multi-token directionals (SOUTH WEST → SW) before peels so pre-
+	// and postdirectionals resolve as single compound abbreviations.
+	tokens = mergeDirectionTokens(tokens)
 
 	var out Address
 	tokens = peelSecondary(tokens, &out)

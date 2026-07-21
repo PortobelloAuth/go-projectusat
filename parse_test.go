@@ -312,3 +312,95 @@ func TestParseRDHighwayNotRuralRoute(t *testing.T) {
 		t.Errorf("StreetName = %q, want ROAD 5A", got.StreetName)
 	}
 }
+
+func TestParseMultiTokenDirectionals(t *testing.T) {
+	raw := "1011 South West Main Street North East Apt 12\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "1011" {
+		t.Errorf("PrimaryNumber = %q, want 1011", got.PrimaryNumber)
+	}
+	if got.Predirectional != "SW" {
+		t.Errorf("Predirectional = %q, want SW", got.Predirectional)
+	}
+	if got.StreetName != "MAIN" {
+		t.Errorf("StreetName = %q, want MAIN", got.StreetName)
+	}
+	if got.StreetSuffix != "ST" {
+		t.Errorf("StreetSuffix = %q, want ST", got.StreetSuffix)
+	}
+	if got.Postdirectional != "NE" {
+		t.Errorf("Postdirectional = %q, want NE", got.Postdirectional)
+	}
+	if got.SecondaryDesignator != "APT" || got.SecondaryNumber != "12" {
+		t.Errorf("secondary = %q %q, want APT 12", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+}
+
+func TestParseMultiTokenPredirectionalAbbreviated(t *testing.T) {
+	// NORTH E (and N. E. after punctuation strip) merge to NE predirectional.
+	for _, street := range []string{
+		"3000 NORTH E MAIN STREET",
+		"3000 N E MAIN STREET",
+		"3000 N. E. MAIN STREET",
+		"3000 NORTH EAST MAIN STREET",
+	} {
+		raw := street + "\nSpringfield IL 62701"
+		got, err := Parse(raw)
+		if err != nil {
+			t.Fatalf("Parse(%q): %v", street, err)
+		}
+		if got.Predirectional != "NE" {
+			t.Errorf("Parse(%q): Predirectional = %q, want NE", street, got.Predirectional)
+		}
+		if got.PrimaryNumber != "3000" || got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+			t.Errorf("Parse(%q): street = primary=%q name=%q suffix=%q",
+				street, got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+		}
+	}
+}
+
+func TestParseDoesNotMergeOppositeDirectionals(t *testing.T) {
+	// NORTH SOUTH / EAST WEST stay as street-name material (not compound dirs).
+	raw := "123 North South Main Street\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.Predirectional != "N" {
+		t.Errorf("Predirectional = %q, want N (only first cardinal)", got.Predirectional)
+	}
+	if got.StreetName != "SOUTH MAIN" {
+		t.Errorf("StreetName = %q, want SOUTH MAIN (unmerged opposite)", got.StreetName)
+	}
+	if got.StreetSuffix != "ST" {
+		t.Errorf("StreetSuffix = %q, want ST", got.StreetSuffix)
+	}
+	if got.Postdirectional != "" {
+		t.Errorf("Postdirectional = %q, want empty", got.Postdirectional)
+	}
+}
+
+func TestMergeDirectionTokens(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"SOUTH WEST MAIN", "SW MAIN"},
+		{"N E MAIN", "NE MAIN"},
+		{"NORTH EAST", "NE"},
+		{"S W", "SW"},
+		{"NORTHEAST MAIN", "NORTHEAST MAIN"}, // already compound, no-op
+		{"NE MAIN", "NE MAIN"},
+		{"NORTH SOUTH MAIN", "NORTH SOUTH MAIN"}, // opposite: do not merge
+		{"EAST WEST", "EAST WEST"},
+		{"MAIN STREET", "MAIN STREET"},
+	}
+	for _, tc := range cases {
+		got := strings.Join(mergeDirectionTokens(strings.Fields(tc.in)), " ")
+		if got != tc.want {
+			t.Errorf("mergeDirectionTokens(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
