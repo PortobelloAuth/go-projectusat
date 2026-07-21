@@ -234,6 +234,8 @@ func parseStreetLine(line string) (Address, error) {
 	}
 
 	// Street suffix (right) — only if something remains for the street body.
+	// Peel exactly one suffix; a second trailing suffix stays in the name
+	// (expanded to primary form below) so e.g. "Main Avenue Drive" → name MAIN AVENUE + DR.
 	if len(tokens) >= 2 {
 		if abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); err == nil {
 			out.StreetSuffix = abbr
@@ -259,15 +261,115 @@ func parseStreetLine(line string) (Address, error) {
 		return Address{}, fmt.Errorf("unrecognized street line: %q", line)
 	}
 
+	// Double-suffix: after peeling one StreetSuffix, if the last remaining name
+	// token is also a street suffix and a name body remains before it, keep it
+	// in StreetName as the spelled-out primary form (do not peel a second suffix).
+	if out.StreetSuffix != "" && len(tokens) >= 2 {
+		last := tokens[len(tokens)-1]
+		if primary, err := streetsuffixes.NormalizeStreetSuffix(last); err == nil {
+			tokens[len(tokens)-1] = primary
+		}
+	}
+
 	name := strings.Join(tokens, " ")
 	// highways.NormalizeStreetName always succeeds for non-empty input: it
 	// rewrites highway forms and otherwise returns the uppercased pass-through.
-	if hw, err := highways.NormalizeStreetName(name); err == nil {
+	// Prefer a highway rewrite over state-as-street-name (e.g. "TN 431" → "TN HIGHWAY 431").
+	hw, hwErr := highways.NormalizeStreetName(name)
+	if hwErr == nil && hw != name {
+		out.StreetName = hw
+	} else if out.StreetSuffix != "" {
+		// When a US state name/abbrev is the entire street name and a suffix is set,
+		// spell the state out fully (OK AVE → OKLAHOMA + AVE; CT CT → CONNECTICUT + CT).
+		if full, ok := fullySpelledUSState(name); ok {
+			out.StreetName = full
+		} else if hwErr == nil {
+			out.StreetName = hw
+		} else {
+			out.StreetName = name
+		}
+	} else if hwErr == nil {
 		out.StreetName = hw
 	} else {
 		out.StreetName = name
 	}
 	return out, nil
+}
+
+// usStateFullNames maps US state/possession two-letter codes to their fully
+// spelled primary names. Excludes military AE/AP/AA and Canadian provinces.
+var usStateFullNames = map[string]string{
+	"AL": "ALABAMA",
+	"AK": "ALASKA",
+	"AS": "AMERICAN SAMOA",
+	"AZ": "ARIZONA",
+	"AR": "ARKANSAS",
+	"CA": "CALIFORNIA",
+	"CO": "COLORADO",
+	"CT": "CONNECTICUT",
+	"DE": "DELAWARE",
+	"DC": "DISTRICT OF COLUMBIA",
+	"FM": "FEDERATED STATES OF MICRONESIA",
+	"FL": "FLORIDA",
+	"GA": "GEORGIA",
+	"GU": "GUAM",
+	"HI": "HAWAII",
+	"ID": "IDAHO",
+	"IL": "ILLINOIS",
+	"IN": "INDIANA",
+	"IA": "IOWA",
+	"KS": "KANSAS",
+	"KY": "KENTUCKY",
+	"LA": "LOUISIANA",
+	"ME": "MAINE",
+	"MH": "MARSHALL ISLANDS",
+	"MD": "MARYLAND",
+	"MA": "MASSACHUSETTS",
+	"MI": "MICHIGAN",
+	"MN": "MINNESOTA",
+	"MS": "MISSISSIPPI",
+	"MO": "MISSOURI",
+	"MT": "MONTANA",
+	"NE": "NEBRASKA",
+	"NV": "NEVADA",
+	"NH": "NEW HAMPSHIRE",
+	"NJ": "NEW JERSEY",
+	"NM": "NEW MEXICO",
+	"NY": "NEW YORK",
+	"NC": "NORTH CAROLINA",
+	"ND": "NORTH DAKOTA",
+	"MP": "NORTHERN MARIANA ISLANDS",
+	"OH": "OHIO",
+	"OK": "OKLAHOMA",
+	"OR": "OREGON",
+	"PW": "PALAU",
+	"PA": "PENNSYLVANIA",
+	"PR": "PUERTO RICO",
+	"RI": "RHODE ISLAND",
+	"SC": "SOUTH CAROLINA",
+	"SD": "SOUTH DAKOTA",
+	"TN": "TENNESSEE",
+	"TX": "TEXAS",
+	"UT": "UTAH",
+	"VT": "VERMONT",
+	"VI": "VIRGIN ISLANDS",
+	"VA": "VIRGINIA",
+	"WA": "WASHINGTON",
+	"WV": "WEST VIRGINIA",
+	"WI": "WISCONSIN",
+	"WY": "WYOMING",
+}
+
+// fullySpelledUSState returns the fully spelled US state/possession name when
+// name (possibly multi-word) normalizes to a known US region code. Military
+// and Canadian codes are excluded.
+func fullySpelledUSState(name string) (string, bool) {
+	abbr, err := region.NormalizeRegion(name)
+	if err != nil {
+		return "", false
+	}
+	full, ok := usStateFullNames[abbr]
+	return full, ok
 }
 
 // expandHashTokens splits glued forms like "#12" into "#", "12".

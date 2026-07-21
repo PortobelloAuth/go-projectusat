@@ -565,3 +565,106 @@ func TestParseMilitaryNotBrokenByLeadingUnit(t *testing.T) {
 			got.SecondaryDesignator, got.PrimaryNumber)
 	}
 }
+
+func TestParseDoubleSuffixAndStateAsStreetName(t *testing.T) {
+	tests := []struct {
+		name       string
+		raw        string
+		primary    string
+		streetName string
+		suffix     string
+	}{
+		// Double street suffix: rightmost is StreetSuffix; left stays in name as primary form.
+		{
+			name:       "avenue drive",
+			raw:        "2000 Main Avenue Drive\nSpringfield IL 62701",
+			primary:    "2000",
+			streetName: "MAIN AVENUE",
+			suffix:     "DR",
+		},
+		{
+			name:       "pky ave expands parkway",
+			raw:        "2002 Main Pky Ave\nSpringfield IL 62701",
+			primary:    "2002",
+			streetName: "MAIN PARKWAY",
+			suffix:     "AVE",
+		},
+		{
+			name:       "street road",
+			raw:        "2004 Oak Street Road\nSpringfield IL 62701",
+			primary:    "2004",
+			streetName: "OAK STREET",
+			suffix:     "RD",
+		},
+		// State as complete street name: spell out full US state when entire name is state.
+		{
+			name:       "OK avenue",
+			raw:        "8000 OK Avenue\nOklahoma City OK 73101",
+			primary:    "8000",
+			streetName: "OKLAHOMA",
+			suffix:     "AVE",
+		},
+		{
+			name:       "CT drive",
+			raw:        "8004 CT Drive\nHartford CT 06101",
+			primary:    "8004",
+			streetName: "CONNECTICUT",
+			suffix:     "DR",
+		},
+		{
+			// Last CT is suffix COURT; first CT is state CONNECTICUT.
+			name:       "CT CT state then court",
+			raw:        "8006 CT CT\nHartford CT 06101",
+			primary:    "8006",
+			streetName: "CONNECTICUT",
+			suffix:     "CT",
+		},
+		{
+			name:       "full state name already spelled",
+			raw:        "8008 Oklahoma Avenue\nOklahoma City OK 73101",
+			primary:    "8008",
+			streetName: "OKLAHOMA",
+			suffix:     "AVE",
+		},
+		{
+			name:       "multi-word state new york",
+			raw:        "8010 New York Avenue\nAlbany NY 12201",
+			primary:    "8010",
+			streetName: "NEW YORK",
+			suffix:     "AVE",
+		},
+		// State as portion of street name / highway path: do not force full spell.
+		{
+			name:       "state highway abbrev preserved",
+			raw:        "8105 TN 431\nSomewhere KY 40000",
+			primary:    "8105",
+			streetName: "TN HIGHWAY 431",
+			suffix:     "",
+		},
+		{
+			name:       "state portion multi-word not only-state",
+			raw:        "8106 OK Main Street\nOklahoma City OK 73101",
+			primary:    "8106",
+			streetName: "OK MAIN",
+			suffix:     "ST",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.StreetName != tc.streetName {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.streetName)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+		})
+	}
+}
+
