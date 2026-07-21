@@ -436,7 +436,6 @@ func TestParseLeadingSecondaryApartment(t *testing.T) {
 	}
 }
 
-
 func TestParseLeadingHashNoPrimary(t *testing.T) {
 	raw := "#3200 South Tech Drive\nMiami FL 33101"
 	got, err := Parse(raw)
@@ -468,7 +467,6 @@ func TestParseLeadingHashNoPrimary(t *testing.T) {
 	}
 }
 
-
 func TestParseLeadingHashWithPrimary(t *testing.T) {
 	raw := "#3200 152 South Tech Drive\nMiami FL 33101"
 	got, err := Parse(raw)
@@ -499,7 +497,6 @@ func TestParseLeadingHashWithPrimary(t *testing.T) {
 		t.Errorf("Format = %q, want %q", Format(norm), want)
 	}
 }
-
 
 func TestParseLeadingUnitWithTrailingUpper(t *testing.T) {
 	raw := "Unit 3200 152 Tech Drive Upper\nMiami FL 33101"
@@ -533,7 +530,6 @@ func TestParseLeadingUnitWithTrailingUpper(t *testing.T) {
 	}
 }
 
-
 func TestParseLeadingSecondaryNoNumberNotReordered(t *testing.T) {
 	// Numbered designator without a following unit number must not invent one.
 	// "Apartment" alone at the start should not be reordered as secondary+number.
@@ -548,7 +544,6 @@ func TestParseLeadingSecondaryNoNumberNotReordered(t *testing.T) {
 		t.Errorf("SecondaryNumber = %q, want empty (no invented number)", got.SecondaryNumber)
 	}
 }
-
 
 func TestParseMilitaryNotBrokenByLeadingUnit(t *testing.T) {
 	// Military "UNIT N BOX N" must stay on the military fast path.
@@ -667,4 +662,3 @@ func TestParseDoubleSuffixAndStateAsStreetName(t *testing.T) {
 		})
 	}
 }
-
