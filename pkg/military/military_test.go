@@ -46,13 +46,13 @@ func TestNormalizeStreetLineErrors(t *testing.T) {
 	cases := []string{
 		"",
 		"   ",
-		"PSC 3",                 // missing BOX + number
-		"PSC BOX 4120",          // missing assigned number
-		"FOO 3 BOX 4120",        // unknown type
-		"PSC 3 BOX",             // missing box number
-		"PSC 3 BOX 4120 EXTRA",  // trailing junk
-		"MAIN ST",               // not military
-		"BOX 4120",              // no type
+		"PSC 3",                // missing BOX + number
+		"PSC BOX 4120",         // missing assigned number
+		"FOO 3 BOX 4120",       // unknown type
+		"PSC 3 BOX",            // missing box number
+		"PSC 3 BOX 4120 EXTRA", // trailing junk
+		"MAIN ST",              // not military
+		"BOX 4120",             // no type
 	}
 
 	for _, in := range cases {
@@ -108,19 +108,19 @@ func TestNormalizeLastLineErrors(t *testing.T) {
 	cases := []string{
 		"",
 		"   ",
-		"APO AE",                       // missing ZIP
-		"APO 09021-0002",               // missing region
-		"AE 09021-0002",                // missing city
-		"NYC NY 10001",                 // not military
-		"APO AE GERMANY 09021-0002",    // country name not allowed
-		"APO FRANKFURT AE 09021-0002",  // city name not allowed
-		"FRANKFURT AE 09021-0002",      // city must be APO/FPO/DPO
-		"APO XX 09021-0002",            // invalid region
-		"APO AE 9021",                  // bad ZIP length
-		"APO AE 09021-000",             // bad ZIP+4
-		"APO AE 090210002",             // missing hyphen in ZIP+4
-		"APO AE 09021-0002 EXTRA",      // trailing junk
-		"DPO CA 90210",                 // domestic state not military region
+		"APO AE",                      // missing ZIP
+		"APO 09021-0002",              // missing region
+		"AE 09021-0002",               // missing city
+		"NYC NY 10001",                // not military
+		"APO AE GERMANY 09021-0002",   // country name not allowed
+		"APO FRANKFURT AE 09021-0002", // city name not allowed
+		"FRANKFURT AE 09021-0002",     // city must be APO/FPO/DPO
+		"APO XX 09021-0002",           // invalid region
+		"APO AE 9021",                 // bad ZIP length
+		"APO AE 09021-000",            // bad ZIP+4
+		"APO AE 090210002",            // missing hyphen in ZIP+4
+		"APO AE 09021-0002 EXTRA",     // trailing junk
+		"DPO CA 90210",                // domestic state not military region
 	}
 
 	for _, in := range cases {

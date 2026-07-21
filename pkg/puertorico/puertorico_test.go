@@ -63,9 +63,9 @@ func TestStreetTypeStaySame(t *testing.T) {
 
 func TestStreetTypeCaseAndWhitespace(t *testing.T) {
 	cases := []struct {
-		in            string
-		wantPrimary   string
-		wantAbrev     string
+		in          string
+		wantPrimary string
+		wantAbrev   string
 	}{
 		{"avenida", "AVENIDA", "AVE"},
 		{" Ave ", "AVENIDA", "AVE"},

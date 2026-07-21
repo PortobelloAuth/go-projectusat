@@ -38,14 +38,14 @@ func TestNormalizeBasicStreet(t *testing.T) {
 
 func TestNormalizeDirectionalsAndHighway(t *testing.T) {
 	in := Address{
-		PrimaryNumber:    "100",
-		Predirectional:   "North",
-		StreetName:       "US Hwy 41",
-		StreetSuffix:     "",
-		Postdirectional:  "Southwest",
-		City:             "Miami",
-		Region:           "FL",
-		Postal:           "33101-1234",
+		PrimaryNumber:   "100",
+		Predirectional:  "North",
+		StreetName:      "US Hwy 41",
+		StreetSuffix:    "",
+		Postdirectional: "Southwest",
+		City:            "Miami",
+		Region:          "FL",
+		Postal:          "33101-1234",
 	}
 	got, err := Normalize(in)
 	if err != nil {
@@ -169,13 +169,13 @@ func TestNormalizePreservesDiacritics(t *testing.T) {
 
 func TestNormalizeBusinessNameAndWhitespace(t *testing.T) {
 	in := Address{
-		BusinessName: "  Acme   Corp.  ",
+		BusinessName:  "  Acme   Corp.  ",
 		PrimaryNumber: "  112-10 ",
-		StreetName:   "  Bronx  ",
-		StreetSuffix: " Road ",
-		City:         " Bronx ",
-		Region:       " ny ",
-		Postal:       " 10475 ",
+		StreetName:    "  Bronx  ",
+		StreetSuffix:  " Road ",
+		City:          " Bronx ",
+		Region:        " ny ",
+		Postal:        " 10475 ",
 	}
 	got, err := Normalize(in)
 	if err != nil {
