@@ -100,6 +100,24 @@ func TestNormalizeUnknownAndEmpty(t *testing.T) {
 	if got.StreetSuffix != "AVE" {
 		t.Errorf("StreetSuffix = %q, want AVE", got.StreetSuffix)
 	}
+
+	// CollapseSpace must run before Upper/NormalizeUnknown so padded UNKNOWN blanks.
+	padded, err := Normalize(Address{
+		PrimaryNumber: " UNKNOWN ",
+		StreetName:    "Main",
+		StreetSuffix:  "ST",
+		Region:        " UNKNOWN ",
+		City:          "Springfield",
+	})
+	if err != nil {
+		t.Fatalf("padded UNKNOWN should not error (region blanks, skips NormalizeRegion): %v", err)
+	}
+	if padded.PrimaryNumber != "" {
+		t.Errorf("PrimaryNumber %q → %q, want blank", " UNKNOWN ", padded.PrimaryNumber)
+	}
+	if padded.Region != "" {
+		t.Errorf("Region %q → %q, want blank", " UNKNOWN ", padded.Region)
+	}
 }
 
 func TestNormalizePostalVariants(t *testing.T) {

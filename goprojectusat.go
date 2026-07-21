@@ -110,9 +110,11 @@ func Normalize(a Address) (Address, error) {
 	return out, nil
 }
 
-// baseField blanks UNKNOWN, collapses whitespace, and uppercases.
+// baseField collapses whitespace, then blanks UNKNOWN and uppercases.
+// Collapse must run before Upper so padded values like " UNKNOWN " become blank
+// (Upper/NormalizeUnknown only match the exact token "UNKNOWN").
 func baseField(s string) string {
-	return textutil.CollapseSpace(textutil.Upper(s))
+	return textutil.Upper(textutil.CollapseSpace(s))
 }
 
 // normalizePostal formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
