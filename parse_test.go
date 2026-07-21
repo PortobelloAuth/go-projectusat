@@ -209,3 +209,106 @@ func TestParseGluedHashSecondary(t *testing.T) {
 		t.Errorf("secondary = %q %q", got.SecondaryDesignator, got.SecondaryNumber)
 	}
 }
+
+func TestParseRuralRouteMultiline(t *testing.T) {
+	raw := "Rural Route 91 Box A7\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "RR 91 BOX A7" {
+		t.Errorf("StreetName = %q, want RR 91 BOX A7", got.StreetName)
+	}
+	if got.PrimaryNumber != "" || got.StreetSuffix != "" {
+		t.Errorf("expected empty primary/suffix for RR, got primary=%q suffix=%q",
+			got.PrimaryNumber, got.StreetSuffix)
+	}
+	if got.City != "SPRINGFIELD" || got.Region != "IL" || got.Postal != "62701" {
+		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "RR 91 BOX A7\nSPRINGFIELD IL 62701"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+func TestParseRuralRouteVariants(t *testing.T) {
+	cases := []struct {
+		street string
+		want   string
+	}{
+		{"RFD 61 #87b", "RR 61 BOX 87B"},
+		{"RD 61 # 87b", "RR 61 BOX 87B"},
+		{"RR0061 #87b", "RR 61 BOX 87B"},
+	}
+	for _, tc := range cases {
+		raw := tc.street + "\nSpringfield IL 62701"
+		got, err := Parse(raw)
+		if err != nil {
+			t.Fatalf("Parse(%q): %v", tc.street, err)
+		}
+		if got.StreetName != tc.want {
+			t.Errorf("Parse(%q).StreetName = %q, want %q", tc.street, got.StreetName, tc.want)
+		}
+		norm, err := Normalize(got)
+		if err != nil {
+			t.Fatalf("Normalize: %v", err)
+		}
+		wantFmt := tc.want + "\nSPRINGFIELD IL 62701"
+		if Format(norm) != wantFmt {
+			t.Errorf("Format = %q, want %q", Format(norm), wantFmt)
+		}
+	}
+}
+
+func TestParsePOBoxMultiline(t *testing.T) {
+	cases := []struct {
+		street string
+		want   string
+	}{
+		{"Post office Box G", "PO BOX G"},
+		{"PO Box 11890", "PO BOX 11890"},
+	}
+	for _, tc := range cases {
+		raw := tc.street + "\nSpringfield IL 62701"
+		got, err := Parse(raw)
+		if err != nil {
+			t.Fatalf("Parse(%q): %v", tc.street, err)
+		}
+		if got.StreetName != tc.want {
+			t.Errorf("StreetName = %q, want %q", got.StreetName, tc.want)
+		}
+		if got.PrimaryNumber != "" || got.StreetSuffix != "" {
+			t.Errorf("expected empty primary/suffix for PO Box, got primary=%q suffix=%q",
+				got.PrimaryNumber, got.StreetSuffix)
+		}
+		norm, err := Normalize(got)
+		if err != nil {
+			t.Fatalf("Normalize: %v", err)
+		}
+		wantFmt := tc.want + "\nSPRINGFIELD IL 62701"
+		if Format(norm) != wantFmt {
+			t.Errorf("Format = %q, want %q", Format(norm), wantFmt)
+		}
+	}
+}
+
+func TestParseRDHighwayNotRuralRoute(t *testing.T) {
+	// Bare "RD 5A" is a highway-style street name, not rural route (no BOX/#).
+	raw := "RD 5A\nSomewhere KY 40000"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName == "RR 5A BOX" || strings.HasPrefix(got.StreetName, "RR ") {
+		t.Fatalf("RD 5A must not parse as rural route, got StreetName=%q", got.StreetName)
+	}
+	// Highway rewrite via parseStreetLine → ROAD 5A (no primary number).
+	if got.StreetName != "ROAD 5A" {
+		t.Errorf("StreetName = %q, want ROAD 5A", got.StreetName)
+	}
+}

@@ -198,7 +198,15 @@ func parseSingleLineCivilian(line string) (Address, error) {
 // parseStreetLine reverse-token peels secondary, postdirectional, and suffix,
 // then peels primary number and predirectional from the left. Residual tokens
 // form StreetName (with highway rewrite when applicable).
+//
+// Rural route and PO Box free-text lines are rewritten first (see
+// rewriteSpecialStreetLine) and stored wholly in StreetName, similar to
+// overseas military street lines.
 func parseStreetLine(line string) (Address, error) {
+	if rewritten, ok := rewriteSpecialStreetLine(line); ok {
+		return Address{StreetName: rewritten}, nil
+	}
+
 	cleaned := strings.ToUpper(textutil.CollapseSpace(
 		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true, KeepSlash: true}),
 	))
