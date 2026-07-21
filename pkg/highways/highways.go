@@ -114,6 +114,9 @@ var gluedInterstate = regexp.MustCompile(`^(IH?)(\d+[A-Z]*)$`)
 // routeID matches a highway/route designator token (digits with optional letter suffix, or letter-only).
 var routeID = regexp.MustCompile(`^(\d+[A-Z]*|[A-Z]+)$`)
 
+// digitRouteID matches a digit-bearing route designator (e.g. 440, 60E, 5A). Letter-only tokens are excluded.
+var digitRouteID = regexp.MustCompile(`^\d+[A-Z]*$`)
+
 // multiWordStateNames are full US state/possession names (sorted longest-first for greedy match).
 // Built from region keys that contain a space and are not already two-letter codes.
 var multiWordStateNames = []string{
@@ -214,7 +217,9 @@ func normalizeTokens(tokens []string) (string, bool) {
 			return join(append([]string{abbrev}, core...)), true
 		}
 		// State + bare route number → ST HIGHWAY N
-		if isRouteID(rest[0]) {
+		// Require a digit-bearing designator so non-highway names like OKLAHOMA AVE,
+		// WASHINGTON BLVD, CA MAIN pass through. Letter-only routes are only for SR MM.
+		if isDigitRouteID(rest[0]) {
 			core := append([]string{"HIGHWAY", rest[0]}, normalizeSuffixes(rest[1:])...)
 			return join(append([]string{abbrev}, core...)), true
 		}
@@ -491,6 +496,15 @@ func isRouteID(t string) bool {
 		return false
 	}
 	return routeID.MatchString(t)
+}
+
+// isDigitRouteID is true for digit-bearing route designators (optional trailing letters).
+// Used for state + bare-route rewrites so letter-only street tokens are not treated as routes.
+func isDigitRouteID(t string) bool {
+	if t == "" {
+		return false
+	}
+	return digitRouteID.MatchString(t)
 }
 
 func isLetterOnly(t string) bool {

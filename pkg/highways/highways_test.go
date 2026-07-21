@@ -61,6 +61,12 @@ func TestNormalizeStreetName(t *testing.T) {
 		// Whitespace / case normalization
 		{"  county   hwy  60e  ", "COUNTY HIGHWAY 60E"},
 		{"farm to market 1200", "FM 1200"},
+
+		// State name/code as street name portion only — not bare highway routes
+		// (letter-only residual after peeling state must not become "… HIGHWAY …")
+		{"OKLAHOMA AVE", "OKLAHOMA AVE"},
+		{"WASHINGTON BLVD", "WASHINGTON BLVD"},
+		{"CA MAIN", "CA MAIN"},
 	}
 
 	for _, tc := range cases {
