@@ -281,12 +281,11 @@ func peelSecondary(tokens []string, out *Address) []string {
 		return tokens[:len(tokens)-2]
 	}
 
-	// Numbered designator + unit number
+	// Numbered designator + unit number (e.g. APT 4). Overseas military
+	// "UNIT N BOX N" is handled earlier by the military fast path, so this
+	// peel only sees civilian street lines.
 	if len(tokens) >= 2 {
 		if info, err := secondaryunit.Info(tokens[len(tokens)-2]); err == nil && info.Numbered {
-			// Avoid treating "UNIT 2050 BOX 4190"-style military as secondary:
-			// if second-to-last is UNIT and last is digits but earlier tokens
-			// remain with BOX pattern, leave alone — military path handles those.
 			out.SecondaryDesignator = info.Short
 			out.SecondaryNumber = tokens[len(tokens)-1]
 			return tokens[:len(tokens)-2]
