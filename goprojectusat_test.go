@@ -526,14 +526,47 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 	if suite.SecondaryDesignator != "#" {
 		t.Fatalf("Suite SecondaryAsHash = %q, want #", suite.SecondaryDesignator)
 	}
+
+	// Input already "#" (SecondaryAsHash output) re-normalizes cleanly.
+	hashIn, err := NormalizeWithOptions(Address{
+		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
+		SecondaryDesignator: "#", SecondaryNumber: "4",
+	}, Options{SecondaryAsHash: true})
+	if err != nil {
+		t.Fatalf("SecondaryDesignator \"#\": %v", err)
+	}
+	if hashIn.SecondaryDesignator != "#" {
+		t.Fatalf("hash input SecondaryDesignator = %q, want #", hashIn.SecondaryDesignator)
+	}
+
+	// Round-trip: SecondaryAsHash then normalize again succeeds with "#".
+	again, err := NormalizeWithOptions(got, Options{SecondaryAsHash: true})
+	if err != nil {
+		t.Fatalf("round-trip SecondaryAsHash: %v", err)
+	}
+	if again.SecondaryDesignator != "#" {
+		t.Fatalf("round-trip SecondaryDesignator = %q, want #", again.SecondaryDesignator)
+	}
+	// Content form also accepts "#".
+	contentHash, err := Normalize(Address{
+		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
+		SecondaryDesignator: "#", SecondaryNumber: "4",
+	})
+	if err != nil {
+		t.Fatalf("Normalize with \"#\": %v", err)
+	}
+	if contentHash.SecondaryDesignator != "#" {
+		t.Fatalf("content hash SecondaryDesignator = %q, want #", contentHash.SecondaryDesignator)
+	}
 }
 
 func TestNormalizeWithOptionsFuzzy(t *testing.T) {
-	// Mild typos: Californa → CA, Avenu → AVE (Fuzzy* threshold 0.7).
+	// Mild typos: Californa → CA, Aveneu → AVE (Fuzzy* threshold 0.7).
+	// "Aveneu" is a real typo (not an alt form); "Avenu"/"AVENU" is a listed alt.
 	in := Address{
 		PrimaryNumber: "10",
 		StreetName:    "Oak",
-		StreetSuffix:  "Avenu",
+		StreetSuffix:  "Aveneu",
 		City:          "Sacramento",
 		Region:        "Californa",
 		Postal:        "95814",

@@ -82,15 +82,17 @@ var unitShortMap = maps.Collect(func(yield func(string, string) bool) {
 	}
 })
 
-// TODO: When comparing addresses for matching, consider converting
-// all unit types to # as an option (even though it isn't correct by
-// the standard.) Because the standard allows for it when the unit
-// type isn't fully known it is essentially the common matchable
-// unit type abbreviation for all numbered unit types.
-// TODO: what should we to do with # (re-read the standard)
+// hashUnit is the Project US@ exchange/matching designator for numbered
+// secondary units when the unit type is unknown or intentionally collapsed.
+// It is accepted by Info/Normalize so SecondaryAsHash results re-normalize.
+var hashUnit = SecondaryUnit{
+	Primary:  "#",
+	Short:    "#",
+	Numbered: true,
+}
 
 // Per the standard, Normalize always returns the uppercase abbreviation
-// for the Unit Type.
+// for the Unit Type. "#" is accepted as the matching-form designator.
 func Normalize(u string) (string, error) {
 	info, err := Info(u)
 	if err != nil {
@@ -103,6 +105,12 @@ func Normalize(u string) (string, error) {
 func Info(u string) (*SecondaryUnit, error) {
 	// capitalize
 	capitalized := strings.ToUpper(u)
+
+	// "#" is the standard matching/unknown unit designator (numbered).
+	if capitalized == "#" {
+		h := hashUnit
+		return &h, nil
+	}
 
 	// look up the primary (full) unit type word
 	full, ok := unitShortMap[capitalized]

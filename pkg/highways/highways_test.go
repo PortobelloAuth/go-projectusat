@@ -67,6 +67,12 @@ func TestNormalizeStreetName(t *testing.T) {
 		{"OKLAHOMA AVE", "OKLAHOMA AVE"},
 		{"WASHINGTON BLVD", "WASHINGTON BLVD"},
 		{"CA MAIN", "CA MAIN"},
+
+		// Letter-only tokens after US / I are street names, not route IDs
+		// (digit-bearing routes only for US / I / IH / bare HWY / RD / RT / EXPRESSWAY;
+		// letter-only remains for SR MM only)
+		{"US GRANT", "US GRANT"},
+		{"I STREET", "I STREET"},
 	}
 
 	for _, tc := range cases {

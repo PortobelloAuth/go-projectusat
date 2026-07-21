@@ -36,6 +36,7 @@ func TestNormalize(t *testing.T) {
 		{"Lower", "LOWR"},
 		{"Trailer", "TRLR"},
 		{"Space", "SPC"},
+		{"#", "#"},
 	}
 
 	for _, tc := range cases {
@@ -94,5 +95,21 @@ func TestNormalizeUnknown(t *testing.T) {
 	}
 	if got != "" {
 		t.Fatalf("got %q, want empty string on error", got)
+	}
+}
+
+func TestInfoHash(t *testing.T) {
+	info, err := secondaryunit.Info("#")
+	if err != nil {
+		t.Fatalf("Info(\"#\"): %v", err)
+	}
+	if info.Short != "#" {
+		t.Fatalf("Short = %q, want #", info.Short)
+	}
+	if !info.Numbered {
+		t.Fatal("Numbered = false, want true")
+	}
+	if info.Primary != "#" {
+		t.Fatalf("Primary = %q, want #", info.Primary)
 	}
 }

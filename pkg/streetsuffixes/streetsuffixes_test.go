@@ -102,12 +102,16 @@ func TestNormalizeStreetSuffixUnknown(t *testing.T) {
 }
 
 func TestFuzzyNormalizeStreetSuffix(t *testing.T) {
-	// Mild typo should resolve when fuzzy matching is enabled.
-	got, err := streetsuffixes.FuzzyNormalizeStreetSuffix("Avenu")
+	// Real typo (not a listed alt form — "AVENU" is an alt; "Aveneu" is not).
+	const typo = "Aveneu"
+	if _, err := streetsuffixes.NormalizeStreetSuffix(typo); err == nil {
+		t.Fatalf("NormalizeStreetSuffix(%q) succeeded; fixture is not a real typo", typo)
+	}
+	got, err := streetsuffixes.FuzzyNormalizeStreetSuffix(typo)
 	if err != nil {
 		t.Fatalf("FuzzyNormalizeStreetSuffix: %v", err)
 	}
 	if got != "AVENUE" {
-		t.Fatalf("FuzzyNormalizeStreetSuffix(Avenu) = %q, want AVENUE", got)
+		t.Fatalf("FuzzyNormalizeStreetSuffix(%q) = %q, want AVENUE", typo, got)
 	}
 }

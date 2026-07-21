@@ -290,29 +290,29 @@ func matchHighwayCore(tokens []string) ([]string, bool) {
 	}
 
 	// --- Interstate ---
-	// INTERSTATE [HWY|HIGHWAY] N ...
+	// INTERSTATE [HWY|HIGHWAY] N ... (digit-bearing route IDs only)
 	if tokens[0] == "INTERSTATE" {
 		i := 1
 		if i < len(tokens) && isHwy(tokens[i]) {
 			i++
 		}
-		if i < len(tokens) && isRouteID(tokens[i]) {
+		if i < len(tokens) && isDigitRouteID(tokens[i]) {
 			return withRouteAndSuffixes([]string{"INTERSTATE"}, tokens[i:]), true
 		}
 	}
-	// I N ...  or  IH N ...
-	if (tokens[0] == "I" || tokens[0] == "IH") && len(tokens) >= 2 && isRouteID(tokens[1]) {
+	// I N ...  or  IH N ... (digit-bearing; "I STREET" must pass through)
+	if (tokens[0] == "I" || tokens[0] == "IH") && len(tokens) >= 2 && isDigitRouteID(tokens[1]) {
 		return withRouteAndSuffixes([]string{"INTERSTATE"}, tokens[1:]), true
 	}
 
 	// --- US highway ---
-	// US [HWY|HIGHWAY] N ...
+	// US [HWY|HIGHWAY] N ... (digit-bearing; "US GRANT" must pass through)
 	if tokens[0] == "US" && len(tokens) >= 2 {
 		i := 1
 		if i < len(tokens) && isHwy(tokens[i]) {
 			i++
 		}
-		if i < len(tokens) && isRouteID(tokens[i]) {
+		if i < len(tokens) && isDigitRouteID(tokens[i]) {
 			return withRouteAndSuffixes([]string{"US", "HIGHWAY"}, tokens[i:]), true
 		}
 	}
@@ -364,20 +364,21 @@ func matchHighwayCore(tokens []string) ([]string, bool) {
 	}
 
 	// --- Bare highway / road / route / expressway ---
+	// Digit-bearing route IDs only (letter-only is reserved for SR MM).
 	// HWY|HIGHWAY N
-	if isHwy(tokens[0]) && len(tokens) >= 2 && isRouteID(tokens[1]) {
+	if isHwy(tokens[0]) && len(tokens) >= 2 && isDigitRouteID(tokens[1]) {
 		return withRouteAndSuffixes([]string{"HIGHWAY"}, tokens[1:]), true
 	}
 	// RD|ROAD N  (road is part of the street name)
-	if isRoad(tokens[0]) && len(tokens) >= 2 && isRouteID(tokens[1]) {
+	if isRoad(tokens[0]) && len(tokens) >= 2 && isDigitRouteID(tokens[1]) {
 		return withRouteAndSuffixes([]string{"ROAD"}, tokens[1:]), true
 	}
 	// RT|RTE|ROUTE N
-	if isRoute(tokens[0]) && len(tokens) >= 2 && isRouteID(tokens[1]) {
+	if isRoute(tokens[0]) && len(tokens) >= 2 && isDigitRouteID(tokens[1]) {
 		return withRouteAndSuffixes([]string{"ROUTE"}, tokens[1:]), true
 	}
 	// EXPRESSWAY N
-	if tokens[0] == "EXPRESSWAY" && len(tokens) >= 2 && isRouteID(tokens[1]) {
+	if tokens[0] == "EXPRESSWAY" && len(tokens) >= 2 && isDigitRouteID(tokens[1]) {
 		return withRouteAndSuffixes([]string{"EXPRESSWAY"}, tokens[1:]), true
 	}
 
