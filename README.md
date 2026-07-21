@@ -14,15 +14,16 @@ from potential backers.
 **What works today:** structured `Address` normalization (`Normalize` /
 `NormalizeWithOptions`), free-text `Parse` (multi-line / comma-separated; overseas
 military APO/FPO/DPO fast path; rural route / PO Box free-text rewrite; multi-token
-directionals; leading secondary / `#` reorder; reverse-token street componentization),
+directionals; leading secondary / `#` reorder; double-suffix and state-as-street-name;
+reverse-token street componentization),
 street/last-line formatting, military street lines through `Normalize`/`Format`, and
 component packages under `pkg/` (regions, street suffixes, directionals, secondary units,
 diacritics, highways, military, Puerto Rico, text helpers).
 
 **Not yet:** Puerto Rico vocabulary in `Parse`, same-line business/pre-street detection,
-double-suffix / state-as-street-name edge cases (landing next), grid/fractional narrative
-forms, and full C#-parity street-line edge cases. Use `pkg/puertorico` directly for Spanish
-street/unit vocabulary until it is wired into the root parse pipeline.
+grid/fractional/narrative free-text forms, and remaining C#-parity street-line edge cases.
+Use `pkg/puertorico` directly for Spanish street/unit vocabulary until it is wired into
+the root parse pipeline.
 
 **Prefer content form** (`Normalize`) when writing patient records; use
 `NormalizeWithOptions` when preparing addresses for match/exchange (see Options
