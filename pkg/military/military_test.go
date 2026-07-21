@@ -1,58 +1,153 @@
 package military_test
 
-/*
-"MILITARY ADDRESSES
-Patient records containing addresses to Army/Air Post Offices (APOs), or Fleet Post Offices (FPOs) are
-required to include the patient’s name and rank, per USPS Publication 28. Guidance for the patient’s
-name and rank is out of scope for this document.
-APO/FPO patient addresses MUST include the unit, the box number, the APO/FPO address, and the 9-
-digit ZIP Code. City or country names MUST NOT be included in APO/FPO shipping addresses.
-The Street Address Line for all APO/FPO military patient addresses MUST be standardized to
-include the appropriate military address type with its assigned number and a box number. There
-are five possible military address types: CMR (Consolidated Mail Room), OMC (Official Mail
-Center), PSC (Postal Service Center), UMR (Unit Mail Room), and UNIT. The assigned number
-and the box number MUST follow one of these acronyms.
+import (
+	"testing"
 
-Examples of standardized military address:
-Army/Air Post Office (APO)
-PSC 3 BOX 4120
-APO AE 09021-0002
-UNIT 2050 BOX 4190
-APO AP 96278-2050
-CMR 802 BOX 74
-APO AE 09499-0074
-Fleet Post Office (FPO)
-UNIT 100100 BOX 4120
-FPO AP 96691-0104
-UNIT 4856 BOX 121
-FPO AP 96667-3931
-Diplomatic Post Office (DPO)
-UNIT 8400 BOX 0000
-DPO AE 09498-0048
+	"github.com/PortobelloAuth/go-projectusat/pkg/military"
+)
 
-Domestic Locations
+func TestNormalizeStreetLine(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		// Brief / Publication 28 examples
+		{"PSC 3 BOX 4120", "PSC 3 BOX 4120"},
+		{"UNIT 2050 BOX 4190", "UNIT 2050 BOX 4190"},
+		{"UNIT 100100 BOX 4120", "UNIT 100100 BOX 4120"},
+		{"UNIT 8400 BOX 0000", "UNIT 8400 BOX 0000"},
+		{"CMR 802 BOX 74", "CMR 802 BOX 74"},
+		{"UNIT 4856 BOX 121", "UNIT 4856 BOX 121"},
+		{"UNIT 9900 BOX 0500", "UNIT 9900 BOX 0500"},
 
-Most domestic military addresses must have a conventional street style address. Domestic
-Military addresses MUST use only the city name along with the approved two–character state
-abbreviation and the ZIP Code or ZIP+4 Code.
+		// All five address types
+		{"OMC 12 BOX 99", "OMC 12 BOX 99"},
+		{"UMR 5 BOX 1", "UMR 5 BOX 1"},
 
-Overseas Locations
+		// Case / whitespace
+		{"  psc   3  box  4120  ", "PSC 3 BOX 4120"},
+		{"unit 2050 box 4190", "UNIT 2050 BOX 4190"},
+	}
 
-Overseas military addresses MUST contain the APO or FPO designation along with a two–
-character “state” abbreviation of AE, AP, or AA and the ZIP Code or ZIP+4 Code. AE is used for
-armed forces in Europe, the Middle East, Africa, and Canada; AP is for the Pacific; and AA is for
-the Americas excluding Canada.
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			got, err := military.NormalizeStreetLine(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeStreetLine(%q) unexpected error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Fatalf("NormalizeStreetLine(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
 
-DEPARTMENT OF STATE ADDRESSES
-DPOs are postal facilities that operate at one of the Department of State's missions abroad as a branch
-post office of the U.S. Postal Service (USPS). DPO patient addresses MUST include the unit, the box
-number, the DPO address, and the 9-digit ZIP Code. City or country names MUST NOT be included in
-DPO shipping addresses. Patient records containing addresses to DPOs are required to include the
-patient’s name, per USPS Publication 28. Guidance for the patient’s name is out of scope for this
-document.
+func TestNormalizeStreetLineErrors(t *testing.T) {
+	cases := []string{
+		"",
+		"   ",
+		"PSC 3",                 // missing BOX + number
+		"PSC BOX 4120",          // missing assigned number
+		"FOO 3 BOX 4120",        // unknown type
+		"PSC 3 BOX",             // missing box number
+		"PSC 3 BOX 4120 EXTRA",  // trailing junk
+		"MAIN ST",               // not military
+		"BOX 4120",              // no type
+	}
 
-Example:
-UNIT 9900 BOX 0500
-DPO AE 09701-0500
-"
-*/
+	for _, in := range cases {
+		t.Run(in, func(t *testing.T) {
+			got, err := military.NormalizeStreetLine(in)
+			if err == nil {
+				t.Fatalf("NormalizeStreetLine(%q) expected error, got %q", in, got)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeStreetLine(%q) = %q, want empty on error", in, got)
+			}
+		})
+	}
+}
+
+func TestNormalizeLastLine(t *testing.T) {
+	cases := []struct {
+		in             string
+		city, reg, zip string
+	}{
+		// Brief / Publication 28 examples
+		{"APO AE 09021-0002", "APO", "AE", "09021-0002"},
+		{"APO AP 96278-2050", "APO", "AP", "96278-2050"},
+		{"FPO AP 96691-0104", "FPO", "AP", "96691-0104"},
+		{"FPO AP 96667-3931", "FPO", "AP", "96667-3931"},
+		{"DPO AE 09498-0048", "DPO", "AE", "09498-0048"},
+		{"DPO AE 09701-0500", "DPO", "AE", "09701-0500"},
+		{"APO AE 09499-0074", "APO", "AE", "09499-0074"},
+
+		// ZIP without +4
+		{"APO AA 34002", "APO", "AA", "34002"},
+
+		// Case / whitespace
+		{"  apo  ae  09021-0002  ", "APO", "AE", "09021-0002"},
+		{"fpo ap 96691-0104", "FPO", "AP", "96691-0104"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			city, reg, zip, err := military.NormalizeLastLine(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeLastLine(%q) unexpected error: %v", tc.in, err)
+			}
+			if city != tc.city || reg != tc.reg || zip != tc.zip {
+				t.Fatalf("NormalizeLastLine(%q) = (%q, %q, %q), want (%q, %q, %q)",
+					tc.in, city, reg, zip, tc.city, tc.reg, tc.zip)
+			}
+		})
+	}
+}
+
+func TestNormalizeLastLineErrors(t *testing.T) {
+	cases := []string{
+		"",
+		"   ",
+		"APO AE",                       // missing ZIP
+		"APO 09021-0002",               // missing region
+		"AE 09021-0002",                // missing city
+		"NYC NY 10001",                 // not military
+		"APO AE GERMANY 09021-0002",    // country name not allowed
+		"APO FRANKFURT AE 09021-0002",  // city name not allowed
+		"FRANKFURT AE 09021-0002",      // city must be APO/FPO/DPO
+		"APO XX 09021-0002",            // invalid region
+		"APO AE 9021",                  // bad ZIP length
+		"APO AE 09021-000",             // bad ZIP+4
+		"APO AE 090210002",             // missing hyphen in ZIP+4
+		"APO AE 09021-0002 EXTRA",      // trailing junk
+		"DPO CA 90210",                 // domestic state not military region
+	}
+
+	for _, in := range cases {
+		t.Run(in, func(t *testing.T) {
+			city, reg, zip, err := military.NormalizeLastLine(in)
+			if err == nil {
+				t.Fatalf("NormalizeLastLine(%q) expected error, got (%q, %q, %q)", in, city, reg, zip)
+			}
+			if city != "" || reg != "" || zip != "" {
+				t.Fatalf("NormalizeLastLine(%q) = (%q, %q, %q), want empty on error", in, city, reg, zip)
+			}
+		})
+	}
+}
+
+func TestAddressTypeConstants(t *testing.T) {
+	// Ensure exported AddressType values match USPS acronyms.
+	want := map[military.AddressType]string{
+		military.AddressCMR:  "CMR",
+		military.AddressOMC:  "OMC",
+		military.AddressPSC:  "PSC",
+		military.AddressUMR:  "UMR",
+		military.AddressUNIT: "UNIT",
+	}
+	for k, v := range want {
+		if string(k) != v {
+			t.Fatalf("AddressType %q = %q, want %q", k, string(k), v)
+		}
+	}
+}
