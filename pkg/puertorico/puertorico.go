@@ -1,5 +1,11 @@
 package puertorico
 
+import (
+	"fmt"
+	"maps"
+	"strings"
+)
+
 /*
 Spanish        Sp. Abreviation    English
 AVENIDA   <->  AVE                Avenue
@@ -55,5 +61,115 @@ Sector SEC
 Terraza TERR
 Urbanization URB
 Villa VIL
-Comment
 */
+
+// streetTypeMap maps Spanish primary street type -> abbreviation.
+// Project US@ keeps Spanish forms (do not force English).
+var streetTypeMap = map[string]string{
+	"AVENIDA":  "AVE",
+	"CALLE":    "CLL",
+	"CAMINITO": "CMT",
+	"CAMINO":   "CAM",
+	"CERRADA":  "CER",
+	"CIRCULO":  "CIR",
+	"ENTRADA":  "ENT",
+	"PASEO":    "PSO",
+	"PLACITA":  "PLA",
+	"RANCHO":   "RCH",
+	"VEREDA":   "VER",
+	"VISTA":    "VIS",
+}
+
+var streetTypeShortMap = maps.Collect(func(yield func(string, string) bool) {
+	for primary, short := range streetTypeMap {
+		if !yield(short, primary) {
+			return
+		}
+	}
+})
+
+// secondaryMap maps Spanish/English primary secondary designator -> abbreviation.
+// Per Project US@ secondary designators, Normalize returns the uppercase short form.
+var secondaryMap = map[string]string{
+	"APARTAMENTO":      "APT",
+	"BARRIADA":         "BDA",
+	"BUILDING":         "BLDG",
+	"BLOQUE":           "BL",
+	"BARRIO":           "BO",
+	"CARRETERA":        "CARR",
+	"CASERIO":          "CAS",
+	"CONDOMINIO":       "COND",
+	"COOPERATIVA":      "COOP",
+	"CORPORACION":      "CORP",
+	"DEPARTAMENTO":     "DEPT",
+	"EDIFICIO":         "EDIF",
+	"ENTREGA GENERAL":  "GEN DEL",
+	"EXTENCION":        "EXT",
+	"HOSPITAL":         "HOSP",
+	"INDUSTRIAL":       "IND",
+	"JARDINES":         "JARD",
+	"MANSIONES":        "MANS",
+	"PARCELAS":         "PARC",
+	"QUEBRADA":         "QBDA",
+	"REPARTO":          "REPTO",
+	"RESIDENCIAL":      "RES",
+	"SECTOR":           "SEC",
+	"TERRAZA":          "TERR",
+	"URBANIZATION":     "URB",
+	"VILLA":            "VIL",
+}
+
+var secondaryShortMap = maps.Collect(func(yield func(string, string) bool) {
+	for primary, short := range secondaryMap {
+		if !yield(short, primary) {
+			return
+		}
+	}
+})
+
+// NormalizeStreetType maps a Spanish PR street type (primary or abbreviation)
+// to the Spanish primary form. Example: "AVE" or "AVENIDA" -> "AVENIDA".
+func NormalizeStreetType(s string) (string, error) {
+	capitalized := strings.ToUpper(strings.TrimSpace(s))
+
+	if primary, ok := streetTypeShortMap[capitalized]; ok {
+		return primary, nil
+	}
+	if _, ok := streetTypeMap[capitalized]; ok {
+		return capitalized, nil
+	}
+
+	return "", fmt.Errorf("Unrecognized street type")
+}
+
+// AbbreviateStreetType maps a Spanish PR street type (primary or abbreviation)
+// to the Spanish abbreviation. Example: "AVE" or "AVENIDA" -> "AVE".
+func AbbreviateStreetType(s string) (string, error) {
+	capitalized := strings.ToUpper(strings.TrimSpace(s))
+
+	if short, ok := streetTypeMap[capitalized]; ok {
+		return short, nil
+	}
+	if _, ok := streetTypeShortMap[capitalized]; ok {
+		return capitalized, nil
+	}
+
+	return "", fmt.Errorf("Unrecognized street type")
+}
+
+// NormalizeSecondary maps a Puerto Rico secondary designator (primary or short)
+// to the uppercase abbreviation. Example: "Apartamento" or "APT" -> "APT".
+func NormalizeSecondary(s string) (string, error) {
+	capitalized := strings.ToUpper(strings.TrimSpace(s))
+	// collapse internal whitespace for multi-word designators (e.g. GEN DEL)
+	capitalized = strings.Join(strings.Fields(capitalized), " ")
+
+	if short, ok := secondaryMap[capitalized]; ok {
+		return short, nil
+	}
+	if _, ok := secondaryShortMap[capitalized]; ok {
+		return capitalized, nil
+	}
+
+	return "", fmt.Errorf("Unrecognized secondary designator")
+}
