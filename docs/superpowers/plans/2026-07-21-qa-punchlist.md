@@ -150,7 +150,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `8100 Montana Treasure Avenue` → should be `8100 MT TREASURE AVE`  
 - **Repro:** `South Carolina county road 22` mishandles leading SOUTH as predir  
 - **Falsifiable tests:** `TestPunchlist_PL010a_MontanaTreasure`, `TestPunchlist_PL010b_SouthCarolinaCountyRoad`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-011: Leading UNIT + trailing RM order inverted
 
@@ -159,7 +159,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** C# case `Unit 3200 152 Tech Dr Room 12`  
 - **Expected:** `152 TECH DR UNIT 3200 RM 12` (order of secondaries)  
 - **Falsifiable test:** `TestPunchlist_PL011_UnitThenRoomOrder`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-012: Business + Suite before primary misparsed
 
@@ -168,7 +168,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `UCENT Building Suite 480 411 N Central Ave`  
 - **Expected (C#):** business retained, primary `411`, suite as secondary  
 - **Falsifiable test:** `TestPunchlist_PL012_BusinessSuiteThenPrimary`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-013: Rural route phrase variants incomplete
 
@@ -177,7 +177,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `RFD Route 61 Box 87b`, `Rural Route NO. 91 Box A7`, Spanish `BZN`/`BUZON`, glued `RR0061#87b`  
 - **Expected:** normalize to `RR n BOX id`  
 - **Falsifiable tests:** `TestPunchlist_PL013a_RFDRoutePhrase`, `TestPunchlist_PL013b_GluedRRHash`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-014: Trailing junk blocks suffix peel
 
@@ -185,7 +185,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Sources:** A1-003  
 - **Repro:** street like `Oak Boulevard Box 9` (non-RR) loses Boulevard peel  
 - **Falsifiable test:** `TestPunchlist_PL014_TrailingJunkAfterSuffix`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-015: Parse vs structured Normalize diverge on highway BYP/FRONTAGE
 
@@ -204,7 +204,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Actual:** error or unrecognized; only English `URBANIZATION` in map  
 - **Expected:** map to `URB`  
 - **Falsifiable test:** `TestPunchlist_PL016_UrbanizacionSpelling`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-017: UNIT BOX street + civilian last line inconsistent
 
@@ -223,7 +223,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Actual:** `# 12` absorbed into street name  
 - **Expected:** primary `100`, secondary `#`/`12`, name `MAIN ST`  
 - **Falsifiable test:** `TestPunchlist_PL018_MidLineHashSecondary`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ---
 
@@ -236,7 +236,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `NORTH-EAST MAIN STREET`  
 - **Expected (C#):** `NE MAIN ST`  
 - **Falsifiable test:** `TestPunchlist_PL019_HyphenatedDirectional`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-020: Apostrophe not stripped
 
@@ -245,7 +245,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `West Main' rd`  
 - **Expected (C#):** `W MAIN RD`  
 - **Falsifiable test:** `TestPunchlist_PL020_ApostropheStrip`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-021: Hyphenated street token blocks suffix (`Main-Street`)
 
@@ -254,7 +254,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `100 Main-Street`  
 - **Actual:** suffix not peeled  
 - **Falsifiable test:** `TestPunchlist_PL021_HyphenatedStreetToken`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ### PL-022: KEY peeled as secondary; PRAIRIE typo in tables
 
@@ -279,7 +279,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `POB 11890`  
 - **Expected:** `PO BOX 11890`  
 - **Falsifiable test:** `TestPunchlist_PL024_POBAlias`  
-- **Status:** open
+- **Status:** **done** (minion wave 2, 2026-07-21)
 
 ---
 
