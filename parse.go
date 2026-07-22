@@ -449,8 +449,11 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	// UNIT 3200 then RM 12). Also clears the leading designator so
 	// splitPreStreet sees the house number first.
 	var leadingSecondary *secondaryPeel
-	tokens = reorderLeadingSecondary(tokens, isPR)
+	// Extract leading UNIT/APT/# pairs first so multi-secondary fold keeps
+	// original left-to-right order (Unit 3200 … Room 12 → UNIT 3200 RM 12).
+	// Then reorder remaining mid-line pairs (Suite 480 411 …) to the end.
 	tokens, leadingSecondary = takeLeadingSecondary(tokens, isPR)
+	tokens = reorderLeadingSecondary(tokens, isPR)
 
 	// Same-line business / narrative tokens before the house number
 	// (e.g. "WILLIAMSON MEDICAL CENTER 3000 EDWARD CURD LANE").
