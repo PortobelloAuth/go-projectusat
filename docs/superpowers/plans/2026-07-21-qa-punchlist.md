@@ -194,7 +194,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** same highway string via Parse path vs field-level Address differs on BYPASS/FRONTAGE  
 - **Expected:** identical content form  
 - **Falsifiable test:** `TestPunchlist_PL015_HighwayParseNormalizeParity`  
-- **Status:** open
+- **Status:** **done** (already GREEN under `-tags punchlist` as of punchlist commit — no code change required; keep as regression)
 
 ### PL-016: Spanish URBANIZACION rejected
 
@@ -270,7 +270,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Sources:** A1-008  
 - **Repro:** streets literally named like suite patterns without numbers  
 - **Falsifiable test:** `TestPunchlist_PL023_AptAsStreetName`  
-- **Status:** open
+- **Status:** **done** (already GREEN — "Suite Dreams Lane" style case passes; keep as regression)
 
 ### PL-024: POB alias for PO Box
 
