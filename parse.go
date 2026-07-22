@@ -401,9 +401,14 @@ func splitStreetAndCity(tokens []string, regionCode string) (Address, string, er
 //     also valid but harder to round-trip through field-level Normalize).
 //   - Hyphenated primaries (NYC style, e.g. "112-10") keep the hyphen via
 //     StripOptions.KeepHyphen.
-//   - Multi-secondary units (e.g. "Building 420 Room 120") are peeled right-to-
-//     left repeatedly and combined into SecondaryDesignator + SecondaryNumber
-//     so Format yields "BLDG 420 RM 120".
+//   - Multi-secondary units (e.g. "Building 420 Room 120") are peeled and
+//     combined into SecondaryDesignator + SecondaryNumber so Format yields
+//     "BLDG 420 RM 120". Leading secondaries (e.g. "Unit 3200 … Room 12") are
+//     extracted first so fold order preserves original left-to-right appearance
+//     → UNIT / "3200 RM 12".
+//   - State as portion of street name is abbreviated (MONTANA TREASURE → MT
+//     TREASURE); multi-word state prefixes are not stolen as predirectionals
+//     (SOUTH CAROLINA COUNTY ROAD 22 → SC COUNTY ROAD 22).
 func parseStreetLine(line string, regionCode string) (Address, error) {
 	isPR := regionCode == "PR"
 
@@ -434,9 +439,12 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	// and postdirectionals resolve as single compound abbreviations.
 	tokens = mergeDirectionTokens(tokens)
 
-	// Move leading secondary designator/# + number to the end so reverse peels
-	// see them as trailing (e.g. "APT 4 123 MAIN ST" → "123 MAIN ST APT 4").
-	tokens = reorderLeadingSecondary(tokens, isPR)
+	// Extract leading secondary designator/# + number so it stays first in
+	// multi-secondary fold order (e.g. "UNIT 3200 152 TECH DR ROOM 12" →
+	// UNIT 3200 then RM 12). Also clears the leading designator so
+	// splitPreStreet sees the house number first.
+	var leadingSecondary *secondaryPeel
+	tokens, leadingSecondary = takeLeadingSecondary(tokens, isPR)
 
 	// Same-line business / narrative tokens before the house number
 	// (e.g. "WILLIAMSON MEDICAL CENTER 3000 EDWARD CURD LANE").
@@ -449,7 +457,7 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		out.BusinessName = preStreet
 	}
 
-	tokens = peelSecondary(tokens, &out, isPR)
+	tokens = peelSecondary(tokens, &out, isPR, leadingSecondary)
 
 	// Postdirectional (right) only when a street-name token remains after the peel
 	// (accounting for an optional leading primary). Same empty-name guard as
@@ -535,7 +543,12 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	// when looking for the predirectional: "123 1/2 N MAIN" → predir N.
 	// If the directional is the only remaining name token (e.g. "1005 South
 	// Avenue" after peeling AVE), keep it as StreetName — do not set Predirectional.
-	if len(tokens) > 1 {
+	//
+	// Multi-word state names that begin with a directional word (SOUTH CAROLINA,
+	// NORTH DAKOTA, WEST VIRGINIA, …) must not lose their first token as predir:
+	// "SOUTH CAROLINA COUNTY ROAD 22" stays intact for highway normalize → SC …
+	// and "SOUTH CAROLINA AVENUE" keeps the full state as StreetName.
+	if len(tokens) > 1 && !leadingTokensAreMultiWordState(tokens) {
 		preIdx := 0
 		if looksLikeFraction(tokens[0]) && len(tokens) > 2 {
 			preIdx = 1
@@ -590,6 +603,12 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 			tokens[i] = full
 		}
 	}
+
+	// When a US state name is only a *portion* of the street name (more name
+	// tokens remain), abbreviate it to the two-letter code per Project US@:
+	// "MONTANA TREASURE" → "MT TREASURE". Entire-name state spelling is handled
+	// below via fullySpelledUSState when a street suffix is present.
+	tokens = abbreviateLeadingStatePortion(tokens)
 
 	name := strings.Join(tokens, " ")
 	// highways.NormalizeStreetName always succeeds for non-empty input: it
@@ -703,6 +722,77 @@ func fullySpelledUSState(name string) (string, bool) {
 	return full, ok
 }
 
+// leadingTokensAreMultiWordState reports whether tokens begin with a multi-word
+// US state/possession name (SOUTH CAROLINA, NEW YORK, WEST VIRGINIA, …). Used to
+// avoid peeling the first word as a predirectional when it belongs to the state.
+func leadingTokensAreMultiWordState(tokens []string) bool {
+	if len(tokens) < 2 {
+		return false
+	}
+	// Longest multi-word US names are up to 4 tokens (FEDERATED STATES OF MICRONESIA).
+	maxN := 4
+	if maxN > len(tokens) {
+		maxN = len(tokens)
+	}
+	for n := maxN; n >= 2; n-- {
+		candidate := strings.Join(tokens[:n], " ")
+		abbr, err := region.NormalizeRegion(candidate)
+		if err != nil {
+			continue
+		}
+		if _, ok := usStateFullNames[abbr]; !ok {
+			continue
+		}
+		// Require a multi-word full name (or multi-word alias), not a 1-token abbrev.
+		if full, ok := usStateFullNames[abbr]; ok && len(strings.Fields(full)) >= 2 {
+			// Accept when the candidate equals the full name or a known multi-word alias
+			// that NormalizeRegion maps to the same code (e.g. S CAROLINA → SC).
+			if candidate == full || len(strings.Fields(candidate)) >= 2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// abbreviateLeadingStatePortion replaces a leading full US state name with its
+// two-letter postal code when the state is only a portion of the street name
+// (at least one name token remains after the state). Entire-name state spelling
+// is left alone for fullySpelledUSState when a street suffix is present.
+//
+//	MONTANA TREASURE → MT TREASURE
+//	SOUTH CAROLINA COUNTY ROAD 22 → SC COUNTY ROAD 22
+//	OKLAHOMA (alone) → unchanged
+func abbreviateLeadingStatePortion(tokens []string) []string {
+	if len(tokens) < 2 {
+		return tokens
+	}
+	// Leave at least one residual name token after the state portion.
+	maxN := 4
+	if maxN > len(tokens)-1 {
+		maxN = len(tokens) - 1
+	}
+	for n := maxN; n >= 1; n-- {
+		// Two-letter codes are already abbreviated — do not rewrite.
+		if n == 1 && len(tokens[0]) <= 2 {
+			continue
+		}
+		candidate := strings.Join(tokens[:n], " ")
+		abbr, err := region.NormalizeRegion(candidate)
+		if err != nil {
+			continue
+		}
+		if _, ok := usStateFullNames[abbr]; !ok {
+			continue
+		}
+		out := make([]string, 0, len(tokens)-n+1)
+		out = append(out, abbr)
+		out = append(out, tokens[n:]...)
+		return out
+	}
+	return tokens
+}
+
 // expandHashTokens splits glued forms like "#12" into "#", "12".
 func expandHashTokens(tokens []string) []string {
 	out := make([]string, 0, len(tokens)+1)
@@ -731,8 +821,8 @@ func expandHashTokens(tokens []string) []string {
 // following street body, tokens are returned as-is.
 //
 // Call after special rewrite, hash expand, directional merge, and leading
-// secondary reorder so military/RR/PO never reach here and "APT 4 123 …" is
-// already reordered to start with the house number.
+// secondary extraction so military/RR/PO never reach here and "APT 4 123 …"
+// already starts with the house number.
 func splitPreStreet(tokens []string) (business string, rest []string) {
 	if len(tokens) < 2 {
 		return "", tokens
@@ -782,39 +872,31 @@ func restoreDecimalPeriods(s string) string {
 	return strings.ReplaceAll(s, string(decimalPeriodSentinel), ".")
 }
 
-// reorderLeadingSecondary moves a leading secondary designator (or #) plus its
-// unit number to the end of the token slice so reverse-token peels can capture
-// them. Patterns:
+// takeLeadingSecondary extracts a leading secondary designator (or #) plus its
+// unit number so it can be folded first in multi-secondary order (preserving
+// original left-to-right appearance). Patterns:
 //
-//	DESIGNATOR + NUMBER + rest  →  rest + DESIGNATOR + NUMBER
-//	# + NUMBER + rest           →  rest + # + NUMBER
+//	DESIGNATOR + NUMBER + rest  →  rest, peel{DES, NUMBER}
+//	# + NUMBER + rest           →  rest, peel{"#", NUMBER}
 //
 // Glued "#NUMBER" is already split by expandHashTokens. Numbered designators
 // without a following number are left unchanged (no invented unit number).
-// Non-numbered designators at the start are not reordered.
-func reorderLeadingSecondary(tokens []string, isPR bool) []string {
+// Non-numbered designators at the start are not extracted.
+func takeLeadingSecondary(tokens []string, isPR bool) ([]string, *secondaryPeel) {
 	if len(tokens) < 3 {
-		// Need designator/number plus at least one rest token to move.
-		return tokens
+		// Need designator/number plus at least one rest token.
+		return tokens, nil
 	}
 
 	// "# NUMBER rest…"
 	if tokens[0] == "#" && looksLikeSecondaryNumber(tokens[1]) {
-		rest := tokens[2:]
-		out := make([]string, 0, len(tokens))
-		out = append(out, rest...)
-		out = append(out, "#", tokens[1])
-		return out
+		return tokens[2:], &secondaryPeel{designator: "#", number: tokens[1]}
 	}
 
 	// "APT NUMBER rest…" (numbered secondary designator only)
 	if info, err := secondaryunit.Info(tokens[0]); err == nil && info.Numbered {
 		if looksLikeSecondaryNumber(tokens[1]) {
-			rest := tokens[2:]
-			out := make([]string, 0, len(tokens))
-			out = append(out, rest...)
-			out = append(out, tokens[0], tokens[1])
-			return out
+			return tokens[2:], &secondaryPeel{designator: info.Short, number: tokens[1]}
 		}
 		// Numbered designator with no unit number — do not invent.
 	}
@@ -823,16 +905,12 @@ func reorderLeadingSecondary(tokens []string, isPR bool) []string {
 	if isPR {
 		if short, err := puertorico.NormalizeSecondary(tokens[0]); err == nil {
 			if looksLikeSecondaryNumber(tokens[1]) {
-				rest := tokens[2:]
-				out := make([]string, 0, len(tokens))
-				out = append(out, rest...)
-				out = append(out, short, tokens[1])
-				return out
+				return tokens[2:], &secondaryPeel{designator: short, number: tokens[1]}
 			}
 		}
 	}
 
-	return tokens
+	return tokens, nil
 }
 
 // looksLikeSecondaryNumber reports whether tok is a plausible unit number
@@ -848,21 +926,23 @@ type secondaryPeel struct {
 	number     string // unit number, or empty for non-numbered designators
 }
 
-// peelSecondary repeatedly peels trailing secondary designators from the right.
+// peelSecondary repeatedly peels trailing secondary designators from the right,
+// then folds them with an optional leading secondary (from takeLeadingSecondary)
+// so Format preserves left-to-right designator order of original appearance.
+//
 // Overseas military "UNIT N BOX N" is handled earlier by the military fast path,
 // so this peel only sees civilian street lines.
 //
 // The Address struct holds a single SecondaryDesignator + SecondaryNumber pair.
-// Multiple trailing secondaries are peeled right-to-left and folded so Format
-// yields e.g. "BLDG 420 RM 120":
-//   - rightmost peel seeds designator/number
-//   - each further-left numbered peel becomes the designator; prior des+num
-//     is appended to the number trail
-//   - non-numbered peels (UPPER/REAR) append onto SecondaryNumber
+// Multiple secondaries fold as:
+//   - ordered left-to-right: leading peel first, then trailing peels LTR
+//   - first numbered peel becomes SecondaryDesignator (or first peel if none numbered)
+//   - subsequent peels append onto SecondaryNumber ("420 RM 120", "3200 RM 12")
+//   - non-numbered peels (UPPER/REAR) before the designator append at the end
 //
-// So "Building 420 Room 120" → BLDG / "420 RM 120", and "Unit 3200 … Upper"
-// (after leading reorder) → UNIT / "3200 UPPR".
-func peelSecondary(tokens []string, out *Address, isPR bool) []string {
+// So "Building 420 Room 120" → BLDG / "420 RM 120", and
+// "Unit 3200 152 Tech Drive Room 12" → UNIT / "3200 RM 12".
+func peelSecondary(tokens []string, out *Address, isPR bool, leading *secondaryPeel) []string {
 	var peels []secondaryPeel // rightmost first
 
 	for len(tokens) > 0 {
@@ -925,40 +1005,67 @@ func peelSecondary(tokens []string, out *Address, isPR bool) []string {
 		break
 	}
 
-	if len(peels) == 0 {
+	// Build left-to-right order: leading (original first) then reverse of
+	// rightmost-first trailing peels.
+	var ordered []secondaryPeel
+	if leading != nil {
+		ordered = append(ordered, *leading)
+	}
+	for i := len(peels) - 1; i >= 0; i-- {
+		ordered = append(ordered, peels[i])
+	}
+	if len(ordered) == 0 {
 		return tokens
 	}
 
-	// Fold rightmost-first peels into a single designator + number pair.
-	// Rightmost peel is the seed; each further-left numbered secondary becomes
-	// the new designator with the prior designator/number as the trail:
-	//   RM+120, then BLDG+420  →  BLDG / "420 RM 120"
-	// Non-numbered peels (UPPER/REAR) append to SecondaryNumber so leading
-	// "Unit 3200 … Upper" (reordered to "… Upper Unit 3200") still yields
-	// UNIT / "3200 UPPR" rather than promoting UPPR to designator.
-	des := peels[0].designator
-	num := peels[0].number
-	for i := 1; i < len(peels); i++ {
-		p := peels[i]
-		if p.number != "" {
-			trail := des
-			if num != "" {
-				trail = des + " " + num
-			}
-			des = p.designator
-			num = p.number + " " + trail
-			continue
-		}
-		// Non-numbered further left (or after a bare designator seed).
-		if num != "" {
-			num = num + " " + p.designator
-		} else {
-			num = p.designator
-		}
-	}
+	des, num := foldSecondaryPeels(ordered)
 	out.SecondaryDesignator = des
 	out.SecondaryNumber = num
 	return tokens
+}
+
+// foldSecondaryPeels combines ordered (left-to-right) secondary peels into a
+// single designator + number pair for Address / Format.
+func foldSecondaryPeels(ordered []secondaryPeel) (des, num string) {
+	if len(ordered) == 0 {
+		return "", ""
+	}
+	// Prefer the first numbered peel as the primary designator so non-numbered
+	// markers (UPPER/REAR) do not displace UNIT/BLDG when they appear first.
+	firstNum := -1
+	for i, p := range ordered {
+		if p.number != "" {
+			firstNum = i
+			break
+		}
+	}
+	if firstNum < 0 {
+		des = ordered[0].designator
+		for i := 1; i < len(ordered); i++ {
+			if num != "" {
+				num += " "
+			}
+			num += ordered[i].designator
+		}
+		return des, num
+	}
+	des = ordered[firstNum].designator
+	num = ordered[firstNum].number
+	for i := firstNum + 1; i < len(ordered); i++ {
+		p := ordered[i]
+		if p.number != "" {
+			num += " " + p.designator + " " + p.number
+		} else {
+			num += " " + p.designator
+		}
+	}
+	// Non-numbered peels that appeared before the designator append at the end
+	// (Unit 3200 … Upper with Upper left of Unit after extraction is rare;
+	// trailing "… Upper Unit 3200" still yields UNIT / "3200 UPPR").
+	for i := 0; i < firstNum; i++ {
+		num += " " + ordered[i].designator
+	}
+	return des, num
 }
 
 // looksLikePrimaryNumber reports whether tok is a plausible primary address number
