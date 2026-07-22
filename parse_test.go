@@ -49,6 +49,69 @@ func TestParseMilitaryCommaSeparated(t *testing.T) {
 	}
 }
 
+func TestParseMilitarySingleLineSpaceSeparated(t *testing.T) {
+	// Space-only (no newline/comma) must still parse overseas military.
+	raw := "PSC 3 BOX 4120 APO AE 09021-0002"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "PSC 3 BOX 4120" {
+		t.Errorf("StreetName = %q, want PSC 3 BOX 4120", got.StreetName)
+	}
+	if got.BusinessName != "" {
+		t.Errorf("BusinessName = %q, want empty", got.BusinessName)
+	}
+	if got.City != "APO" || got.Region != "AE" || got.Postal != "09021-0002" {
+		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+	if got.PrimaryNumber != "" || got.SecondaryDesignator != "" {
+		t.Errorf("expected no civilian peels, primary=%q sec=%q", got.PrimaryNumber, got.SecondaryDesignator)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if Format(norm) != "PSC 3 BOX 4120\nAPO AE 09021-0002" {
+		t.Errorf("Format = %q", Format(norm))
+	}
+}
+
+func TestParseMilitarySingleLineWithBusiness(t *testing.T) {
+	raw := "HQ DET PSC 3 BOX 4120 APO AE 09021-0002"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "PSC 3 BOX 4120" {
+		t.Errorf("StreetName = %q", got.StreetName)
+	}
+	if got.BusinessName != "HQ DET" {
+		t.Errorf("BusinessName = %q, want HQ DET", got.BusinessName)
+	}
+	if got.City != "APO" || got.Region != "AE" || got.Postal != "09021-0002" {
+		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+}
+
+func TestParseMilitaryStreetCivilianLastLine(t *testing.T) {
+	// Military-form street with civilian city must keep street intact.
+	raw := "UNIT 2050 BOX 4190\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "UNIT 2050 BOX 4190" {
+		t.Errorf("StreetName = %q, want UNIT 2050 BOX 4190", got.StreetName)
+	}
+	if got.PrimaryNumber != "" || got.SecondaryDesignator != "" {
+		t.Errorf("expected no civilian peels, primary=%q sec=%q", got.PrimaryNumber, got.SecondaryDesignator)
+	}
+	if got.City != "SPRINGFIELD" || got.Region != "IL" || got.Postal != "62701" {
+		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+}
+
 func TestParseSimpleMultiline(t *testing.T) {
 	raw := "123 Main Street\nSpringfield IL 62701"
 	got, err := Parse(raw)

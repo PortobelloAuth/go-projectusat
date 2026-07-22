@@ -44,11 +44,74 @@ func Parse(raw string) (Address, error) {
 				}
 			}
 		}
+
+		// Military street form with civilian last line (e.g. UNIT BOX + Springfield IL).
+		// Street line alone normalizes as military; last line is ordinary city/region/ZIP.
+		if street, err := military.NormalizeStreetLine(lines[len(lines)-2]); err == nil {
+			if city, reg, zip, err := parseLastLine(lines[len(lines)-1]); err == nil {
+				var business string
+				if len(lines) > 2 {
+					business = strings.ToUpper(textutil.CollapseSpace(strings.Join(lines[:len(lines)-2], " ")))
+				}
+				return Address{
+					BusinessName: business,
+					StreetName:   street,
+					City:         city,
+					Region:       reg,
+					Postal:       zip,
+				}, nil
+			}
+		}
 	}
 
-	// Single-line military "STREET, LAST" already split by splitAddressLines into 2 lines via comma.
-	// Fall through to Task 3/4 for non-military.
+	// Single-line space-separated military: "PSC 3 BOX 4120 APO AE 09021-0002"
+	// (comma-separated form already becomes 2 lines via splitAddressLines).
+	if len(lines) == 1 {
+		if addr, ok := tryParseSingleLineMilitary(lines[0]); ok {
+			return addr, nil
+		}
+	}
+
+	// Fall through for non-military.
 	return parseCivilian(lines)
+}
+
+// tryParseSingleLineMilitary recognizes a space-only overseas military address
+// on one logical line: optional business tokens, then TYPE N BOX N, then
+// APO|FPO|DPO AE|AP|AA ZIP. Consumes last-line and street from the ends so
+// multi-token business prefixes are preserved.
+func tryParseSingleLineMilitary(line string) (Address, bool) {
+	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
+	// Minimum: TYPE N BOX N + CITY REGION ZIP (7 tokens).
+	if len(tokens) < 7 {
+		return Address{}, false
+	}
+
+	// Last 3 tokens must be a military last line.
+	lastCand := strings.Join(tokens[len(tokens)-3:], " ")
+	city, reg, zip, err := military.NormalizeLastLine(lastCand)
+	if err != nil {
+		return Address{}, false
+	}
+
+	// Preceding 4 tokens must be a military street line.
+	streetCand := strings.Join(tokens[len(tokens)-7:len(tokens)-3], " ")
+	street, err := military.NormalizeStreetLine(streetCand)
+	if err != nil {
+		return Address{}, false
+	}
+
+	var business string
+	if len(tokens) > 7 {
+		business = strings.Join(tokens[:len(tokens)-7], " ")
+	}
+	return Address{
+		BusinessName: business,
+		StreetName:   street,
+		City:         city,
+		Region:       reg,
+		Postal:       zip,
+	}, true
 }
 
 // splitAddressLines splits on newlines, then on commas within lines, collapses
