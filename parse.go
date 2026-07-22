@@ -139,7 +139,7 @@ func parseCivilian(lines []string) (Address, error) {
 		// Single segment: peel trailing last-line tokens; remainder is street.
 		return parseSingleLineCivilian(lines[0])
 	}
-	city, reg, zip, err := parseLastLine(lines[len(lines)-1])
+	city, reg, zip, country, err := parseLastLine(lines[len(lines)-1])
 	if err != nil {
 		return Address{}, err
 	}
@@ -158,6 +158,7 @@ func parseCivilian(lines []string) (Address, error) {
 	street.City = city
 	street.Region = reg
 	street.Postal = zip
+	street.Country = country
 	return street, nil
 }
 
@@ -178,17 +179,22 @@ func mergeBusinessName(multiLine, sameLine string) string {
 
 // parseLastLine extracts city, region (abbreviated), and postal from a last line
 // like "SPRINGFIELD IL 62701" or "OTTAWA ON K1A 0B1". City is multi-word capable.
-func parseLastLine(line string) (city, reg, postal string, err error) {
+// Trailing country tokens (USA/US/UNITED STATES) are stripped into country.
+func parseLastLine(line string) (city, reg, postal, country string, err error) {
 	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
 	if len(tokens) < 2 {
-		return "", "", "", fmt.Errorf("invalid last line: %q", line)
+		return "", "", "", "", fmt.Errorf("invalid last line: %q", line)
+	}
+	tokens, country = stripTrailingCountry(tokens)
+	if len(tokens) < 2 {
+		return "", "", "", "", fmt.Errorf("invalid last line: %q", line)
 	}
 	postal, rest, ok := peelPostal(tokens)
 	if !ok {
-		return "", "", "", fmt.Errorf("invalid last line postal: %q", line)
+		return "", "", "", "", fmt.Errorf("invalid last line postal: %q", line)
 	}
 	if len(rest) < 1 {
-		return "", "", "", fmt.Errorf("invalid last line: missing region in %q", line)
+		return "", "", "", "", fmt.Errorf("invalid last line: missing region in %q", line)
 	}
 	// Longest region match from the right of rest (e.g. DISTRICT OF COLUMBIA).
 	for n := len(rest); n >= 1; n-- {
@@ -196,12 +202,32 @@ func parseLastLine(line string) (city, reg, postal string, err error) {
 		if abbr, e := region.NormalizeRegion(cand); e == nil {
 			city = strings.Join(rest[:len(rest)-n], " ")
 			if city == "" {
-				return "", "", "", fmt.Errorf("invalid last line: missing city in %q", line)
+				return "", "", "", "", fmt.Errorf("invalid last line: missing city in %q", line)
 			}
-			return city, abbr, postal, nil
+			return city, abbr, postal, country, nil
 		}
 	}
-	return "", "", "", fmt.Errorf("unrecognized region in last line: %q", line)
+	return "", "", "", "", fmt.Errorf("unrecognized region in last line: %q", line)
+}
+
+// stripTrailingCountry removes a trailing country designator (USA, US, UNITED
+// STATES) from tokens. Returns the remaining tokens and the country string
+// (empty if none). Does not strip CA/CANADA — CA collides with California.
+func stripTrailingCountry(tokens []string) (rest []string, country string) {
+	if len(tokens) == 0 {
+		return tokens, ""
+	}
+	last := tokens[len(tokens)-1]
+	switch last {
+	case "USA", "US":
+		return tokens[:len(tokens)-1], last
+	case "STATES":
+		// UNITED STATES
+		if len(tokens) >= 2 && tokens[len(tokens)-2] == "UNITED" {
+			return tokens[:len(tokens)-2], "UNITED STATES"
+		}
+	}
+	return tokens, ""
 }
 
 // peelPostal removes US ZIP / ZIP+4 or Canadian postal from the right of tokens.
@@ -216,38 +242,33 @@ func peelPostal(tokens []string) (postal string, rest []string, ok bool) {
 		return normalizePostal(last), tokens[:len(tokens)-1], true
 	}
 
+	// Compact Canadian single token: K1A0B1 → K1A 0B1
+	if caPostalCompact.MatchString(last) {
+		return normalizePostal(last), tokens[:len(tokens)-1], true
+	}
+
 	if len(tokens) >= 2 {
 		prev := tokens[len(tokens)-2]
 		// Two-token US ZIP+4: 62701 1234
 		if usZIPCompact.MatchString(prev+last) || usZIPCompact.MatchString(prev+"-"+last) {
 			return normalizePostal(prev + "-" + last), tokens[:len(tokens)-2], true
 		}
-		// Canadian two-token: K1A 0B1
-		two := prev + " " + last
-		np := normalizePostal(two)
-		if len(np) >= 6 && containsLetter(np) {
-			return np, tokens[:len(tokens)-2], true
+		// Canadian two-token FSA + LDU only: K1A 0B1 (not region+garbage).
+		if caPostalFSA.MatchString(prev) && caPostalLDU.MatchString(last) {
+			return normalizePostal(prev + last), tokens[:len(tokens)-2], true
 		}
 	}
 
-	// Single alphanumeric postal fallback
+	// Single alphanumeric postal fallback (unknown international forms).
 	return normalizePostal(last), tokens[:len(tokens)-1], true
 }
 
-func containsLetter(s string) bool {
-	for _, r := range s {
-		if unicode.IsLetter(r) {
-			return true
-		}
-	}
-	return false
-}
-
-// parseSingleLineCivilian peels postal + region + single-token city from the
-// right; remainder is componentized as a street line. Multi-word cities require
-// multi-line form.
+// parseSingleLineCivilian peels postal + region from the right, then splits the
+// remaining tokens into street + multi-word city by trying city lengths and
+// preferring a parseStreetLine result with PrimaryNumber and StreetSuffix.
 func parseSingleLineCivilian(line string) (Address, error) {
 	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
+	tokens, country := stripTrailingCountry(tokens)
 	postal, rest, ok := peelPostal(tokens)
 	if !ok || len(rest) < 2 {
 		return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
@@ -257,23 +278,74 @@ func parseSingleLineCivilian(line string) (Address, error) {
 		cand := strings.Join(rest[len(rest)-n:], " ")
 		if abbr, e := region.NormalizeRegion(cand); e == nil {
 			before := rest[:len(rest)-n]
+			// Need ≥1 street token and ≥1 city token.
 			if len(before) < 2 {
 				return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
 			}
-			// Conservative: last token of before = city; rest = street.
-			city := before[len(before)-1]
-			streetToks := before[:len(before)-1]
-			street, err := parseStreetLine(strings.Join(streetToks, " "), abbr)
+			street, city, err := splitStreetAndCity(before, abbr)
 			if err != nil {
 				return Address{}, err
 			}
 			street.City = city
 			street.Region = abbr
 			street.Postal = postal
+			street.Country = country
 			return street, nil
 		}
 	}
 	return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
+}
+
+// splitStreetAndCity partitions tokens (street… city…) after region/postal are
+// peeled. Tries city as the last 1..len-1 tokens; prefers the longest city where
+// parseStreetLine succeeds with a PrimaryNumber or StreetName. When multiple
+// candidates succeed, prefer those with StreetSuffix (or SecondaryDesignator)
+// so "123 MAIN STREET NEW YORK" yields city NEW YORK rather than STREET NEW YORK.
+func splitStreetAndCity(tokens []string, regionCode string) (Address, string, error) {
+	type cand struct {
+		street Address
+		city   string
+		cityN  int
+		score  int
+	}
+	var best *cand
+	// cityLen from longest to shortest so equal scores keep the longer city.
+	for cityLen := len(tokens) - 1; cityLen >= 1; cityLen-- {
+		streetToks := tokens[:len(tokens)-cityLen]
+		if len(streetToks) == 0 {
+			continue
+		}
+		street, err := parseStreetLine(strings.Join(streetToks, " "), regionCode)
+		if err != nil {
+			continue
+		}
+		if street.PrimaryNumber == "" && street.StreetName == "" {
+			continue
+		}
+		score := 0
+		if street.PrimaryNumber != "" {
+			score += 2
+		}
+		if street.StreetName != "" {
+			score++
+		}
+		if street.StreetSuffix != "" {
+			score += 3
+		}
+		if street.SecondaryDesignator != "" {
+			score++
+		}
+		// Longer city breaks ties (prefer multi-word cities).
+		score = score*100 + cityLen
+		if best == nil || score > best.score {
+			c := cand{street: street, city: strings.Join(tokens[len(tokens)-cityLen:], " "), cityN: cityLen, score: score}
+			best = &c
+		}
+	}
+	if best == nil {
+		return Address{}, "", fmt.Errorf("cannot split street and city from %q", strings.Join(tokens, " "))
+	}
+	return best.street, best.city, nil
 }
 
 // parseStreetLine reverse-token peels secondary, postdirectional, and suffix,

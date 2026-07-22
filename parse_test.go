@@ -1659,3 +1659,110 @@ func TestParseNonPRDoesNotForceSpanishStreetType(t *testing.T) {
 		t.Errorf("StreetName = %q, expected CALLE/LUNA residual", gotES.StreetName)
 	}
 }
+
+func TestParseSingleLineMultiWordCity(t *testing.T) {
+	// PL-002: city may span multiple tokens on a single-line address.
+	raw := "123 Main Street New York NY 10005"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.City != "NEW YORK" {
+		t.Fatalf("City = %q, want NEW YORK", got.City)
+	}
+	if got.Region != "NY" || got.Postal != "10005" {
+		t.Fatalf("region/postal = %q %q", got.Region, got.Postal)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if FormatStreetLine(norm) != "123 MAIN ST" {
+		t.Fatalf("FormatStreetLine = %q, want 123 MAIN ST", FormatStreetLine(norm))
+	}
+}
+
+func TestParseSingleLineSingleWordCityStillWorks(t *testing.T) {
+	raw := "123 Main Street Springfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.City != "SPRINGFIELD" || got.Region != "IL" || got.Postal != "62701" {
+		t.Fatalf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+	if FormatStreetLine(got) != "123 MAIN ST" && !(got.PrimaryNumber == "123" && got.StreetName == "MAIN" && got.StreetSuffix == "ST") {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+}
+
+func TestParseCompactCanadianPostal(t *testing.T) {
+	// PL-003a: compact single-token Canadian postal K1A0B1.
+	raw := "10 Wellington Street\nOttawa ON K1A0B1"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.Region != "ON" {
+		t.Fatalf("Region = %q, want ON", got.Region)
+	}
+	if got.City != "OTTAWA" {
+		t.Fatalf("City = %q, want OTTAWA", got.City)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if strings.ReplaceAll(norm.Postal, " ", "") != "K1A0B1" {
+		t.Fatalf("Postal = %q, want K1A 0B1 (or compact equivalent)", norm.Postal)
+	}
+	if norm.Postal != "K1A 0B1" {
+		t.Fatalf("Postal = %q, want spaced K1A 0B1", norm.Postal)
+	}
+}
+
+func TestParseTrailingCountryOnLastLine(t *testing.T) {
+	// PL-003b: trailing USA must not pollute ZIP.
+	raw := "123 Main Street\nSpringfield IL 62701 USA"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.Postal != "62701" {
+		t.Fatalf("Postal = %q, want 62701", got.Postal)
+	}
+	if strings.Contains(got.Postal, "USA") {
+		t.Fatalf("Postal still contains USA: %q", got.Postal)
+	}
+	if got.City != "SPRINGFIELD" || got.Region != "IL" {
+		t.Fatalf("city/region = %q %q", got.City, got.Region)
+	}
+	// Country may be captured or dropped.
+	if got.Country != "" && got.Country != "USA" {
+		t.Fatalf("Country = %q, want USA or empty", got.Country)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if norm.Postal != "62701" {
+		t.Fatalf("Normalize Postal = %q, want 62701", norm.Postal)
+	}
+}
+
+func TestParseTrailingUnitedStatesOnLastLine(t *testing.T) {
+	raw := "123 Main Street\nSpringfield IL 62701 UNITED STATES"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.Postal != "62701" {
+		t.Fatalf("Postal = %q, want 62701", got.Postal)
+	}
+	if got.Country != "" && got.Country != "UNITED STATES" {
+		t.Fatalf("Country = %q", got.Country)
+	}
+}

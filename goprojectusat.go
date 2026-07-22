@@ -60,6 +60,13 @@ type Options struct {
 // usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
 var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
+// Canadian postal: compact A1A1A1, or FSA (A1A) + LDU (1A1) as two tokens.
+var (
+	caPostalCompact = regexp.MustCompile(`^[A-Z]\d[A-Z]\d[A-Z]\d$`)
+	caPostalFSA     = regexp.MustCompile(`^[A-Z]\d[A-Z]$`)
+	caPostalLDU     = regexp.MustCompile(`^\d[A-Z]\d$`)
+)
+
 // Normalize returns a content-normalized copy (uppercase, standard abbreviations).
 // Diacritics are preserved; callers may pre-run diacritics.Substitute if needed.
 // Empty optional fields stay blank. Unrecognized non-empty controlled vocabulary
@@ -224,8 +231,8 @@ func baseField(s string) string {
 	return textutil.Upper(textutil.CollapseSpace(s))
 }
 
-// normalizePostal formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
-// as uppercase alphanumerics with collapsed spacing.
+// normalizePostal formats US ZIP / ZIP+4 and Canadian A1A 1A1; other patterns
+// remain uppercase alphanumerics with collapsed spacing.
 func normalizePostal(s string) string {
 	s = baseField(s)
 	if s == "" {
@@ -242,7 +249,12 @@ func normalizePostal(s string) string {
 		return m[1]
 	}
 
-	// Canadian / other international: uppercase, collapse space, drop punctuation.
+	// Canadian: compact or spaced → "A1A 1A1"
+	if caPostalCompact.MatchString(compact) {
+		return compact[:3] + " " + compact[3:]
+	}
+
+	// Other international: uppercase, collapse space, drop punctuation.
 	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{}))
 }
 

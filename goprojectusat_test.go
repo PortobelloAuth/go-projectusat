@@ -131,6 +131,8 @@ func TestNormalizePostalVariants(t *testing.T) {
 		{"62701 1234", "62701-1234"},
 		{"k1a 0b1", "K1A 0B1"},
 		{"K1A  0B1", "K1A 0B1"},
+		{"K1A0B1", "K1A 0B1"},
+		{"k1a0b1", "K1A 0B1"},
 		{"", ""},
 		{"unknown", ""},
 	}
