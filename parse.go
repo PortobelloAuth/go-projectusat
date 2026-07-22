@@ -48,7 +48,7 @@ func Parse(raw string) (Address, error) {
 		// Military street form with civilian last line (e.g. UNIT BOX + Springfield IL).
 		// Street line alone normalizes as military; last line is ordinary city/region/ZIP.
 		if street, err := military.NormalizeStreetLine(lines[len(lines)-2]); err == nil {
-			if city, reg, zip, err := parseLastLine(lines[len(lines)-1]); err == nil {
+			if city, reg, zip, country, err := parseLastLine(lines[len(lines)-1]); err == nil {
 				var business string
 				if len(lines) > 2 {
 					business = strings.ToUpper(textutil.CollapseSpace(strings.Join(lines[:len(lines)-2], " ")))
@@ -59,6 +59,7 @@ func Parse(raw string) (Address, error) {
 					City:         city,
 					Region:       reg,
 					Postal:       zip,
+					Country:      country,
 				}, nil
 			}
 		}
@@ -123,15 +124,49 @@ func splitAddressLines(raw string) []string {
 	raw = strings.ReplaceAll(raw, "\r", "\n")
 	var out []string
 	for _, line := range strings.Split(raw, "\n") {
-		// Comma-separated segments within a line become separate logical lines.
-		for _, part := range strings.Split(line, ",") {
-			part = textutil.CollapseSpace(part)
-			if part != "" {
-				out = append(out, part)
-			}
+		line = textutil.CollapseSpace(line)
+		if line == "" {
+			continue
+		}
+		if left, right, ok := splitMilitaryCommaLine(line); ok {
+			out = append(out, left, right)
+			continue
+		}
+		// Commas are punctuation within a line, not segment boundaries.
+		line = textutil.CollapseSpace(strings.ReplaceAll(line, ",", " "))
+		if line != "" {
+			out = append(out, line)
 		}
 	}
 	return out
+}
+
+// splitMilitaryCommaLine bipartitions a single physical line on a comma when
+// the left side is a military street line and the right is a military last line.
+// Remaining commas (if any) on either side are treated as spaces.
+func splitMilitaryCommaLine(line string) (left, right string, ok bool) {
+	if !strings.Contains(line, ",") {
+		return "", "", false
+	}
+	// Try each comma as the street/last boundary (usually exactly one).
+	for i := 0; i < len(line); i++ {
+		if line[i] != ',' {
+			continue
+		}
+		left = textutil.CollapseSpace(strings.ReplaceAll(line[:i], ",", " "))
+		right = textutil.CollapseSpace(strings.ReplaceAll(line[i+1:], ",", " "))
+		if left == "" || right == "" {
+			continue
+		}
+		if _, err := military.NormalizeStreetLine(left); err != nil {
+			continue
+		}
+		if _, _, _, err := military.NormalizeLastLine(right); err != nil {
+			continue
+		}
+		return left, right, true
+	}
+	return "", "", false
 }
 
 func parseCivilian(lines []string) (Address, error) {
@@ -412,11 +447,20 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 
 	tokens = peelSecondary(tokens, &out, isPR)
 
-	// Postdirectional (right)
+	// Postdirectional (right) only when a street-name token remains after the peel
+	// (accounting for an optional leading primary). Same empty-name guard as
+	// predirectional: "123 South" keeps SOUTH as StreetName, not Postdirectional.
 	if len(tokens) > 1 {
 		if abbr, err := directionals.AbbreviateDirectional(tokens[len(tokens)-1]); err == nil {
-			out.Postdirectional = abbr
-			tokens = tokens[:len(tokens)-1]
+			residual := tokens[:len(tokens)-1]
+			nameBody := residual
+			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
+				nameBody = nameBody[1:]
+			}
+			if len(nameBody) > 0 {
+				out.Postdirectional = abbr
+				tokens = residual
+			}
 		}
 	}
 

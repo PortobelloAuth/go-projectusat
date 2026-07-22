@@ -126,6 +126,64 @@ func TestParseSimpleMultiline(t *testing.T) {
 	}
 }
 
+// PL-004a: comma in last line must not hard-split into a city-less last segment.
+func TestParseCommaInLastLine(t *testing.T) {
+	raw := "123 Main Street\nSpringfield, IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.City != "SPRINGFIELD" || got.Region != "IL" || got.Postal != "62701" {
+		t.Fatalf("last = city=%q region=%q postal=%q", got.City, got.Region, got.Postal)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+}
+
+// PL-004b: comma before apartment stays on the street line.
+func TestParseCommaBeforeApt(t *testing.T) {
+	raw := "123 Main Street, Apt 4\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "APT" || got.SecondaryNumber != "4" {
+		t.Fatalf("secondary = %q %q, want APT 4", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if FormatStreetLine(norm) != "123 MAIN ST APT 4" {
+		t.Fatalf("FormatStreetLine = %q, want 123 MAIN ST APT 4", FormatStreetLine(norm))
+	}
+}
+
+// PL-005: sole remaining name token that is directional stays as StreetName.
+func TestParseDirectionalOnlyStreetName(t *testing.T) {
+	raw := "123 South\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" {
+		t.Fatalf("PrimaryNumber = %q, want 123", got.PrimaryNumber)
+	}
+	if got.StreetName != "SOUTH" {
+		t.Fatalf("StreetName = %q, want SOUTH", got.StreetName)
+	}
+	if got.Predirectional != "" {
+		t.Fatalf("Predirectional = %q, want empty", got.Predirectional)
+	}
+	if got.Postdirectional != "" {
+		t.Fatalf("Postdirectional = %q, want empty", got.Postdirectional)
+	}
+}
+
 func TestParseWithBusinessLine(t *testing.T) {
 	raw := "Acme Corp\n123 Main Street\nSpringfield IL 62701"
 	got, err := Parse(raw)
