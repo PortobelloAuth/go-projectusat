@@ -435,9 +435,14 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	if len(tokens) == 0 {
 		return Address{}, fmt.Errorf("empty street line")
 	}
+	// Hyphenated compounds: NORTH-EAST → NE; Main-Street → MAIN STREET.
+	tokens = expandHyphenatedDirectionals(tokens)
+	tokens = expandHyphenatedStreetTokens(tokens)
 	// Merge multi-token directionals (SOUTH WEST → SW) before peels so pre-
 	// and postdirectionals resolve as single compound abbreviations.
 	tokens = mergeDirectionTokens(tokens)
+	// Mid-line "# 12" secondary → trailing for reverse peels.
+	tokens = reorderMidLineHashSecondary(tokens)
 
 	// Extract leading secondary designator/# + number so it stays first in
 	// multi-secondary fold order (e.g. "UNIT 3200 152 TECH DR ROOM 12" →
@@ -477,26 +482,10 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		}
 	}
 
-	// Street suffix (right) — only if a name body remains after the peel
-	// (accounting for an optional leading primary number). Peel exactly one
-	// suffix; a second trailing suffix stays in the name (expanded to primary
-	// form below) so e.g. "Main Avenue Drive" → name MAIN AVENUE + DR.
-	//
-	// When the only residual after primary would be the suffix itself, leave it
-	// as street-name material: "1001 Avenue E" → name AVENUE + postdir E
-	// (not suffix AVE with empty name); "1000 AVE" → name AVENUE.
-	if len(tokens) >= 2 {
-		if abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); err == nil {
-			residual := tokens[:len(tokens)-1]
-			nameBody := residual
-			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
-				nameBody = nameBody[1:]
-			}
-			if len(nameBody) > 0 {
-				out.StreetSuffix = abbr
-				tokens = residual
-			}
-		}
+	// Street suffix (right) via peelStreetSuffix (handles Annex after Boulevard).
+	if suffix, rest, ok := peelStreetSuffix(tokens); ok {
+		out.StreetSuffix = suffix
+		tokens = rest
 	}
 
 	// PR Spanish street type (trailing token), kept as Spanish primary word
@@ -795,6 +784,143 @@ func abbreviateLeadingStatePortion(tokens []string) []string {
 }
 
 // expandHashTokens splits glued forms like "#12" into "#", "12".
+func expandHyphenatedStreetTokens(tokens []string) []string {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	out := make([]string, 0, len(tokens)+1)
+	for _, t := range tokens {
+		i := strings.LastIndexByte(t, '-')
+		if i <= 0 || i >= len(t)-1 {
+			out = append(out, t)
+			continue
+		}
+		left, right := t[:i], t[i+1:]
+		if left == "" || right == "" {
+			out = append(out, t)
+			continue
+		}
+		// Only split when the right side is a street suffix (STREET→ST, etc.).
+		if _, err := streetsuffixes.NormalizeStreetSuffixAbreviation(right); err == nil {
+			// Preserve multi-hyphen left side as a single token (rare).
+			out = append(out, left, right)
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// peelStreetSuffix peels a street suffix from the right of tokens.
+// Returns the abbreviated suffix, residual tokens, and whether a peel occurred.
+//
+// When the rightmost token is a trailing-junk suffix (ANX/ANNEX) and the
+// previous token is also a street suffix with a non-empty name body, peel the
+// previous (primary) suffix and leave the junk token in the residual name.
+
+func isTrailingJunkSuffix(abbr string) bool {
+	return abbr == "ANX"
+}
+
+// reorderMidLineHashSecondary moves a mid-line "# NUMBER" pair to the end of
+// the token slice so reverse peels capture it as secondary. Patterns:
+//
+//	… HOUSE # NUM rest…  →  … HOUSE rest… # NUM
+//	… # NUM rest…        →  … rest… # NUM   (when not already leading)
+//
+// Leading "# NUM rest" is already handled by reorderLeadingSecondary; this
+// covers house-number-first forms like "100 #12 MAIN STREET".
+
+func peelStreetSuffix(tokens []string) (suffix string, rest []string, ok bool) {
+	if len(tokens) < 2 {
+		return "", tokens, false
+	}
+	last := tokens[len(tokens)-1]
+	lastAbbr, lastErr := streetsuffixes.NormalizeStreetSuffixAbreviation(last)
+	if lastErr != nil {
+		return "", tokens, false
+	}
+
+	// Prefer primary street suffixes over trailing obscure ones (ANNEX/ANX)
+	// when both apply: "Oak Boulevard Annex" → BLVD, residual OAK ANNEX.
+	if isTrailingJunkSuffix(lastAbbr) && len(tokens) >= 3 {
+		prev := tokens[len(tokens)-2]
+		if prevAbbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(prev); err == nil {
+			core := tokens[:len(tokens)-2]
+			nameBody := core
+			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
+				nameBody = nameBody[1:]
+			}
+			if len(nameBody) > 0 {
+				// Keep junk token in residual name; peel previous as StreetSuffix.
+				rest = append(append([]string{}, core...), last)
+				return prevAbbr, rest, true
+			}
+		}
+	}
+
+	// Standard rightmost peel when a name body remains.
+	residual := tokens[:len(tokens)-1]
+	nameBody := residual
+	if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
+		nameBody = nameBody[1:]
+	}
+	if len(nameBody) > 0 {
+		return lastAbbr, residual, true
+	}
+	return "", tokens, false
+}
+
+// isTrailingJunkSuffix reports suffixes that should yield to a preceding
+// primary street suffix when both appear at the end of a street line.
+
+func reorderMidLineHashSecondary(tokens []string) []string {
+	if len(tokens) < 4 {
+		// Need at least HOUSE # NUM rest (4 tokens) for a useful mid-line move.
+		// (Leading form with 3 tokens is handled by reorderLeadingSecondary.)
+		return tokens
+	}
+	// Find first mid-line "# NUMBER" where "#" is not at index 0.
+	for i := 1; i+1 < len(tokens); i++ {
+		if tokens[i] != "#" {
+			continue
+		}
+		if !looksLikeSecondaryNumber(tokens[i+1]) {
+			continue
+		}
+		// Require at least one token after the number (street body).
+		if i+2 >= len(tokens) {
+			// Already trailing — peelSecondary will handle it.
+			return tokens
+		}
+		hash, num := tokens[i], tokens[i+1]
+		out := make([]string, 0, len(tokens))
+		out = append(out, tokens[:i]...)
+		out = append(out, tokens[i+2:]...)
+		out = append(out, hash, num)
+		return out
+	}
+	return tokens
+}
+
+// splitPreStreet finds non-address tokens before the primary house number on a
+// street line and returns them as a business/narrative prefix. The leftmost
+// token that looksLikeHouseNumber and is followed by at least one more token
+// (street body) is treated as the primary; tokens before it become the prefix.
+//
+// Uses looksLikeHouseNumber (not looksLikePrimaryNumber) so digit-leading firm
+// names like "3M" are not mistaken for house numbers when a real primary
+// follows ("3M Corporation 100 Main Street" → business "3M CORPORATION",
+// rest starting at "100").
+//
+// Ordinary streets that already start with a house number are left unchanged
+// (i == 0). If no house-number token appears after position 0 with a
+// following street body, tokens are returned as-is.
+//
+// Call after special rewrite, hash expand, directional merge, and leading
+// secondary reorder so military/RR/PO never reach here and "APT 4 123 …" is
+// already reordered to start with the house number.
+
 func expandHashTokens(tokens []string) []string {
 	out := make([]string, 0, len(tokens)+1)
 	for _, t := range tokens {

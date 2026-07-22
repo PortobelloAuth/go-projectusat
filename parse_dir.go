@@ -2,6 +2,44 @@ package goprojectusat
 
 import "strings"
 
+// expandHyphenatedDirectionals rewrites compound directionals joined by a
+// hyphen into their standard compound abbreviation:
+//
+//	NORTH-EAST / N-E / NORTHEAST → NE (token already compound passes through
+//	via AbbreviateDirectional later; hyphenated forms become NE here)
+//
+// Only N/S + E/W compounds are rewritten. Other hyphenated tokens are left
+// for expandHyphenatedStreetTokens.
+func expandHyphenatedDirectionals(tokens []string) []string {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	out := make([]string, 0, len(tokens))
+	for _, t := range tokens {
+		if merged, ok := hyphenatedDirectional(t); ok {
+			out = append(out, merged)
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// hyphenatedDirectional returns the compound abbreviation for tokens like
+// "NORTH-EAST", "N-W", "SOUTH-EAST". Returns ("", false) when not a compound.
+func hyphenatedDirectional(tok string) (string, bool) {
+	i := strings.IndexByte(tok, '-')
+	if i <= 0 || i >= len(tok)-1 {
+		return "", false
+	}
+	// Only a single hyphen joining two parts.
+	if strings.Count(tok, "-") != 1 {
+		return "", false
+	}
+	a, b := tok[:i], tok[i+1:]
+	return mergeDirectionalPair(a, b)
+}
+
 // mergeDirectionTokens scans tokens left-to-right and merges adjacent cardinal
 // pairs that form a compound directional:
 //

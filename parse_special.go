@@ -42,10 +42,13 @@ func rewritePOBox(cleaned string) (string, bool) {
 		return "", false
 	}
 
-	// POBOX123 glued form
+	// POBOX123 glued form (prefer longer POBOX prefix over POB)
 	if strings.HasPrefix(tokens[0], "POBOX") && tokens[0] != "POBOX" {
-		boxID := tokens[0][len("POBOX"):]
-		return "PO BOX " + boxID, true
+		return "PO BOX " + tokens[0][len("POBOX"):], true
+	}
+	// POB123 glued form
+	if strings.HasPrefix(tokens[0], "POB") && tokens[0] != "POB" && !strings.HasPrefix(tokens[0], "POBOX") {
+		return "PO BOX " + tokens[0][len("POB"):], true
 	}
 
 	i := 0
@@ -55,6 +58,8 @@ func rewritePOBox(cleaned string) (string, bool) {
 	case len(tokens) >= 2 && tokens[0] == "PO" && tokens[1] == "BOX":
 		i = 2
 	case len(tokens) >= 1 && tokens[0] == "POBOX":
+		i = 1
+	case len(tokens) >= 1 && tokens[0] == "POB":
 		i = 1
 	default:
 		return "", false
