@@ -17,6 +17,7 @@ import (
 // PO Box: POST OFFICE BOX / PO BOX → "PO BOX X".
 //
 // On match returns the rewritten uppercase collapsed line and true.
+// PR-only Spanish aliases (Apartado) are handled by rewriteSpecialStreetLinePR.
 func rewriteSpecialStreetLine(line string) (string, bool) {
 	cleaned := strings.ToUpper(textutil.CollapseSpace(
 		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true}),
@@ -182,4 +183,37 @@ func stripLeadingZeros(s string) string {
 		i++
 	}
 	return s[i:]
+}
+
+// rewriteSpecialStreetLinePR rewrites Puerto Rico Spanish free-text specials
+// that are not covered by the general English/USPS path:
+//
+//	Apartado [Postal] X  →  PO BOX X
+//
+// Ruta Rural is already handled by rewriteRuralRoute (matchRuralPrefix).
+// Only called when the address region is PR.
+func rewriteSpecialStreetLinePR(line string) (string, bool) {
+	cleaned := strings.ToUpper(textutil.CollapseSpace(
+		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true}),
+	))
+	if cleaned == "" {
+		return "", false
+	}
+	return rewriteApartado(cleaned)
+}
+
+// rewriteApartado matches APARTADO / APARTADO POSTAL + box id → "PO BOX X".
+func rewriteApartado(cleaned string) (string, bool) {
+	tokens := strings.Fields(cleaned)
+	if len(tokens) == 0 || tokens[0] != "APARTADO" {
+		return "", false
+	}
+	i := 1
+	if i < len(tokens) && tokens[i] == "POSTAL" {
+		i++
+	}
+	if i >= len(tokens) {
+		return "", false
+	}
+	return "PO BOX " + tokens[i], true
 }

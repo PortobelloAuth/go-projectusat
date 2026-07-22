@@ -852,13 +852,13 @@ func TestParseGridStyleDoubleDirectionals(t *testing.T) {
 	// Salt Lake City–style grid addresses: numeric street name, pre+post
 	// directionals, no street suffix required.
 	tests := []struct {
-		name     string
-		raw      string
-		primary  string
-		predir   string
-		street   string
-		postdir  string
-		wantFmt  string
+		name    string
+		raw     string
+		primary string
+		predir  string
+		street  string
+		postdir string
+		wantFmt string
 	}{
 		{
 			name:    "spelled directionals",
@@ -928,7 +928,6 @@ func TestParseGridStyleDoubleDirectionals(t *testing.T) {
 		})
 	}
 }
-
 
 func TestParseFractionalPrimary(t *testing.T) {
 	// Fractional house numbers: PrimaryNumber is the integer portion; the
@@ -1006,7 +1005,6 @@ func TestParseFractionalPrimary(t *testing.T) {
 		})
 	}
 }
-
 
 func TestParseMultiSecondaryTrailingUnits(t *testing.T) {
 	// Multiple trailing secondaries peel right-to-left repeatedly and combine
@@ -1115,7 +1113,6 @@ func TestParseMultiSecondaryTrailingUnits(t *testing.T) {
 	}
 }
 
-
 func TestParseHyphenatedPrimary(t *testing.T) {
 	// NYC-style hyphenated house numbers keep the hyphen (KeepHyphen).
 	tests := []struct {
@@ -1179,7 +1176,6 @@ func TestParseHyphenatedPrimary(t *testing.T) {
 		})
 	}
 }
-
 
 func TestParseSpecialFormsNotBrokenByGridMultiSecondary(t *testing.T) {
 	// Military / RR / PO Box / leading secondary must remain intact after
@@ -1347,7 +1343,6 @@ func TestParseDirectionalAsStreetName(t *testing.T) {
 	}
 }
 
-
 func TestParseAvenueLetterPostdir(t *testing.T) {
 	// "1001 Avenue E" → Primary 1001, StreetName AVENUE, Postdir E (suffix not
 	// peeled when it would leave an empty name). C# Format: "1001 AVENUE E".
@@ -1430,7 +1425,6 @@ func TestParseAvenueLetterPostdir(t *testing.T) {
 	}
 }
 
-
 func TestParsePoundSecondarySpacing(t *testing.T) {
 	// After parse+normalize+format, # secondary appears as "# 12" (space via
 	// joinNonEmpty). Both glued and spaced inputs converge.
@@ -1458,4 +1452,147 @@ func TestParsePoundSecondarySpacing(t *testing.T) {
 	}
 }
 
+func TestParsePuertoRicoCalleTrailingNumber(t *testing.T) {
+	// PR order: Spanish type before name, house number trailing.
+	raw := "Calle Luna 123\nSan Juan PR 00901"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" {
+		t.Errorf("PrimaryNumber = %q, want 123", got.PrimaryNumber)
+	}
+	if got.StreetName != "LUNA" {
+		t.Errorf("StreetName = %q, want LUNA", got.StreetName)
+	}
+	if got.StreetSuffix != "CLL" {
+		t.Errorf("StreetSuffix = %q, want CLL", got.StreetSuffix)
+	}
+	if got.City != "SAN JUAN" || got.Region != "PR" || got.Postal != "00901" {
+		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "123 LUNA CLL\nSAN JUAN PR 00901"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
 
+func TestParsePuertoRicoCalleUSOrder(t *testing.T) {
+	// US order with Spanish type: number first, type before or after name.
+	raw := "123 Calle Luna\nSan Juan PR 00901"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "LUNA" || got.StreetSuffix != "CLL" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	norm, err := Normalize(got)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	want := "123 LUNA CLL\nSAN JUAN PR 00901"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+func TestParsePuertoRicoAvenida(t *testing.T) {
+	raw := "Avenida Ponce de Leon 456\nSan Juan PR 00907"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "456" {
+		t.Errorf("PrimaryNumber = %q, want 456", got.PrimaryNumber)
+	}
+	if got.StreetName != "PONCE DE LEON" {
+		t.Errorf("StreetName = %q, want PONCE DE LEON", got.StreetName)
+	}
+	if got.StreetSuffix != "AVE" {
+		t.Errorf("StreetSuffix = %q, want AVE", got.StreetSuffix)
+	}
+}
+
+func TestParsePuertoRicoSecondaryURBAndApartamento(t *testing.T) {
+	raw := "Calle Luna 123 Apartamento 4\nSan Juan PR 00901"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "LUNA" || got.StreetSuffix != "CLL" {
+		t.Errorf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "APT" || got.SecondaryNumber != "4" {
+		t.Errorf("secondary = %q %q, want APT 4", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+
+	rawURB := "123 Calle Luna URB\nPonce PR 00716"
+	gotURB, err := Parse(rawURB)
+	if err != nil {
+		t.Fatalf("Parse URB: %v", err)
+	}
+	if gotURB.SecondaryDesignator != "URB" {
+		t.Errorf("SecondaryDesignator = %q, want URB", gotURB.SecondaryDesignator)
+	}
+	if gotURB.PrimaryNumber != "123" || gotURB.StreetName != "LUNA" || gotURB.StreetSuffix != "CLL" {
+		t.Errorf("street = primary=%q name=%q suffix=%q", gotURB.PrimaryNumber, gotURB.StreetName, gotURB.StreetSuffix)
+	}
+	norm, err := Normalize(gotURB)
+	if err != nil {
+		t.Fatalf("Normalize URB: %v", err)
+	}
+	want := "123 LUNA CLL URB\nPONCE PR 00716"
+	if Format(norm) != want {
+		t.Errorf("Format = %q, want %q", Format(norm), want)
+	}
+}
+
+func TestParsePuertoRicoApartado(t *testing.T) {
+	raw := "Apartado 11890\nSan Juan PR 00901"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.StreetName != "PO BOX 11890" {
+		t.Errorf("StreetName = %q, want PO BOX 11890", got.StreetName)
+	}
+	if got.PrimaryNumber != "" || got.StreetSuffix != "" {
+		t.Errorf("expected empty primary/suffix for Apartado, got primary=%q suffix=%q",
+			got.PrimaryNumber, got.StreetSuffix)
+	}
+}
+
+func TestParseNonPRDoesNotForceSpanishStreetType(t *testing.T) {
+	// CLL is PR-specific; without region PR it must not peel as suffix.
+	// English street still works on non-PR.
+	raw := "123 Main Street\nSpringfield IL 62701"
+	got, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "123" || got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+
+	// A free-text line with Spanish type on a non-PR region leaves the type in the name.
+	rawES := "123 Calle Luna\nSpringfield IL 62701"
+	gotES, err := Parse(rawES)
+	if err != nil {
+		t.Fatalf("Parse non-PR Spanish: %v", err)
+	}
+	if gotES.StreetSuffix == "CLL" {
+		t.Errorf("non-PR must not peel Spanish CLL as StreetSuffix, got %+v", gotES)
+	}
+	// Calle stays in street name (or residual); primary still peels.
+	if gotES.PrimaryNumber != "123" {
+		t.Errorf("PrimaryNumber = %q, want 123", gotES.PrimaryNumber)
+	}
+	if !strings.Contains(gotES.StreetName, "CALLE") && !strings.Contains(gotES.StreetName, "LUNA") {
+		t.Errorf("StreetName = %q, expected CALLE/LUNA residual", gotES.StreetName)
+	}
+}

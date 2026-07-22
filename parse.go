@@ -8,6 +8,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/military"
+	"github.com/PortobelloAuth/go-projectusat/pkg/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
@@ -84,7 +85,7 @@ func parseCivilian(lines []string) (Address, error) {
 	if len(lines) > 2 {
 		business = strings.ToUpper(textutil.CollapseSpace(strings.Join(lines[:len(lines)-2], " ")))
 	}
-	street, err := parseStreetLine(streetLine)
+	street, err := parseStreetLine(streetLine, reg)
 	if err != nil {
 		return Address{}, err
 	}
@@ -199,7 +200,7 @@ func parseSingleLineCivilian(line string) (Address, error) {
 			// Conservative: last token of before = city; rest = street.
 			city := before[len(before)-1]
 			streetToks := before[:len(before)-1]
-			street, err := parseStreetLine(strings.Join(streetToks, " "))
+			street, err := parseStreetLine(strings.Join(streetToks, " "), abbr)
 			if err != nil {
 				return Address{}, err
 			}
@@ -233,7 +234,15 @@ func parseSingleLineCivilian(line string) (Address, error) {
 //   - Multi-secondary units (e.g. "Building 420 Room 120") are peeled right-to-
 //     left repeatedly and combined into SecondaryDesignator + SecondaryNumber
 //     so Format yields "BLDG 420 RM 120".
-func parseStreetLine(line string) (Address, error) {
+func parseStreetLine(line string, regionCode string) (Address, error) {
+	isPR := regionCode == "PR"
+
+	// PR Spanish specials (Apartado) before general RR/PO rewrite.
+	if isPR {
+		if rewritten, ok := rewriteSpecialStreetLinePR(line); ok {
+			return Address{StreetName: rewritten}, nil
+		}
+	}
 	if rewritten, ok := rewriteSpecialStreetLine(line); ok {
 		return Address{StreetName: rewritten}, nil
 	}
@@ -253,16 +262,20 @@ func parseStreetLine(line string) (Address, error) {
 
 	// Move leading secondary designator/# + number to the end so reverse peels
 	// see them as trailing (e.g. "APT 4 123 MAIN ST" → "123 MAIN ST APT 4").
-	tokens = reorderLeadingSecondary(tokens)
+	tokens = reorderLeadingSecondary(tokens, isPR)
 
 	// Same-line business / narrative tokens before the house number
 	// (e.g. "WILLIAMSON MEDICAL CENTER 3000 EDWARD CURD LANE").
+	// Skip for PR: house numbers often trail Spanish type+name ("CALLE LUNA 123"),
+	// which would otherwise be misread as pre-street + primary.
 	var out Address
-	var preStreet string
-	preStreet, tokens = splitPreStreet(tokens)
-	out.BusinessName = preStreet
+	if !isPR {
+		var preStreet string
+		preStreet, tokens = splitPreStreet(tokens)
+		out.BusinessName = preStreet
+	}
 
-	tokens = peelSecondary(tokens, &out)
+	tokens = peelSecondary(tokens, &out, isPR)
 
 	// Postdirectional (right)
 	if len(tokens) > 1 {
@@ -294,12 +307,41 @@ func parseStreetLine(line string) (Address, error) {
 		}
 	}
 
+	// PR Spanish street types as suffix (trailing) when English suffix did not match.
+	if isPR && out.StreetSuffix == "" && len(tokens) >= 2 {
+		if abbr, err := puertorico.AbbreviateStreetType(tokens[len(tokens)-1]); err == nil {
+			residual := tokens[:len(tokens)-1]
+			nameBody := residual
+			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
+				nameBody = nameBody[1:]
+			}
+			if len(nameBody) > 0 {
+				out.StreetSuffix = abbr
+				tokens = residual
+			}
+		}
+	}
+
 	// Primary number (left). Fractional house numbers keep the integer here
 	// and leave "1/2" (etc.) in residual tokens for StreetName — see
 	// parseStreetLine doc on fractional addresses.
 	if len(tokens) > 0 && looksLikePrimaryNumber(tokens[0]) {
 		out.PrimaryNumber = tokens[0]
 		tokens = tokens[1:]
+	}
+
+	// PR trailing house number: "CALLE LUNA 123" → primary 123.
+	if isPR && out.PrimaryNumber == "" && len(tokens) >= 2 && looksLikePrimaryNumber(tokens[len(tokens)-1]) {
+		out.PrimaryNumber = tokens[len(tokens)-1]
+		tokens = tokens[:len(tokens)-1]
+	}
+
+	// PR leading Spanish street type: "CALLE LUNA" → suffix CLL, name LUNA.
+	if isPR && out.StreetSuffix == "" && len(tokens) >= 2 {
+		if abbr, err := puertorico.AbbreviateStreetType(tokens[0]); err == nil {
+			out.StreetSuffix = abbr
+			tokens = tokens[1:]
+		}
 	}
 
 	// Predirectional (left) only when a street-name token remains after it.
@@ -506,7 +548,7 @@ func splitPreStreet(tokens []string) (business string, rest []string) {
 // Glued "#NUMBER" is already split by expandHashTokens. Numbered designators
 // without a following number are left unchanged (no invented unit number).
 // Non-numbered designators at the start are not reordered.
-func reorderLeadingSecondary(tokens []string) []string {
+func reorderLeadingSecondary(tokens []string, isPR bool) []string {
 	if len(tokens) < 3 {
 		// Need designator/number plus at least one rest token to move.
 		return tokens
@@ -531,6 +573,19 @@ func reorderLeadingSecondary(tokens []string) []string {
 			return out
 		}
 		// Numbered designator with no unit number — do not invent.
+	}
+
+	// PR Spanish secondary (e.g. APARTAMENTO 4 … / EDIF 2 …)
+	if isPR {
+		if short, err := puertorico.NormalizeSecondary(tokens[0]); err == nil {
+			if looksLikeSecondaryNumber(tokens[1]) {
+				rest := tokens[2:]
+				out := make([]string, 0, len(tokens))
+				out = append(out, rest...)
+				out = append(out, short, tokens[1])
+				return out
+			}
+		}
 	}
 
 	return tokens
@@ -563,7 +618,7 @@ type secondaryPeel struct {
 //
 // So "Building 420 Room 120" → BLDG / "420 RM 120", and "Unit 3200 … Upper"
 // (after leading reorder) → UNIT / "3200 UPPR".
-func peelSecondary(tokens []string, out *Address) []string {
+func peelSecondary(tokens []string, out *Address, isPR bool) []string {
 	var peels []secondaryPeel // rightmost first
 
 	for len(tokens) > 0 {
@@ -595,6 +650,25 @@ func peelSecondary(tokens []string, out *Address) []string {
 			peels = append(peels, secondaryPeel{designator: info.Short})
 			tokens = tokens[:len(tokens)-1]
 			continue
+		}
+
+		// PR Spanish secondary designators (only when region is PR).
+		if isPR {
+			if len(tokens) >= 2 {
+				if short, err := puertorico.NormalizeSecondary(tokens[len(tokens)-2]); err == nil {
+					peels = append(peels, secondaryPeel{
+						designator: short,
+						number:     tokens[len(tokens)-1],
+					})
+					tokens = tokens[:len(tokens)-2]
+					continue
+				}
+			}
+			if short, err := puertorico.NormalizeSecondary(tokens[len(tokens)-1]); err == nil {
+				peels = append(peels, secondaryPeel{designator: short})
+				tokens = tokens[:len(tokens)-1]
+				continue
+			}
 		}
 
 		break

@@ -12,19 +12,17 @@ being built in public to facilitate feedback from potential users and support
 from potential backers.
 
 **What works today:** structured `Address` normalization (`Normalize` /
-`NormalizeWithOptions`), free-text `Parse` (multi-line / comma-separated; overseas
-military APO/FPO/DPO fast path; rural route / PO Box free-text rewrite; multi-token
-directionals; leading secondary / `#` reorder; double-suffix and state-as-street-name;
-grid-style double directionals; fractional house numbers; multi-secondary trailing units;
-hyphenated NYC-style primaries; reverse-token street componentization),
-street/last-line formatting, military street lines through `Normalize`/`Format`, and
-component packages under `pkg/` (regions, street suffixes, directionals, secondary units,
-diacritics, highways, military, Puerto Rico, text helpers).
+`NormalizeWithOptions`), free-text `Parse` covering the main Project US@ / C# parity
+workflows: multi-line and comma-separated input; overseas military; rural route and PO Box;
+multi-token directionals; leading secondary / `#` reorder; double-suffix and state-as-street-name;
+same-line business and narrative pre-street prefixes; grid-style double directionals;
+fractional and hyphenated primaries; multi-secondary units; directional-as-name and
+Avenue-letter edges; Puerto Rico Spanish street types and secondaries (including Apartado),
+street/last-line formatting, and component packages under `pkg/`.
 
-**Not yet:** Puerto Rico vocabulary in `Parse`, same-line business/pre-street detection,
-narrative free-text forms, and remaining C#-parity street-line edge cases.
-Use `pkg/puertorico` directly for Spanish street/unit vocabulary until it is wired into
-the root parse pipeline.
+**Not yet:** exhaustive C# `StreetLineNormalizerTests` parity for every punctuation/
+narrative edge, geocoder-backed disambiguation, and some rare dual-interpretation cases.
+The API remains unstable.
 
 **Prefer content form** (`Normalize`) when writing patient records; use
 `NormalizeWithOptions` when preparing addresses for match/exchange (see Options
@@ -69,16 +67,31 @@ addr, err = goprojectusat.Parse("PO Box 11890\nSpringfield IL 62701")
 ```
 
 `Parse` is conservative: it splits on newlines and commas, peels last-line
-city/region/postal, rewrites rural route / PO Box street lines when matched,
-merges multi-token directionals (`SOUTH WEST` → `SW`), reorders a leading secondary
-designator or `#` + unit number to the end of the street line, reverse-token peels
-common street components (including repeated multi-secondary units such as
-`Building 420 Room 120` → `BLDG 420 RM 120`), recognizes grid-style double
-directionals without a suffix (`1016 E 1700 S`), keeps fractional slashes and
-hyphenated primaries, and uses a military fast path when both street and last
-lines match APO/FPO/DPO forms. It does not call `Normalize`;
-compose `Normalize(Parse(raw))` for content form. Ambiguous or unrecognizable
-input returns an error rather than inventing structure.
+city/region/postal, rewrites rural route / PO Box (and PR `Apartado`) street lines,
+merges multi-token directionals (`SOUTH WEST` → `SW`), reorders leading secondary / `#`,
+extracts same-line business/narrative prefixes before the house number, reverse-token
+peels street components (including multi-secondary `BLDG 420 RM 120`), handles grid
+directionals (`1016 E 1700 S`), fractions and hyphenated primaries, and uses a military
+fast path for APO/FPO/DPO. When region is `PR`, Spanish street types (`CALLE`→`CLL`) and
+secondaries (`URB`, `APARTAMENTO`) apply. It does not call `Normalize`; compose
+`Normalize(Parse(raw))` for content form. Ambiguous input returns an error rather than
+inventing structure.
+
+Puerto Rico:
+
+```go
+addr, err := goprojectusat.Parse("Calle Luna 123\nSan Juan PR 00901")
+// Format(Normalize(addr)) =>
+// 123 LUNA CLL
+// SAN JUAN PR 00901
+```
+
+Same-line business / narrative:
+
+```go
+addr, err := goprojectusat.Parse("Williamson Medical Center 3000 Edward Curd Lane\nSpringfield IL 62701")
+// BusinessName WILLIAMSON MEDICAL CENTER; street 3000 EDWARD CURD LN
+```
 
 ## Normalization of Input vs. Normalization for Comparison
 
