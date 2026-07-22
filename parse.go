@@ -419,9 +419,13 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 
 	// KeepHyphen: NYC-style primary ranges (112-10). KeepSlash: fractional
 	// addresses (123 1/2 Main St) so "1/2" survives into StreetName.
+	// Protect digit.digit periods (grid designators like 39.4) so StripPunctuation
+	// does not glue them into 394; restore after strip.
+	protected := protectDecimalPeriods(line)
 	cleaned := strings.ToUpper(textutil.CollapseSpace(
-		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true, KeepSlash: true}),
+		textutil.StripPunctuation(protected, textutil.StripOptions{KeepHyphen: true, KeepSlash: true}),
 	))
+	cleaned = restoreDecimalPeriods(cleaned)
 	tokens := expandHashTokens(strings.Fields(cleaned))
 	if len(tokens) == 0 {
 		return Address{}, fmt.Errorf("empty street line")
@@ -702,11 +706,16 @@ func expandHashTokens(tokens []string) []string {
 
 // splitPreStreet finds non-address tokens before the primary house number on a
 // street line and returns them as a business/narrative prefix. The leftmost
-// token that looksLikePrimaryNumber and is followed by at least one more token
+// token that looksLikeHouseNumber and is followed by at least one more token
 // (street body) is treated as the primary; tokens before it become the prefix.
 //
-// Ordinary streets that already start with a primary number are left unchanged
-// (i == 0). If no primary-looking token appears after position 0 with a
+// Uses looksLikeHouseNumber (not looksLikePrimaryNumber) so digit-leading firm
+// names like "3M" are not mistaken for house numbers when a real primary
+// follows ("3M Corporation 100 Main Street" → business "3M CORPORATION",
+// rest starting at "100").
+//
+// Ordinary streets that already start with a house number are left unchanged
+// (i == 0). If no house-number token appears after position 0 with a
 // following street body, tokens are returned as-is.
 //
 // Call after special rewrite, hash expand, directional merge, and leading
@@ -717,7 +726,7 @@ func splitPreStreet(tokens []string) (business string, rest []string) {
 		return "", tokens
 	}
 	for i := 0; i < len(tokens)-1; i++ {
-		if !looksLikePrimaryNumber(tokens[i]) {
+		if !looksLikeHouseNumber(tokens[i]) {
 			continue
 		}
 		// Primary already first: ordinary street — do not invent a pre-street.
@@ -727,8 +736,38 @@ func splitPreStreet(tokens []string) (business string, rest []string) {
 		// At least one token after the primary remains for the street body.
 		return strings.Join(tokens[:i], " "), tokens[i:]
 	}
-	// No primary after position 0 (or no following body): leave as today.
+	// No house number after position 0 (or no following body): leave as today.
 	return "", tokens
+}
+
+// decimalPeriodSentinel replaces '.' between digits during StripPunctuation so
+// grid designators like "39.4" survive cleaning. Private-use code point; not
+// expected in address input.
+const decimalPeriodSentinel = '\uE000'
+
+// protectDecimalPeriods replaces periods that sit between two digits with a
+// sentinel so StripPunctuation does not remove them (grid / milepost style).
+func protectDecimalPeriods(s string) string {
+	runes := []rune(s)
+	if len(runes) < 3 {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(runes); i++ {
+		if runes[i] == '.' && i > 0 && i < len(runes)-1 &&
+			unicode.IsDigit(runes[i-1]) && unicode.IsDigit(runes[i+1]) {
+			b.WriteRune(decimalPeriodSentinel)
+			continue
+		}
+		b.WriteRune(runes[i])
+	}
+	return b.String()
+}
+
+// restoreDecimalPeriods turns protectDecimalPeriods sentinels back into '.'.
+func restoreDecimalPeriods(s string) string {
+	return strings.ReplaceAll(s, string(decimalPeriodSentinel), ".")
 }
 
 // reorderLeadingSecondary moves a leading secondary designator (or #) plus its
@@ -904,7 +943,8 @@ func peelSecondary(tokens []string, out *Address, isPR bool) []string {
 }
 
 // looksLikePrimaryNumber reports whether tok is a plausible primary address number
-// (contains a digit; hyphenated ranges like 112-10 qualify).
+// (contains a digit; hyphenated ranges like 112-10 qualify). Broader than
+// looksLikeHouseNumber — used when consuming an already-positioned primary token.
 func looksLikePrimaryNumber(tok string) bool {
 	for _, r := range tok {
 		if unicode.IsDigit(r) {
@@ -912,6 +952,88 @@ func looksLikePrimaryNumber(tok string) bool {
 		}
 	}
 	return false
+}
+
+// looksLikeHouseNumber reports whether tok is a primarily numeric house number
+// suitable for pre-street splitting. Stricter than looksLikePrimaryNumber so
+// digit-leading product/firm tokens like "3M" are rejected while common US
+// forms still match:
+//
+//	100, 5          pure digits
+//	100A            digits (≥2) + single trailing letter (apartment style)
+//	112-10, 112-10A hyphenated ranges
+//	12TH, 3RD       ordinals
+//
+// Rejected: "3M" (single digit + letter product code), "A1" (letter-leading),
+// bare fractions ("1/2"), grid decimals ("39.4").
+func looksLikeHouseNumber(tok string) bool {
+	if tok == "" {
+		return false
+	}
+	upper := strings.ToUpper(tok)
+
+	// Must start with a digit.
+	if upper[0] < '0' || upper[0] > '9' {
+		return false
+	}
+
+	// Ordinal: digits + ST/ND/RD/TH (12TH, 3RD, 1ST, 2ND).
+	if len(upper) >= 3 {
+		suf := upper[len(upper)-2:]
+		body := upper[:len(upper)-2]
+		if isAllDigits(body) {
+			switch suf {
+			case "ST", "ND", "RD", "TH":
+				return true
+			}
+		}
+	}
+
+	// Hyphenated primary range: 112-10, 112-10A, 19-01.
+	if strings.Contains(upper, "-") {
+		parts := strings.Split(upper, "-")
+		if len(parts) < 2 || !isAllDigits(parts[0]) {
+			return false
+		}
+		for _, p := range parts[1:] {
+			if p == "" || !isAlphanumeric(p) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Pure digits.
+	if isAllDigits(upper) {
+		return true
+	}
+
+	// Digits + single trailing letter (100A). Require ≥2 digits so single-digit
+	// product codes like "3M" are not treated as house numbers during pre-street
+	// split. (Bare "1A Main St" still parses via looksLikePrimaryNumber after
+	// splitPreStreet leaves tokens unchanged.)
+	if len(upper) >= 3 {
+		last := upper[len(upper)-1]
+		digits := upper[:len(upper)-1]
+		if last >= 'A' && last <= 'Z' && isAllDigits(digits) && len(digits) >= 2 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isAlphanumeric reports whether s is non-empty and only letters/digits.
+func isAlphanumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // looksLikeFraction reports whether tok is a simple numeric fraction such as
