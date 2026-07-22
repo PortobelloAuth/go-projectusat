@@ -216,14 +216,30 @@ func parseSingleLineCivilian(line string) (Address, error) {
 // then peels primary number and predirectional from the left. Residual tokens
 // form StreetName (with highway rewrite when applicable).
 //
-// Rural route and PO Box free-text lines are rewritten first (see
-// rewriteSpecialStreetLine) and stored wholly in StreetName, similar to
-// overseas military street lines.
+// Special forms:
+//   - Rural route and PO Box free-text lines are rewritten first (see
+//     rewriteSpecialStreetLine) and stored wholly in StreetName, similar to
+//     overseas military street lines.
+//   - Grid-style double directionals without a street suffix (e.g. "1016 E 1700 S"
+//     or "1016 East 1700 South") peel as Primary + Predir + numeric StreetName +
+//     Postdir — no suffix is required.
+//   - Fractional house numbers (e.g. "123 1/2 Main Street"): PrimaryNumber is
+//     the integer portion ("123"); the fraction stays in StreetName ("1/2 MAIN")
+//     with slash retained via StripOptions.KeepSlash. This prefers a clean
+//     primary over packing "123 1/2" into PrimaryNumber (USPS-style packing is
+//     also valid but harder to round-trip through field-level Normalize).
+//   - Hyphenated primaries (NYC style, e.g. "112-10") keep the hyphen via
+//     StripOptions.KeepHyphen.
+//   - Multi-secondary units (e.g. "Building 420 Room 120") are peeled right-to-
+//     left repeatedly and combined into SecondaryDesignator + SecondaryNumber
+//     so Format yields "BLDG 420 RM 120".
 func parseStreetLine(line string) (Address, error) {
 	if rewritten, ok := rewriteSpecialStreetLine(line); ok {
 		return Address{StreetName: rewritten}, nil
 	}
 
+	// KeepHyphen: NYC-style primary ranges (112-10). KeepSlash: fractional
+	// addresses (123 1/2 Main St) so "1/2" survives into StreetName.
 	cleaned := strings.ToUpper(textutil.CollapseSpace(
 		textutil.StripPunctuation(line, textutil.StripOptions{KeepHyphen: true, KeepSlash: true}),
 	))
@@ -266,17 +282,28 @@ func parseStreetLine(line string) (Address, error) {
 		}
 	}
 
-	// Primary number (left)
+	// Primary number (left). Fractional house numbers keep the integer here
+	// and leave "1/2" (etc.) in residual tokens for StreetName — see
+	// parseStreetLine doc on fractional addresses.
 	if len(tokens) > 0 && looksLikePrimaryNumber(tokens[0]) {
 		out.PrimaryNumber = tokens[0]
 		tokens = tokens[1:]
 	}
 
 	// Predirectional (left) only when a street-name token remains after it.
+	// A leading fraction token (1/2, 1/4, …) stays in the name and is skipped
+	// when looking for the predirectional: "123 1/2 N MAIN" → predir N.
 	if len(tokens) > 1 {
-		if abbr, err := directionals.AbbreviateDirectional(tokens[0]); err == nil {
-			out.Predirectional = abbr
-			tokens = tokens[1:]
+		preIdx := 0
+		if looksLikeFraction(tokens[0]) && len(tokens) > 2 {
+			preIdx = 1
+		}
+		if abbr, err := directionals.AbbreviateDirectional(tokens[preIdx]); err == nil {
+			// Ensure at least one name token remains after removing the predir.
+			if len(tokens) > preIdx+1 {
+				out.Predirectional = abbr
+				tokens = append(tokens[:preIdx:preIdx], tokens[preIdx+1:]...)
+			}
 		}
 	}
 
@@ -486,56 +513,96 @@ func looksLikeSecondaryNumber(tok string) bool {
 	return looksLikePrimaryNumber(tok)
 }
 
-// peelSecondary removes a trailing secondary designator and optional number.
-func peelSecondary(tokens []string, out *Address) []string {
-	if len(tokens) == 0 {
-		return tokens
-	}
-
-	// "# 12" or "#12" (already expanded)
-	if len(tokens) >= 2 && tokens[len(tokens)-2] == "#" {
-		out.SecondaryDesignator = "#"
-		out.SecondaryNumber = tokens[len(tokens)-1]
-		return peelTrailingNonNumberedSecondary(tokens[:len(tokens)-2], out)
-	}
-
-	// Numbered designator + unit number (e.g. APT 4). Overseas military
-	// "UNIT N BOX N" is handled earlier by the military fast path, so this
-	// peel only sees civilian street lines.
-	if len(tokens) >= 2 {
-		if info, err := secondaryunit.Info(tokens[len(tokens)-2]); err == nil && info.Numbered {
-			out.SecondaryDesignator = info.Short
-			out.SecondaryNumber = tokens[len(tokens)-1]
-			return peelTrailingNonNumberedSecondary(tokens[:len(tokens)-2], out)
-		}
-	}
-
-	// Designator alone (non-numbered, or numbered without a number)
-	if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil {
-		out.SecondaryDesignator = info.Short
-		return tokens[:len(tokens)-1]
-	}
-
-	return tokens
+// secondaryPeel is one right-to-left secondary unit match.
+type secondaryPeel struct {
+	designator string // short form (APT, BLDG, #, …)
+	number     string // unit number, or empty for non-numbered designators
 }
 
-// peelTrailingNonNumberedSecondary peels one more trailing non-numbered
-// secondary designator (e.g. UPPER/REAR) after a numbered secondary was taken.
-// Appended to SecondaryNumber so Format yields "UNIT 3200 UPPR".
-func peelTrailingNonNumberedSecondary(tokens []string, out *Address) []string {
-	if len(tokens) == 0 {
+// peelSecondary repeatedly peels trailing secondary designators from the right.
+// Overseas military "UNIT N BOX N" is handled earlier by the military fast path,
+// so this peel only sees civilian street lines.
+//
+// The Address struct holds a single SecondaryDesignator + SecondaryNumber pair.
+// Multiple trailing secondaries are peeled right-to-left and folded so Format
+// yields e.g. "BLDG 420 RM 120":
+//   - rightmost peel seeds designator/number
+//   - each further-left numbered peel becomes the designator; prior des+num
+//     is appended to the number trail
+//   - non-numbered peels (UPPER/REAR) append onto SecondaryNumber
+//
+// So "Building 420 Room 120" → BLDG / "420 RM 120", and "Unit 3200 … Upper"
+// (after leading reorder) → UNIT / "3200 UPPR".
+func peelSecondary(tokens []string, out *Address) []string {
+	var peels []secondaryPeel // rightmost first
+
+	for len(tokens) > 0 {
+		// "# 12" or "#12" (already expanded by expandHashTokens)
+		if len(tokens) >= 2 && tokens[len(tokens)-2] == "#" {
+			peels = append(peels, secondaryPeel{
+				designator: "#",
+				number:     tokens[len(tokens)-1],
+			})
+			tokens = tokens[:len(tokens)-2]
+			continue
+		}
+
+		// Numbered designator + unit number (e.g. APT 4, BLDG 420, RM 120).
+		// Unit id may be alpha-only (STE A); do not require a digit.
+		if len(tokens) >= 2 {
+			if info, err := secondaryunit.Info(tokens[len(tokens)-2]); err == nil && info.Numbered {
+				peels = append(peels, secondaryPeel{
+					designator: info.Short,
+					number:     tokens[len(tokens)-1],
+				})
+				tokens = tokens[:len(tokens)-2]
+				continue
+			}
+		}
+
+		// Designator alone (non-numbered, or numbered without a number)
+		if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil {
+			peels = append(peels, secondaryPeel{designator: info.Short})
+			tokens = tokens[:len(tokens)-1]
+			continue
+		}
+
+		break
+	}
+
+	if len(peels) == 0 {
 		return tokens
 	}
-	if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil && !info.Numbered {
-		if out.SecondaryNumber != "" {
-			out.SecondaryNumber = out.SecondaryNumber + " " + info.Short
-		} else if out.SecondaryDesignator != "" {
-			out.SecondaryDesignator = out.SecondaryDesignator + " " + info.Short
-		} else {
-			out.SecondaryDesignator = info.Short
+
+	// Fold rightmost-first peels into a single designator + number pair.
+	// Rightmost peel is the seed; each further-left numbered secondary becomes
+	// the new designator with the prior designator/number as the trail:
+	//   RM+120, then BLDG+420  →  BLDG / "420 RM 120"
+	// Non-numbered peels (UPPER/REAR) append to SecondaryNumber so leading
+	// "Unit 3200 … Upper" (reordered to "… Upper Unit 3200") still yields
+	// UNIT / "3200 UPPR" rather than promoting UPPR to designator.
+	des := peels[0].designator
+	num := peels[0].number
+	for i := 1; i < len(peels); i++ {
+		p := peels[i]
+		if p.number != "" {
+			trail := des
+			if num != "" {
+				trail = des + " " + num
+			}
+			des = p.designator
+			num = p.number + " " + trail
+			continue
 		}
-		return tokens[:len(tokens)-1]
+		// Non-numbered further left (or after a bare designator seed).
+		if num != "" {
+			num = num + " " + p.designator
+		} else {
+			num = p.designator
+		}
 	}
+	out.SecondaryDesignator = des
+	out.SecondaryNumber = num
 	return tokens
 }
 
@@ -548,4 +615,15 @@ func looksLikePrimaryNumber(tok string) bool {
 		}
 	}
 	return false
+}
+
+// looksLikeFraction reports whether tok is a simple numeric fraction such as
+// "1/2" or "3/4" (digits, slash, digits). Used so a fraction after the primary
+// number stays in StreetName and does not block predirectional detection.
+func looksLikeFraction(tok string) bool {
+	i := strings.IndexByte(tok, '/')
+	if i <= 0 || i >= len(tok)-1 {
+		return false
+	}
+	return isAllDigits(tok[:i]) && isAllDigits(tok[i+1:])
 }

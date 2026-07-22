@@ -847,3 +847,422 @@ func TestParseDoubleSuffixAndStateAsStreetName(t *testing.T) {
 		})
 	}
 }
+
+func TestParseGridStyleDoubleDirectionals(t *testing.T) {
+	// Salt Lake City–style grid addresses: numeric street name, pre+post
+	// directionals, no street suffix required.
+	tests := []struct {
+		name     string
+		raw      string
+		primary  string
+		predir   string
+		street   string
+		postdir  string
+		wantFmt  string
+	}{
+		{
+			name:    "spelled directionals",
+			raw:     "1016 East 1700 South\nSalt Lake City UT 84105",
+			primary: "1016",
+			predir:  "E",
+			street:  "1700",
+			postdir: "S",
+			wantFmt: "1016 E 1700 S\nSALT LAKE CITY UT 84105",
+		},
+		{
+			name:    "abbreviated directionals",
+			raw:     "842 E 1700 S\nSalt Lake City UT 84105",
+			primary: "842",
+			predir:  "E",
+			street:  "1700",
+			postdir: "S",
+			wantFmt: "842 E 1700 S\nSALT LAKE CITY UT 84105",
+		},
+		{
+			name:    "north west grid",
+			raw:     "500 North 300 West\nSalt Lake City UT 84103",
+			primary: "500",
+			predir:  "N",
+			street:  "300",
+			postdir: "W",
+			wantFmt: "500 N 300 W\nSALT LAKE CITY UT 84103",
+		},
+		{
+			name:    "compound predir still merges",
+			raw:     "100 Northeast 200 South\nSalt Lake City UT 84111",
+			primary: "100",
+			predir:  "NE",
+			street:  "200",
+			postdir: "S",
+			wantFmt: "100 NE 200 S\nSALT LAKE CITY UT 84111",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.Predirectional != tc.predir {
+				t.Errorf("Predirectional = %q, want %q", got.Predirectional, tc.predir)
+			}
+			if got.StreetName != tc.street {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.street)
+			}
+			if got.StreetSuffix != "" {
+				t.Errorf("StreetSuffix = %q, want empty (grid has no suffix)", got.StreetSuffix)
+			}
+			if got.Postdirectional != tc.postdir {
+				t.Errorf("Postdirectional = %q, want %q", got.Postdirectional, tc.postdir)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+
+func TestParseFractionalPrimary(t *testing.T) {
+	// Fractional house numbers: PrimaryNumber is the integer portion; the
+	// fraction token stays in StreetName with slash retained (KeepSlash).
+	// Choice: Primary="123", StreetName="1/2 MAIN" (not Primary="123 1/2").
+	tests := []struct {
+		name       string
+		raw        string
+		primary    string
+		streetName string
+		suffix     string
+		wantFmt    string
+	}{
+		{
+			name:       "half main street",
+			raw:        "123 1/2 Main Street\nSpringfield IL 62701",
+			primary:    "123",
+			streetName: "1/2 MAIN",
+			suffix:     "ST",
+			wantFmt:    "123 1/2 MAIN ST\nSPRINGFIELD IL 62701",
+		},
+		{
+			// Format order is PRIMARY PREDIR STREET, so the fraction (in
+			// StreetName) appears after the predirectional field.
+			name:       "quarter with predirectional after fraction",
+			raw:        "45 1/4 North Oak Avenue\nSpringfield IL 62701",
+			primary:    "45",
+			streetName: "1/4 OAK",
+			suffix:     "AVE",
+			wantFmt:    "45 N 1/4 OAK AVE\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "half with abbreviated predir",
+			raw:        "123 1/2 N Main Street\nSpringfield IL 62701",
+			primary:    "123",
+			streetName: "1/2 MAIN",
+			suffix:     "ST",
+			wantFmt:    "123 N 1/2 MAIN ST\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "fraction with secondary",
+			raw:        "123 1/2 Main Street Apt 4\nSpringfield IL 62701",
+			primary:    "123",
+			streetName: "1/2 MAIN",
+			suffix:     "ST",
+			wantFmt:    "123 1/2 MAIN ST APT 4\nSPRINGFIELD IL 62701",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.StreetName != tc.streetName {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.streetName)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			// Slash must survive Parse (KeepSlash) and Normalize free-text.
+			if !strings.Contains(got.StreetName, "/") {
+				t.Errorf("StreetName %q lost fractional slash", got.StreetName)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+
+func TestParseMultiSecondaryTrailingUnits(t *testing.T) {
+	// Multiple trailing secondaries peel right-to-left repeatedly and combine
+	// into SecondaryDesignator (leftmost) + SecondaryNumber (remainder) so
+	// Format yields "BLDG 420 RM 120".
+	tests := []struct {
+		name    string
+		raw     string
+		primary string
+		street  string
+		suffix  string
+		secDes  string
+		secNum  string
+		wantFmt string
+	}{
+		{
+			name:    "building and room",
+			raw:     "450 Jane Stanford Way Building 420 Room 120\nSpringfield IL 62701",
+			primary: "450",
+			street:  "JANE STANFORD",
+			suffix:  "WY", // WAY normalizes to WY
+			secDes:  "BLDG",
+			secNum:  "420 RM 120",
+			wantFmt: "450 JANE STANFORD WY BLDG 420 RM 120\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:    "suite and floor",
+			raw:     "100 Main Street Suite 200 Floor 3\nSpringfield IL 62701",
+			primary: "100",
+			street:  "MAIN",
+			suffix:  "ST",
+			secDes:  "STE",
+			secNum:  "200 FL 3",
+			wantFmt: "100 MAIN ST STE 200 FL 3\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:    "building room upper",
+			raw:     "450 Jane Stanford Way Building 420 Room 120 Upper\nSpringfield IL 62701",
+			primary: "450",
+			street:  "JANE STANFORD",
+			suffix:  "WY",
+			secDes:  "BLDG",
+			secNum:  "420 RM 120 UPPR",
+			wantFmt: "450 JANE STANFORD WY BLDG 420 RM 120 UPPR\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:    "single secondary still works",
+			raw:     "450 Jane Stanford Way Building 420\nSpringfield IL 62701",
+			primary: "450",
+			street:  "JANE STANFORD",
+			suffix:  "WY",
+			secDes:  "BLDG",
+			secNum:  "420",
+			wantFmt: "450 JANE STANFORD WY BLDG 420\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:    "alpha unit numbers",
+			raw:     "10 Oak Drive Building A Room B\nSpringfield IL 62701",
+			primary: "10",
+			street:  "OAK",
+			suffix:  "DR",
+			secDes:  "BLDG",
+			secNum:  "A RM B",
+			wantFmt: "10 OAK DR BLDG A RM B\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:    "hash after building",
+			raw:     "10 Main Street Building 5 # 12\nSpringfield IL 62701",
+			primary: "10",
+			street:  "MAIN",
+			suffix:  "ST",
+			secDes:  "BLDG",
+			secNum:  "5 # 12",
+			wantFmt: "10 MAIN ST BLDG 5 # 12\nSPRINGFIELD IL 62701",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.StreetName != tc.street {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.street)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			if got.SecondaryDesignator != tc.secDes {
+				t.Errorf("SecondaryDesignator = %q, want %q", got.SecondaryDesignator, tc.secDes)
+			}
+			if got.SecondaryNumber != tc.secNum {
+				t.Errorf("SecondaryNumber = %q, want %q", got.SecondaryNumber, tc.secNum)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+
+func TestParseHyphenatedPrimary(t *testing.T) {
+	// NYC-style hyphenated house numbers keep the hyphen (KeepHyphen).
+	tests := []struct {
+		name    string
+		raw     string
+		primary string
+		street  string
+		suffix  string
+		wantFmt string
+	}{
+		{
+			name:    "bronx road",
+			raw:     "112-10 Bronx Road\nBronx NY 10475",
+			primary: "112-10",
+			street:  "BRONX",
+			suffix:  "RD",
+			wantFmt: "112-10 BRONX RD\nBRONX NY 10475",
+		},
+		{
+			name:    "with predirectional",
+			raw:     "35-11 35th Avenue\nAstoria NY 11106",
+			primary: "35-11",
+			street:  "35TH",
+			suffix:  "AVE",
+			wantFmt: "35-11 35TH AVE\nASTORIA NY 11106",
+		},
+		{
+			name:    "with secondary",
+			raw:     "112-10 Bronx Road Apt 3B\nBronx NY 10475",
+			primary: "112-10",
+			street:  "BRONX",
+			suffix:  "RD",
+			wantFmt: "112-10 BRONX RD APT 3B\nBRONX NY 10475",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.StreetName != tc.street {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.street)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			if !strings.Contains(got.PrimaryNumber, "-") {
+				t.Errorf("PrimaryNumber %q lost hyphen", got.PrimaryNumber)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+
+func TestParseSpecialFormsNotBrokenByGridMultiSecondary(t *testing.T) {
+	// Military / RR / PO Box / leading secondary must remain intact after
+	// multi-secondary and grid parsing changes.
+	tests := []struct {
+		name    string
+		raw     string
+		wantFmt string
+		check   func(t *testing.T, got Address)
+	}{
+		{
+			name:    "military unit box",
+			raw:     "UNIT 2050 BOX 4190\nAPO AP 96278-2050",
+			wantFmt: "UNIT 2050 BOX 4190\nAPO AP 96278-2050",
+			check: func(t *testing.T, got Address) {
+				if got.StreetName != "UNIT 2050 BOX 4190" {
+					t.Errorf("StreetName = %q", got.StreetName)
+				}
+				if got.SecondaryDesignator != "" || got.PrimaryNumber != "" {
+					t.Errorf("military must not civilian-peel, sec=%q primary=%q",
+						got.SecondaryDesignator, got.PrimaryNumber)
+				}
+			},
+		},
+		{
+			name:    "rural route",
+			raw:     "RR 2 BOX 152\nAnytown KY 40000",
+			wantFmt: "RR 2 BOX 152\nANYTOWN KY 40000",
+			check: func(t *testing.T, got Address) {
+				if got.StreetName != "RR 2 BOX 152" {
+					t.Errorf("StreetName = %q", got.StreetName)
+				}
+			},
+		},
+		{
+			name:    "po box",
+			raw:     "PO BOX 123\nAnytown KY 40000",
+			wantFmt: "PO BOX 123\nANYTOWN KY 40000",
+			check: func(t *testing.T, got Address) {
+				if got.StreetName != "PO BOX 123" {
+					t.Errorf("StreetName = %q", got.StreetName)
+				}
+			},
+		},
+		{
+			name:    "leading secondary apartment",
+			raw:     "APT 4 123 MAIN ST\nSpringfield IL 62701",
+			wantFmt: "123 MAIN ST APT 4\nSPRINGFIELD IL 62701",
+			check: func(t *testing.T, got Address) {
+				if got.PrimaryNumber != "123" || got.SecondaryDesignator != "APT" || got.SecondaryNumber != "4" {
+					t.Errorf("primary=%q sec=%q %q", got.PrimaryNumber, got.SecondaryDesignator, got.SecondaryNumber)
+				}
+			},
+		},
+		{
+			name:    "unit with trailing upper",
+			raw:     "Unit 3200 152 Tech Drive Upper\nMiami FL 33101",
+			wantFmt: "152 TECH DR UNIT 3200 UPPR\nMIAMI FL 33101",
+			check: func(t *testing.T, got Address) {
+				if got.SecondaryDesignator != "UNIT" || got.SecondaryNumber != "3200 UPPR" {
+					t.Errorf("secondary = %q %q", got.SecondaryDesignator, got.SecondaryNumber)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if tc.check != nil {
+				tc.check(t, got)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+

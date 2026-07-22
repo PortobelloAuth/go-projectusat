@@ -15,13 +15,14 @@ from potential backers.
 `NormalizeWithOptions`), free-text `Parse` (multi-line / comma-separated; overseas
 military APO/FPO/DPO fast path; rural route / PO Box free-text rewrite; multi-token
 directionals; leading secondary / `#` reorder; double-suffix and state-as-street-name;
-reverse-token street componentization),
+grid-style double directionals; fractional house numbers; multi-secondary trailing units;
+hyphenated NYC-style primaries; reverse-token street componentization),
 street/last-line formatting, military street lines through `Normalize`/`Format`, and
 component packages under `pkg/` (regions, street suffixes, directionals, secondary units,
 diacritics, highways, military, Puerto Rico, text helpers).
 
 **Not yet:** Puerto Rico vocabulary in `Parse`, same-line business/pre-street detection,
-grid/fractional/narrative free-text forms, and remaining C#-parity street-line edge cases.
+narrative free-text forms, and remaining C#-parity street-line edge cases.
 Use `pkg/puertorico` directly for Spanish street/unit vocabulary until it is wired into
 the root parse pipeline.
 
@@ -71,7 +72,10 @@ addr, err = goprojectusat.Parse("PO Box 11890\nSpringfield IL 62701")
 city/region/postal, rewrites rural route / PO Box street lines when matched,
 merges multi-token directionals (`SOUTH WEST` → `SW`), reorders a leading secondary
 designator or `#` + unit number to the end of the street line, reverse-token peels
-common street components, and uses a military fast path when both street and last
+common street components (including repeated multi-secondary units such as
+`Building 420 Room 120` → `BLDG 420 RM 120`), recognizes grid-style double
+directionals without a suffix (`1016 E 1700 S`), keeps fractional slashes and
+hyphenated primaries, and uses a military fast path when both street and last
 lines match APO/FPO/DPO forms. It does not call `Normalize`;
 compose `Normalize(Parse(raw))` for content form. Ambiguous or unrecognizable
 input returns an error rather than inventing structure.
