@@ -5,24 +5,38 @@ This module implements the
 (which is an extension of the USPS publication 28 standard) for US Address
 Normalization directly in Go.
 
-## This implementation is currently incomplete and its API should be considered unstable.
+## Status
 
-This implementation is incomplete and has not reached release status. It is
-being built in public to facilitate feedback from potential users and support
-from potential backers.
+This library is **built in public** and has **not** cut a stable release. The
+**API may change** without a major-version guarantee.
 
-**What works today:** structured `Address` normalization (`Normalize` /
-`NormalizeWithOptions`), free-text `Parse` covering the main Project US@ / C# parity
-workflows: multi-line and comma-separated input; overseas military; rural route and PO Box;
-multi-token directionals; leading secondary / `#` reorder; double-suffix and state-as-street-name;
-same-line business and narrative pre-street prefixes; grid-style double directionals;
-fractional and hyphenated primaries; multi-secondary units; directional-as-name and
-Avenue-letter edges; Puerto Rico Spanish street types and secondaries (including Apartado),
-street/last-line formatting, and component packages under `pkg/`.
+### Feature readiness
 
-**Not yet:** exhaustive C# `StreetLineNormalizerTests` parity for every punctuation/
-narrative edge, geocoder-backed disambiguation, and some rare dual-interpretation cases.
-The API remains unstable.
+Scores are engineering judgment for **production use of that feature**, not a
+marketing claim. Scale: **Ready** (solid tests + common cases), **Beta** (works
+for main paths; edge cases remain), **Alpha** (usable but incomplete), **Planned**
+(not implemented).
+
+| Feature | Readiness | Notes |
+|---------|-----------|--------|
+| Structured `Normalize` / `NormalizeWithOptions` | **Ready** | Content vs exchange options; controlled vocab; errors on unknown tokens |
+| Format street / last line / full address | **Ready** | Composes normalized fields |
+| Regions (US states, territories, AA/AE/AP, Canada) | **Ready** | Exact + optional fuzzy |
+| Street suffixes (USPS / Project US@ tables) | **Ready** | Exact + optional fuzzy |
+| Directionals (N/S/E/W and compounds) | **Ready** | Single- and multi-token (`SOUTH WEST` → `SW`) |
+| Secondary units (APT, STE, `#`, multi-unit) | **Ready** | Leading / trailing / multi-secondary |
+| Highways & routes (`I10`, `US 41`, `CR`, `FM`, …) | **Ready** | Including decimal grid designators (`RD 39.4` → `ROAD 39.4`) |
+| Diacritics (`substitute` / `transliterate`) | **Ready** | Via options or `pkg/diacritics` |
+| Free-text `Parse` (multi-line / common single-line) | **Beta** | Strong on common US shapes; rare dual-interpretation cases still conservative |
+| C# street-line parity (tracked 55-case battery) | **Ready** | `go test . -run TestCSharpParityScore` → **55/55** |
+| Rural route & PO Box free-text | **Ready** | RR / RFD / PO / POB / Apartado (PR) |
+| Overseas military (APO/FPO/DPO) | **Ready** | Multi-line, comma, and space-separated single line |
+| Same-line business / narrative prefix | **Beta** | Works when a clear house number follows; odd firm names can still surprise |
+| Puerto Rico Spanish street / secondary vocab | **Beta** | Wired into `Parse` when region is `PR`; Spanish primary forms (e.g. `CALLE LUNA`) |
+| Last-line city / region / postal (incl. ZIP+4, CA) | **Beta** | Multi-word cities on multi-line and improved single-line; unusual last lines may fail closed |
+| Full C# `StreetLineNormalizerTests` dump | **Alpha** | Representative parity is green; not every historical C# edge is claimed |
+| Geocoder / official-ID validation of numeric streets | **Planned** | Out of scope (no network / external services) |
+| Stable v1 API / semver release | **Planned** | Still pre-release |
 
 **Prefer content form** (`Normalize`) when writing patient records; use
 `NormalizeWithOptions` when preparing addresses for match/exchange (see Options
