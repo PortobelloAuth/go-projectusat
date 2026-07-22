@@ -87,8 +87,7 @@ SR MM                          <->    STATE ROUTE MM
 ST RT 175                      <->    STATE ROUTE 175
 STATE RTE 260                  <->    STATE ROUTE 260
 TOWNSHIP RD 20                 <->    TOWNSHIP ROAD 20
-Road is not abbreviated as it is part
-of the street name.
+Road is not abbreviated as it is part of the street name.
 
 TSR 45                         <->    TOWNSHIP ROAD 45
 The word township is never abbreviated.

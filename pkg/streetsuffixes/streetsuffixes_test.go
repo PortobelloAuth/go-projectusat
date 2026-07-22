@@ -40,6 +40,11 @@ func TestNormalizeStreetSuffixPrimary(t *testing.T) {
 		{"alley", "ALLEY"},
 		{"BYP", "BYPASS"},
 		{"bypass", "BYPASS"},
+		{"WAY", "WAY"},
+		{"WY", "WAY"},
+		{"way", "WAY"},
+		{"KEY", "KEY"},
+		{"KY", "KEY"},
 	}
 
 	for _, tc := range cases {
@@ -76,6 +81,11 @@ func TestNormalizeStreetSuffixAbbreviation(t *testing.T) {
 		{"PARKWAY", "PKWY"},
 		{"ALLEY", "ALY"},
 		{"BYPASS", "BYP"},
+		{"WAY", "WAY"},
+		{"WY", "WAY"},
+		{"way", "WAY"},
+		{"KEY", "KY"},
+		{"KY", "KY"},
 	}
 
 	for _, tc := range cases {

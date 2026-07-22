@@ -5,7 +5,7 @@ This module implements the
 (which is an extension of the USPS publication 28 standard) for US Address
 Normalization directly in Go.
 
-## This implementation is currently incomplete and its API should be considered unstable.
+## This implementation is currently incomplete and its API should be considered unstable
 
 This implementation is incomplete and has not reached release status. It is
 being built in public to facilitate feedback from potential users and support
@@ -54,7 +54,7 @@ but are considered distinct "primary" suffixes. Since the storage of a suffix by
 its primary representation or abbreviation is left up to an implementation
 (based on the space allocated for storage), this will necessarily lead to
 instances where one implementation stores the address with the suffix
-abbreviation while another does not - resulting in a form of infomration loss.
+abbreviation while another does not - resulting in a form of information loss.
 The exchange case is therefore required to treat both primary suffixes as
 potentially matching. (Avoiding information loss would require distinct
 abbreviations for each primary suffix, but, since they do not exist in the

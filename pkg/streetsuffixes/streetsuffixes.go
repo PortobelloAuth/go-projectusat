@@ -1470,7 +1470,7 @@ var streetSuffixes = []StreetSuffix{
 	},
 	{
 		Primary: "WAY",
-		Short:   "WY",
+		Short:   "WAY",
 		Alt: []string{
 			"WY", "WAY",
 		},
