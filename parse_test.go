@@ -921,6 +921,14 @@ func TestParseDoubleSuffixAndStateAsStreetName(t *testing.T) {
 			suffix:     "CT",
 		},
 		{
+			// Last WY is suffix WAY (not WY); first WY is state WYOMING.
+			name:       "WY WY state then way",
+			raw:        "8011 WY WY\nSpringfield IL 62701",
+			primary:    "8011",
+			streetName: "WYOMING",
+			suffix:     "WAY",
+		},
+		{
 			name:       "full state name already spelled",
 			raw:        "8008 Oklahoma Avenue\nOklahoma City OK 73101",
 			primary:    "8008",
@@ -1146,10 +1154,10 @@ func TestParseMultiSecondaryTrailingUnits(t *testing.T) {
 			raw:     "450 Jane Stanford Way Building 420 Room 120\nSpringfield IL 62701",
 			primary: "450",
 			street:  "JANE STANFORD",
-			suffix:  "WY", // WAY normalizes to WY
+			suffix:  "WAY", // Way suffix prefers WAY (not WY)
 			secDes:  "BLDG",
 			secNum:  "420 RM 120",
-			wantFmt: "450 JANE STANFORD WY BLDG 420 RM 120\nSPRINGFIELD IL 62701",
+			wantFmt: "450 JANE STANFORD WAY BLDG 420 RM 120\nSPRINGFIELD IL 62701",
 		},
 		{
 			name:    "suite and floor",
@@ -1166,20 +1174,20 @@ func TestParseMultiSecondaryTrailingUnits(t *testing.T) {
 			raw:     "450 Jane Stanford Way Building 420 Room 120 Upper\nSpringfield IL 62701",
 			primary: "450",
 			street:  "JANE STANFORD",
-			suffix:  "WY",
+			suffix:  "WAY",
 			secDes:  "BLDG",
 			secNum:  "420 RM 120 UPPR",
-			wantFmt: "450 JANE STANFORD WY BLDG 420 RM 120 UPPR\nSPRINGFIELD IL 62701",
+			wantFmt: "450 JANE STANFORD WAY BLDG 420 RM 120 UPPR\nSPRINGFIELD IL 62701",
 		},
 		{
 			name:    "single secondary still works",
 			raw:     "450 Jane Stanford Way Building 420\nSpringfield IL 62701",
 			primary: "450",
 			street:  "JANE STANFORD",
-			suffix:  "WY",
+			suffix:  "WAY",
 			secDes:  "BLDG",
 			secNum:  "420",
-			wantFmt: "450 JANE STANFORD WY BLDG 420\nSPRINGFIELD IL 62701",
+			wantFmt: "450 JANE STANFORD WAY BLDG 420\nSPRINGFIELD IL 62701",
 		},
 		{
 			name:    "alpha unit numbers",
@@ -1822,5 +1830,71 @@ func TestParseTrailingUnitedStatesOnLastLine(t *testing.T) {
 	}
 	if got.Country != "" && got.Country != "UNITED STATES" {
 		t.Fatalf("Country = %q", got.Country)
+	}
+}
+
+// Permanent regressions for PL-008 / PL-009 / PL-022 (state-as-name WAY,
+// mid-name directional expansion, KEY as street suffix not secondary).
+func TestParseWyomingWayStateAsName(t *testing.T) {
+	// "WY WY" → state WYOMING + suffix WAY (not WY/WY).
+	got, err := Parse("8011 WY WY\nSpringfield IL 62701")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "8011" || got.StreetName != "WYOMING" || got.StreetSuffix != "WAY" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q, want 8011/WYOMING/WAY",
+			got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	if FormatStreetLine(got) != "8011 WYOMING WAY" {
+		t.Fatalf("FormatStreetLine = %q, want 8011 WYOMING WAY", FormatStreetLine(got))
+	}
+}
+
+func TestParseMidNameDirectionalExpanded(t *testing.T) {
+	// Mid-name single-letter directional expands: BAY W DRIVE → BAY WEST DR.
+	got, err := Parse("1014 BAY W DRIVE\nSpringfield IL 62701")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "1014" || got.StreetName != "BAY WEST" || got.StreetSuffix != "DR" {
+		t.Fatalf("street = primary=%q name=%q suffix=%q, want 1014/BAY WEST/DR",
+			got.PrimaryNumber, got.StreetName, got.StreetSuffix)
+	}
+	if got.Predirectional != "" || got.Postdirectional != "" {
+		t.Fatalf("unexpected pre/post dir: pre=%q post=%q", got.Predirectional, got.Postdirectional)
+	}
+	if FormatStreetLine(got) != "1014 BAY WEST DR" {
+		t.Fatalf("FormatStreetLine = %q, want 1014 BAY WEST DR", FormatStreetLine(got))
+	}
+}
+
+func TestParseKeyAsStreetSuffixNotSecondary(t *testing.T) {
+	// Trailing KEY is street suffix KY, not secondary unit KEY.
+	got, err := Parse("8007 EAST KENTUCKY KEY\nSpringfield IL 62701")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.PrimaryNumber != "8007" || got.Predirectional != "E" ||
+		got.StreetName != "KENTUCKY" || got.StreetSuffix != "KY" {
+		t.Fatalf("street = primary=%q pre=%q name=%q suffix=%q, want 8007/E/KENTUCKY/KY",
+			got.PrimaryNumber, got.Predirectional, got.StreetName, got.StreetSuffix)
+	}
+	if got.SecondaryDesignator != "" || got.SecondaryNumber != "" {
+		t.Fatalf("unexpected secondary: des=%q num=%q", got.SecondaryDesignator, got.SecondaryNumber)
+	}
+	if FormatStreetLine(got) != "8007 E KENTUCKY KY" {
+		t.Fatalf("FormatStreetLine = %q, want 8007 E KENTUCKY KY", FormatStreetLine(got))
+	}
+	// Numbered KEY still peels as secondary unit.
+	got2, err := Parse("100 Main Street Key 12\nSpringfield IL 62701")
+	if err != nil {
+		t.Fatalf("Parse Key 12: %v", err)
+	}
+	if got2.SecondaryDesignator != "KEY" || got2.SecondaryNumber != "12" {
+		t.Fatalf("Key 12 secondary = des=%q num=%q, want KEY/12",
+			got2.SecondaryDesignator, got2.SecondaryNumber)
+	}
+	if got2.StreetSuffix != "ST" || got2.StreetName != "MAIN" {
+		t.Fatalf("Key 12 street = name=%q suffix=%q", got2.StreetName, got2.StreetSuffix)
 	}
 }

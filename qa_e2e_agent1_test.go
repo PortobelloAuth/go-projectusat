@@ -326,7 +326,7 @@ func TestQAE2E_ParseNormalizeFormat(t *testing.T) {
 		{
 			name:    "multi-secondary building room",
 			raw:     "450 Jane Stanford Way Building 420 Room 120\nSpringfield IL 62701",
-			wantFmt: "450 JANE STANFORD WY BLDG 420 RM 120\nSPRINGFIELD IL 62701",
+			wantFmt: "450 JANE STANFORD WAY BLDG 420 RM 120\nSPRINGFIELD IL 62701",
 			wantSecDes: "BLDG", wantSecNum: "420 RM 120", checkFields: true,
 		},
 		{

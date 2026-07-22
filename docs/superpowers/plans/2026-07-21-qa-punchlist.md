@@ -131,7 +131,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Expected (C#):** `8011 WYOMING WAY`  
 - **Also:** `Way` suffix should abbreviate to `WAY` not `WY` when it is a street suffix  
 - **Falsifiable test:** `TestPunchlist_PL008_WyomingWay`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-009: Directional-as-name under/over expansion
 
@@ -141,7 +141,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Expected (C#):** `1014 BAY WEST DR`  
 - **Repro B:** over-merge cases where `N E` mid-name should not always become NE (context-sensitive)  
 - **Falsifiable test:** `TestPunchlist_PL009_BayWestDrive`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21; Repro A; Repro B left as context-sensitive follow-up)
 
 ### PL-010: State as *portion* of street name not abbreviated
 
@@ -262,7 +262,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Sources:** A2-003  
 - **Repro:** state/street cases involving KEY / PRAIRIE  
 - **Falsifiable test:** `TestPunchlist_PL022_KeyAndPrairie`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21; KEY-as-suffix path; PRAIRIE table typo separate if still open)
 
 ### PL-023: Apt/Suite as street name fail
 

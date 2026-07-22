@@ -579,6 +579,18 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		}
 	}
 
+	// Mid-name single-letter directionals (not peeled as pre/post dir) expand to
+	// full words: "BAY W DRIVE" → name BAY WEST + DR. Multi-letter compounds
+	// (NE/SW/…) are left as-is so mid-name "N E" merges stay context-sensitive.
+	for i, tok := range tokens {
+		if len(tok) != 1 {
+			continue
+		}
+		if full, err := directionals.NormalizeDirectional(tok); err == nil {
+			tokens[i] = full
+		}
+	}
+
 	name := strings.Join(tokens, " ")
 	// highways.NormalizeStreetName always succeeds for non-empty input: it
 	// rewrites highway forms and otherwise returns the uppercased pass-through.
@@ -877,8 +889,15 @@ func peelSecondary(tokens []string, out *Address, isPR bool) []string {
 			}
 		}
 
-		// Designator alone (non-numbered, or numbered without a number)
+		// Designator alone (non-numbered, or numbered without a number).
+		// When the bare token is also a street suffix (e.g. KEY → KY, TRAILER →
+		// TRLR), leave it for the suffix peel rather than treating it as a unit
+		// type: "8007 EAST KENTUCKY KEY" → E KENTUCKY KY, not secondary KEY.
 		if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil {
+			if _, sErr := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); sErr == nil {
+				// Also a street suffix — prefer suffix over bare secondary.
+				break
+			}
 			peels = append(peels, secondaryPeel{designator: info.Short})
 			tokens = tokens[:len(tokens)-1]
 			continue
