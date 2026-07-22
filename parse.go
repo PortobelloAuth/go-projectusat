@@ -88,11 +88,28 @@ func parseCivilian(lines []string) (Address, error) {
 	if err != nil {
 		return Address{}, err
 	}
-	street.BusinessName = business
+	// Multi-line business stays; same-line pre-street prefix fills BusinessName
+	// when empty, otherwise is prepended with a space.
+	street.BusinessName = mergeBusinessName(business, street.BusinessName)
 	street.City = city
 	street.Region = reg
 	street.Postal = zip
 	return street, nil
+}
+
+// mergeBusinessName combines a multi-line firm/business line with an optional
+// same-line pre-street prefix extracted by parseStreetLine.
+// multi-line takes precedence as the base; same-line only fills when empty,
+// otherwise same-line is prepended: "PREFIX MULTI".
+func mergeBusinessName(multiLine, sameLine string) string {
+	switch {
+	case sameLine == "":
+		return multiLine
+	case multiLine == "":
+		return sameLine
+	default:
+		return sameLine + " " + multiLine
+	}
 }
 
 // parseLastLine extracts city, region (abbreviated), and postal from a last line
@@ -222,7 +239,13 @@ func parseStreetLine(line string) (Address, error) {
 	// see them as trailing (e.g. "APT 4 123 MAIN ST" → "123 MAIN ST APT 4").
 	tokens = reorderLeadingSecondary(tokens)
 
+	// Same-line business / narrative tokens before the house number
+	// (e.g. "WILLIAMSON MEDICAL CENTER 3000 EDWARD CURD LANE").
 	var out Address
+	var preStreet string
+	preStreet, tokens = splitPreStreet(tokens)
+	out.BusinessName = preStreet
+
 	tokens = peelSecondary(tokens, &out)
 
 	// Postdirectional (right)
@@ -383,6 +406,37 @@ func expandHashTokens(tokens []string) []string {
 		out = append(out, t)
 	}
 	return out
+}
+
+// splitPreStreet finds non-address tokens before the primary house number on a
+// street line and returns them as a business/narrative prefix. The leftmost
+// token that looksLikePrimaryNumber and is followed by at least one more token
+// (street body) is treated as the primary; tokens before it become the prefix.
+//
+// Ordinary streets that already start with a primary number are left unchanged
+// (i == 0). If no primary-looking token appears after position 0 with a
+// following street body, tokens are returned as-is.
+//
+// Call after special rewrite, hash expand, directional merge, and leading
+// secondary reorder so military/RR/PO never reach here and "APT 4 123 …" is
+// already reordered to start with the house number.
+func splitPreStreet(tokens []string) (business string, rest []string) {
+	if len(tokens) < 2 {
+		return "", tokens
+	}
+	for i := 0; i < len(tokens)-1; i++ {
+		if !looksLikePrimaryNumber(tokens[i]) {
+			continue
+		}
+		// Primary already first: ordinary street — do not invent a pre-street.
+		if i == 0 {
+			return "", tokens
+		}
+		// At least one token after the primary remains for the street body.
+		return strings.Join(tokens[:i], " "), tokens[i:]
+	}
+	// No primary after position 0 (or no following body): leave as today.
+	return "", tokens
 }
 
 // reorderLeadingSecondary moves a leading secondary designator (or #) plus its

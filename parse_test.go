@@ -561,6 +561,191 @@ func TestParseMilitaryNotBrokenByLeadingUnit(t *testing.T) {
 	}
 }
 
+func TestParseSameLineBusinessPreStreet(t *testing.T) {
+	tests := []struct {
+		name       string
+		raw        string
+		business   string
+		primary    string
+		predir     string
+		streetName string
+		suffix     string
+		wantFmt    string // Format(Normalize) spot check; empty skips
+	}{
+		{
+			name:       "williamson medical center",
+			raw:        "Williamson Medical Center 3000 Edward Curd Lane\nSpringfield IL 62701",
+			business:   "WILLIAMSON MEDICAL CENTER",
+			primary:    "3000",
+			streetName: "EDWARD CURD",
+			suffix:     "LN",
+			wantFmt:    "WILLIAMSON MEDICAL CENTER\n3000 EDWARD CURD LN\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "ucent building with predir and ordinal name",
+			raw:        "UCENT Building 847 North 49th Street\nSpringfield IL 62701",
+			business:   "UCENT BUILDING",
+			primary:    "847",
+			predir:     "N",
+			streetName: "49TH",
+			suffix:     "ST",
+			wantFmt:    "UCENT BUILDING\n847 N 49TH ST\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "narrative lives in the tent near",
+			raw:        "Lives in the tent near 155 North Main Street\nSpringfield IL 62701",
+			business:   "LIVES IN THE TENT NEAR",
+			primary:    "155",
+			predir:     "N",
+			streetName: "MAIN",
+			suffix:     "ST",
+			wantFmt:    "LIVES IN THE TENT NEAR\n155 N MAIN ST\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "center of hope",
+			raw:        "Center of Hope 110 East 7th Street\nSpringfield IL 62701",
+			business:   "CENTER OF HOPE",
+			primary:    "110",
+			predir:     "E",
+			streetName: "7TH",
+			suffix:     "ST",
+			wantFmt:    "CENTER OF HOPE\n110 E 7TH ST\nSPRINGFIELD IL 62701",
+		},
+		// Ordinary streets that start with a primary must not invent BusinessName.
+		{
+			name:       "ordinary street no business",
+			raw:        "123 Main Street\nSpringfield IL 62701",
+			business:   "",
+			primary:    "123",
+			streetName: "MAIN",
+			suffix:     "ST",
+			wantFmt:    "123 MAIN ST\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "ordinary with predir no business",
+			raw:        "847 North 49th Street\nSpringfield IL 62701",
+			business:   "",
+			primary:    "847",
+			predir:     "N",
+			streetName: "49TH",
+			suffix:     "ST",
+		},
+		// Leading secondary reorder runs first — still no false pre-street.
+		{
+			name:       "leading secondary not pre-street",
+			raw:        "Apartment 3200 152 South Tech Drive\nMiami FL 33101",
+			business:   "",
+			primary:    "152",
+			predir:     "S",
+			streetName: "TECH",
+			suffix:     "DR",
+		},
+		// Multi-line business stays; same-line only fills when multi-line empty.
+		{
+			name:       "multi-line business preferred alone",
+			raw:        "Acme Corp\n123 Main Street\nSpringfield IL 62701",
+			business:   "ACME CORP",
+			primary:    "123",
+			streetName: "MAIN",
+			suffix:     "ST",
+		},
+		// Both multi-line and same-line: same-line prepended to multi-line.
+		{
+			name:       "same-line prepends multi-line business",
+			raw:        "Acme Corp\nBuilding A 123 Main Street\nSpringfield IL 62701",
+			business:   "BUILDING A ACME CORP",
+			primary:    "123",
+			streetName: "MAIN",
+			suffix:     "ST",
+			wantFmt:    "BUILDING A ACME CORP\n123 MAIN ST\nSPRINGFIELD IL 62701",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.BusinessName != tc.business {
+				t.Errorf("BusinessName = %q, want %q", got.BusinessName, tc.business)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.Predirectional != tc.predir {
+				t.Errorf("Predirectional = %q, want %q", got.Predirectional, tc.predir)
+			}
+			if got.StreetName != tc.streetName {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.streetName)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			if tc.wantFmt == "" {
+				return
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFmt {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFmt)
+			}
+		})
+	}
+}
+
+func TestParseMilitaryRRPONotBrokenByPreStreet(t *testing.T) {
+	// Military / RR / PO rewrite paths run before pre-street and must stay intact.
+	cases := []struct {
+		raw, street string
+	}{
+		{"PSC 3 BOX 4120\nAPO AE 09021-0002", "PSC 3 BOX 4120"},
+		{"Rural Route 91 Box A7\nSpringfield IL 62701", "RR 91 BOX A7"},
+		{"PO Box 11890\nSpringfield IL 62701", "PO BOX 11890"},
+	}
+	for _, tc := range cases {
+		got, err := Parse(tc.raw)
+		if err != nil {
+			t.Fatalf("Parse(%q): %v", tc.raw, err)
+		}
+		if got.StreetName != tc.street {
+			t.Errorf("Parse(%q).StreetName = %q, want %q", tc.raw, got.StreetName, tc.street)
+		}
+		if got.BusinessName != "" {
+			t.Errorf("Parse(%q).BusinessName = %q, want empty", tc.raw, got.BusinessName)
+		}
+		if got.PrimaryNumber != "" {
+			t.Errorf("Parse(%q).PrimaryNumber = %q, want empty", tc.raw, got.PrimaryNumber)
+		}
+	}
+}
+
+func TestSplitPreStreet(t *testing.T) {
+	cases := []struct {
+		in, wantBiz, wantRest string
+	}{
+		{"123 MAIN ST", "", "123 MAIN ST"},
+		{"WILLIAMSON MEDICAL CENTER 3000 EDWARD CURD LANE", "WILLIAMSON MEDICAL CENTER", "3000 EDWARD CURD LANE"},
+		{"LIVES IN THE TENT NEAR 155 NORTH MAIN STREET", "LIVES IN THE TENT NEAR", "155 NORTH MAIN STREET"},
+		{"RD 5A", "", "RD 5A"}, // primary-looking last token with no following body
+		{"MAIN", "", "MAIN"},
+		{"", "", ""},
+	}
+	for _, tc := range cases {
+		var in []string
+		if tc.in != "" {
+			in = strings.Fields(tc.in)
+		}
+		biz, rest := splitPreStreet(in)
+		gotRest := strings.Join(rest, " ")
+		if biz != tc.wantBiz || gotRest != tc.wantRest {
+			t.Errorf("splitPreStreet(%q) = (%q, %q), want (%q, %q)",
+				tc.in, biz, gotRest, tc.wantBiz, tc.wantRest)
+		}
+	}
+}
+
 func TestParseDoubleSuffixAndStateAsStreetName(t *testing.T) {
 	tests := []struct {
 		name       string
