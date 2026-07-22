@@ -307,16 +307,19 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		}
 	}
 
-	// PR Spanish street types as suffix (trailing) when English suffix did not match.
+	// PR Spanish street type (trailing token), kept as Spanish primary word
+	// (CALLE not CLL). Combined into StreetName below so Format yields
+	// "123 CALLE LUNA" rather than English-style "123 LUNA CLL".
+	var prStreetType string
 	if isPR && out.StreetSuffix == "" && len(tokens) >= 2 {
-		if abbr, err := puertorico.AbbreviateStreetType(tokens[len(tokens)-1]); err == nil {
+		if primary, err := puertorico.NormalizeStreetType(tokens[len(tokens)-1]); err == nil {
 			residual := tokens[:len(tokens)-1]
 			nameBody := residual
 			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
 				nameBody = nameBody[1:]
 			}
 			if len(nameBody) > 0 {
-				out.StreetSuffix = abbr
+				prStreetType = primary
 				tokens = residual
 			}
 		}
@@ -336,10 +339,10 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		tokens = tokens[:len(tokens)-1]
 	}
 
-	// PR leading Spanish street type: "CALLE LUNA" → suffix CLL, name LUNA.
-	if isPR && out.StreetSuffix == "" && len(tokens) >= 2 {
-		if abbr, err := puertorico.AbbreviateStreetType(tokens[0]); err == nil {
-			out.StreetSuffix = abbr
+	// PR leading Spanish street type: "CALLE LUNA" → type CALLE, name LUNA.
+	if isPR && prStreetType == "" && out.StreetSuffix == "" && len(tokens) >= 2 {
+		if primary, err := puertorico.NormalizeStreetType(tokens[0]); err == nil {
+			prStreetType = primary
 			tokens = tokens[1:]
 		}
 	}
@@ -414,6 +417,17 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		out.StreetName = hw
 	} else {
 		out.StreetName = name
+	}
+
+	// Project US@ keeps Spanish street types as Spanish words (not English-style
+	// trailing abbreviations). Prefix type onto StreetName: "CALLE LUNA".
+	if prStreetType != "" {
+		if out.StreetName != "" {
+			out.StreetName = prStreetType + " " + out.StreetName
+		} else {
+			out.StreetName = prStreetType
+		}
+		out.StreetSuffix = ""
 	}
 	return out, nil
 }

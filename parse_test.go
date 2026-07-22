@@ -1462,11 +1462,11 @@ func TestParsePuertoRicoCalleTrailingNumber(t *testing.T) {
 	if got.PrimaryNumber != "123" {
 		t.Errorf("PrimaryNumber = %q, want 123", got.PrimaryNumber)
 	}
-	if got.StreetName != "LUNA" {
-		t.Errorf("StreetName = %q, want LUNA", got.StreetName)
+	if got.StreetName != "CALLE LUNA" {
+		t.Errorf("StreetName = %q, want CALLE LUNA", got.StreetName)
 	}
-	if got.StreetSuffix != "CLL" {
-		t.Errorf("StreetSuffix = %q, want CLL", got.StreetSuffix)
+	if got.StreetSuffix != "" {
+		t.Errorf("StreetSuffix = %q, want empty (type is in StreetName)", got.StreetSuffix)
 	}
 	if got.City != "SAN JUAN" || got.Region != "PR" || got.Postal != "00901" {
 		t.Errorf("last = %q %q %q", got.City, got.Region, got.Postal)
@@ -1475,7 +1475,7 @@ func TestParsePuertoRicoCalleTrailingNumber(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Normalize: %v", err)
 	}
-	want := "123 LUNA CLL\nSAN JUAN PR 00901"
+	want := "123 CALLE LUNA\nSAN JUAN PR 00901"
 	if Format(norm) != want {
 		t.Errorf("Format = %q, want %q", Format(norm), want)
 	}
@@ -1488,14 +1488,14 @@ func TestParsePuertoRicoCalleUSOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if got.PrimaryNumber != "123" || got.StreetName != "LUNA" || got.StreetSuffix != "CLL" {
+	if got.PrimaryNumber != "123" || got.StreetName != "CALLE LUNA" || got.StreetSuffix != "" {
 		t.Fatalf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
 	}
 	norm, err := Normalize(got)
 	if err != nil {
 		t.Fatalf("Normalize: %v", err)
 	}
-	want := "123 LUNA CLL\nSAN JUAN PR 00901"
+	want := "123 CALLE LUNA\nSAN JUAN PR 00901"
 	if Format(norm) != want {
 		t.Errorf("Format = %q, want %q", Format(norm), want)
 	}
@@ -1510,11 +1510,11 @@ func TestParsePuertoRicoAvenida(t *testing.T) {
 	if got.PrimaryNumber != "456" {
 		t.Errorf("PrimaryNumber = %q, want 456", got.PrimaryNumber)
 	}
-	if got.StreetName != "PONCE DE LEON" {
-		t.Errorf("StreetName = %q, want PONCE DE LEON", got.StreetName)
+	if got.StreetName != "AVENIDA PONCE DE LEON" {
+		t.Errorf("StreetName = %q, want AVENIDA PONCE DE LEON", got.StreetName)
 	}
-	if got.StreetSuffix != "AVE" {
-		t.Errorf("StreetSuffix = %q, want AVE", got.StreetSuffix)
+	if got.StreetSuffix != "" {
+		t.Errorf("StreetSuffix = %q, want empty (type is in StreetName)", got.StreetSuffix)
 	}
 }
 
@@ -1524,7 +1524,7 @@ func TestParsePuertoRicoSecondaryURBAndApartamento(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if got.PrimaryNumber != "123" || got.StreetName != "LUNA" || got.StreetSuffix != "CLL" {
+	if got.PrimaryNumber != "123" || got.StreetName != "CALLE LUNA" || got.StreetSuffix != "" {
 		t.Errorf("street = primary=%q name=%q suffix=%q", got.PrimaryNumber, got.StreetName, got.StreetSuffix)
 	}
 	if got.SecondaryDesignator != "APT" || got.SecondaryNumber != "4" {
@@ -1539,14 +1539,14 @@ func TestParsePuertoRicoSecondaryURBAndApartamento(t *testing.T) {
 	if gotURB.SecondaryDesignator != "URB" {
 		t.Errorf("SecondaryDesignator = %q, want URB", gotURB.SecondaryDesignator)
 	}
-	if gotURB.PrimaryNumber != "123" || gotURB.StreetName != "LUNA" || gotURB.StreetSuffix != "CLL" {
+	if gotURB.PrimaryNumber != "123" || gotURB.StreetName != "CALLE LUNA" || gotURB.StreetSuffix != "" {
 		t.Errorf("street = primary=%q name=%q suffix=%q", gotURB.PrimaryNumber, gotURB.StreetName, gotURB.StreetSuffix)
 	}
 	norm, err := Normalize(gotURB)
 	if err != nil {
 		t.Fatalf("Normalize URB: %v", err)
 	}
-	want := "123 LUNA CLL URB\nPONCE PR 00716"
+	want := "123 CALLE LUNA URB\nPONCE PR 00716"
 	if Format(norm) != want {
 		t.Errorf("Format = %q, want %q", Format(norm), want)
 	}

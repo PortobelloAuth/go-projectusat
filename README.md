@@ -72,8 +72,8 @@ merges multi-token directionals (`SOUTH WEST` → `SW`), reorders leading second
 extracts same-line business/narrative prefixes before the house number, reverse-token
 peels street components (including multi-secondary `BLDG 420 RM 120`), handles grid
 directionals (`1016 E 1700 S`), fractions and hyphenated primaries, and uses a military
-fast path for APO/FPO/DPO. When region is `PR`, Spanish street types (`CALLE`→`CLL`) and
-secondaries (`URB`, `APARTAMENTO`) apply. It does not call `Normalize`; compose
+fast path for APO/FPO/DPO. When region is `PR`, Spanish street types stay as Spanish words (`CALLE LUNA`,
+not English-style `LUNA CLL`) and secondaries (`URB`, `APARTAMENTO`) apply. It does not call `Normalize`; compose
 `Normalize(Parse(raw))` for content form. Ambiguous input returns an error rather than
 inventing structure.
 
@@ -82,7 +82,7 @@ Puerto Rico:
 ```go
 addr, err := goprojectusat.Parse("Calle Luna 123\nSan Juan PR 00901")
 // Format(Normalize(addr)) =>
-// 123 LUNA CLL
+// 123 CALLE LUNA
 // SAN JUAN PR 00901
 ```
 
