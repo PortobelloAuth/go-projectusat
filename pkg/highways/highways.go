@@ -111,11 +111,15 @@ KENTUCKY STATE HIGHWAY 625     <->   KY STATE HIGHWAY 625
 // gluedInterstate matches I/IH immediately followed by a route designator (e.g. I10, IH280).
 var gluedInterstate = regexp.MustCompile(`^(IH?)(\d+[A-Z]*)$`)
 
-// routeID matches a highway/route designator token (digits with optional letter suffix, or letter-only).
-var routeID = regexp.MustCompile(`^(\d+[A-Z]*|[A-Z]+)$`)
+// routeID matches a highway/route designator token (digits with optional
+// decimal grid segment and letter suffix, or letter-only).
+// Examples: 440, 60E, 5A, 39.4, MM.
+var routeID = regexp.MustCompile(`^(\d+(\.\d+)?[A-Z]*|[A-Z]+)$`)
 
-// digitRouteID matches a digit-bearing route designator (e.g. 440, 60E, 5A). Letter-only tokens are excluded.
-var digitRouteID = regexp.MustCompile(`^\d+[A-Z]*$`)
+// digitRouteID matches a digit-bearing route designator (e.g. 440, 60E, 5A, 39.4).
+// Optional decimal supports grid-style designators (Project US@ / C#: RD 39.4 → ROAD 39.4).
+// Letter-only tokens are excluded.
+var digitRouteID = regexp.MustCompile(`^\d+(\.\d+)?[A-Z]*$`)
 
 // multiWordStateNames are full US state/possession names (sorted longest-first for greedy match).
 // Built from region keys that contain a space and are not already two-letter codes.

@@ -1898,3 +1898,20 @@ func TestParseKeyAsStreetSuffixNotSecondary(t *testing.T) {
 		t.Fatalf("Key 12 street = name=%q suffix=%q", got2.StreetName, got2.StreetSuffix)
 	}
 }
+
+func TestParseGridRoadDecimalExpandsRD(t *testing.T) {
+	// C# StreetLineNormalizer: "rd 39.4" → "ROAD 39.4"
+	raw := "9028 rd 39.4\nSpringfield IL 62701"
+	p, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	n, err := Normalize(p)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	got := FormatStreetLine(n)
+	if got != "9028 ROAD 39.4" {
+		t.Fatalf("FormatStreetLine = %q, want 9028 ROAD 39.4", got)
+	}
+}
