@@ -272,13 +272,25 @@ func parseStreetLine(line string) (Address, error) {
 		}
 	}
 
-	// Street suffix (right) — only if something remains for the street body.
-	// Peel exactly one suffix; a second trailing suffix stays in the name
-	// (expanded to primary form below) so e.g. "Main Avenue Drive" → name MAIN AVENUE + DR.
+	// Street suffix (right) — only if a name body remains after the peel
+	// (accounting for an optional leading primary number). Peel exactly one
+	// suffix; a second trailing suffix stays in the name (expanded to primary
+	// form below) so e.g. "Main Avenue Drive" → name MAIN AVENUE + DR.
+	//
+	// When the only residual after primary would be the suffix itself, leave it
+	// as street-name material: "1001 Avenue E" → name AVENUE + postdir E
+	// (not suffix AVE with empty name); "1000 AVE" → name AVENUE.
 	if len(tokens) >= 2 {
 		if abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); err == nil {
-			out.StreetSuffix = abbr
-			tokens = tokens[:len(tokens)-1]
+			residual := tokens[:len(tokens)-1]
+			nameBody := residual
+			if len(nameBody) > 0 && looksLikePrimaryNumber(nameBody[0]) {
+				nameBody = nameBody[1:]
+			}
+			if len(nameBody) > 0 {
+				out.StreetSuffix = abbr
+				tokens = residual
+			}
 		}
 	}
 
@@ -293,6 +305,8 @@ func parseStreetLine(line string) (Address, error) {
 	// Predirectional (left) only when a street-name token remains after it.
 	// A leading fraction token (1/2, 1/4, …) stays in the name and is skipped
 	// when looking for the predirectional: "123 1/2 N MAIN" → predir N.
+	// If the directional is the only remaining name token (e.g. "1005 South
+	// Avenue" after peeling AVE), keep it as StreetName — do not set Predirectional.
 	if len(tokens) > 1 {
 		preIdx := 0
 		if looksLikeFraction(tokens[0]) && len(tokens) > 2 {
@@ -309,6 +323,22 @@ func parseStreetLine(line string) (Address, error) {
 
 	if len(tokens) == 0 {
 		return Address{}, fmt.Errorf("unrecognized street line: %q", line)
+	}
+
+	// Sole remaining name token:
+	// - spell out directionals (S → SOUTH) when kept as name rather than Predirectional
+	// - promote bare street-suffix tokens to primary form only when no StreetSuffix
+	//   was peeled (AVE → AVENUE for "1000 AVE" / "1001 Avenue E"). When a suffix
+	//   is already set, leave the token alone so state-as-name (CT Drive → CONNECTICUT)
+	//   can still apply.
+	if len(tokens) == 1 {
+		if full, err := directionals.NormalizeDirectional(tokens[0]); err == nil {
+			tokens[0] = full
+		} else if out.StreetSuffix == "" {
+			if primary, err := streetsuffixes.NormalizeStreetSuffix(tokens[0]); err == nil {
+				tokens[0] = primary
+			}
+		}
 	}
 
 	// Double-suffix: after peeling one StreetSuffix, if the last remaining name

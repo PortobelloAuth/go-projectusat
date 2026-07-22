@@ -1265,4 +1265,197 @@ func TestParseSpecialFormsNotBrokenByGridMultiSecondary(t *testing.T) {
 	}
 }
 
+func TestParseDirectionalAsStreetName(t *testing.T) {
+	// When the only name token after peeling suffix is a directional, keep it as
+	// StreetName (spelled out via NormalizeDirectional), not Predirectional.
+	// Contrast: "1005 South Main Street" → Predir S, name MAIN, ST.
+	tests := []struct {
+		name       string
+		raw        string
+		primary    string
+		predir     string
+		streetName string
+		suffix     string
+		postdir    string
+	}{
+		{
+			name:       "south avenue spelled",
+			raw:        "1005 South Avenue\nSpringfield IL 62701",
+			primary:    "1005",
+			streetName: "SOUTH",
+			suffix:     "AVE",
+		},
+		{
+			name:       "s avenue expands to south",
+			raw:        "1005 S Avenue\nSpringfield IL 62701",
+			primary:    "1005",
+			streetName: "SOUTH",
+			suffix:     "AVE",
+		},
+		{
+			name:       "west boulevard",
+			raw:        "1005 West Boulevard\nSpringfield IL 62701",
+			primary:    "1005",
+			streetName: "WEST",
+			suffix:     "BLVD",
+		},
+		{
+			name:       "n street expands to north",
+			raw:        "1005 N Street\nSpringfield IL 62701",
+			primary:    "1005",
+			streetName: "NORTH",
+			suffix:     "ST",
+		},
+		{
+			name:       "south main still predirectional",
+			raw:        "1005 South Main Street\nSpringfield IL 62701",
+			primary:    "1005",
+			predir:     "S",
+			streetName: "MAIN",
+			suffix:     "ST",
+		},
+		{
+			name:       "ne avenue compound expands",
+			raw:        "1005 NE Avenue\nSpringfield IL 62701",
+			primary:    "1005",
+			streetName: "NORTHEAST",
+			suffix:     "AVE",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.Predirectional != tc.predir {
+				t.Errorf("Predirectional = %q, want %q", got.Predirectional, tc.predir)
+			}
+			if got.StreetName != tc.streetName {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.streetName)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			if got.Postdirectional != tc.postdir {
+				t.Errorf("Postdirectional = %q, want %q", got.Postdirectional, tc.postdir)
+			}
+		})
+	}
+}
+
+
+func TestParseAvenueLetterPostdir(t *testing.T) {
+	// "1001 Avenue E" → Primary 1001, StreetName AVENUE, Postdir E (suffix not
+	// peeled when it would leave an empty name). C# Format: "1001 AVENUE E".
+	tests := []struct {
+		name       string
+		raw        string
+		primary    string
+		streetName string
+		suffix     string
+		postdir    string
+		wantFormat string
+	}{
+		{
+			name:       "avenue e",
+			raw:        "1001 Avenue E\nSpringfield IL 62701",
+			primary:    "1001",
+			streetName: "AVENUE",
+			postdir:    "E",
+			wantFormat: "1001 AVENUE E\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "ave e",
+			raw:        "1001 Ave E\nSpringfield IL 62701",
+			primary:    "1001",
+			streetName: "AVENUE",
+			postdir:    "E",
+			wantFormat: "1001 AVENUE E\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "avenue east",
+			raw:        "1001 Avenue East\nSpringfield IL 62701",
+			primary:    "1001",
+			streetName: "AVENUE",
+			postdir:    "E",
+			wantFormat: "1001 AVENUE E\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "main avenue e keeps suffix",
+			raw:        "100 Main Avenue E\nSpringfield IL 62701",
+			primary:    "100",
+			streetName: "MAIN",
+			suffix:     "AVE",
+			postdir:    "E",
+			wantFormat: "100 MAIN AVE E\nSPRINGFIELD IL 62701",
+		},
+		{
+			name:       "avenue e no primary",
+			raw:        "Avenue E\nSpringfield IL 62701",
+			streetName: "AVENUE",
+			postdir:    "E",
+			wantFormat: "AVENUE E\nSPRINGFIELD IL 62701",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.PrimaryNumber != tc.primary {
+				t.Errorf("PrimaryNumber = %q, want %q", got.PrimaryNumber, tc.primary)
+			}
+			if got.StreetName != tc.streetName {
+				t.Errorf("StreetName = %q, want %q", got.StreetName, tc.streetName)
+			}
+			if got.StreetSuffix != tc.suffix {
+				t.Errorf("StreetSuffix = %q, want %q", got.StreetSuffix, tc.suffix)
+			}
+			if got.Postdirectional != tc.postdir {
+				t.Errorf("Postdirectional = %q, want %q", got.Postdirectional, tc.postdir)
+			}
+			norm, err := Normalize(got)
+			if err != nil {
+				t.Fatalf("Normalize: %v", err)
+			}
+			if Format(norm) != tc.wantFormat {
+				t.Errorf("Format = %q, want %q", Format(norm), tc.wantFormat)
+			}
+		})
+	}
+}
+
+
+func TestParsePoundSecondarySpacing(t *testing.T) {
+	// After parse+normalize+format, # secondary appears as "# 12" (space via
+	// joinNonEmpty). Both glued and spaced inputs converge.
+	for _, street := range []string{
+		"100 Main Street #12",
+		"100 Main Street # 12",
+	} {
+		raw := street + "\nMiami FL 33101"
+		got, err := Parse(raw)
+		if err != nil {
+			t.Fatalf("Parse(%q): %v", street, err)
+		}
+		if got.SecondaryDesignator != "#" || got.SecondaryNumber != "12" {
+			t.Errorf("Parse(%q): secondary = %q %q, want # 12",
+				street, got.SecondaryDesignator, got.SecondaryNumber)
+		}
+		norm, err := Normalize(got)
+		if err != nil {
+			t.Fatalf("Normalize: %v", err)
+		}
+		want := "100 MAIN ST # 12\nMIAMI FL 33101"
+		if Format(norm) != want {
+			t.Errorf("Parse(%q): Format = %q, want %q", street, Format(norm), want)
+		}
+	}
+}
+
 
