@@ -16,6 +16,13 @@ func TestRewriteSpecialStreetLineRuralRoute(t *testing.T) {
 		{"rr 12 box 3", "RR 12 BOX 3"},
 		{"RUTA 5 BOX 12", "RR 5 BOX 12"},
 		{"RUTA RURAL 8 BOX 9A", "RR 8 BOX 9A"},
+		// Phrase variants: RFD Route, Rural Route NO., Spanish box, glued hash
+		{"RFD Route 61 Box 87b", "RR 61 BOX 87B"},
+		{"Rural Route NO. 91 Box A7", "RR 91 BOX A7"},
+		{"Rural Route Number 91 Box A7", "RR 91 BOX A7"},
+		{"RUTA 5 BUZON 12", "RR 5 BOX 12"},
+		{"RUTA 5 BZN 12", "RR 5 BOX 12"},
+		{"RR0061#87b", "RR 61 BOX 87B"},
 		// Trailing junk after box is dropped
 		{"RR 91 BOX A7 SPRINGFIELD", "RR 91 BOX A7"},
 		{"Rural Route 2 Box 10 Main Street", "RR 2 BOX 10"},

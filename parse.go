@@ -444,6 +444,7 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	// UNIT 3200 then RM 12). Also clears the leading designator so
 	// splitPreStreet sees the house number first.
 	var leadingSecondary *secondaryPeel
+	tokens = reorderLeadingSecondary(tokens, isPR)
 	tokens, leadingSecondary = takeLeadingSecondary(tokens, isPR)
 
 	// Same-line business / narrative tokens before the house number
@@ -801,6 +802,15 @@ func expandHashTokens(tokens []string) []string {
 			out = append(out, "#", t[1:])
 			continue
 		}
+		if i := strings.IndexByte(t, '#'); i > 0 {
+			left := t[:i]
+			right := t[i+1:]
+			out = append(out, left, "#")
+			if right != "" {
+				out = append(out, right)
+			}
+			continue
+		}
 		out = append(out, t)
 	}
 	return out
@@ -821,8 +831,9 @@ func expandHashTokens(tokens []string) []string {
 // following street body, tokens are returned as-is.
 //
 // Call after special rewrite, hash expand, directional merge, and leading
-// secondary extraction so military/RR/PO never reach here and "APT 4 123 …"
-// already starts with the house number.
+// secondary reorder so military/RR/PO never reach here and "APT 4 123 …" is
+// already reordered to start with the house number.
+
 func splitPreStreet(tokens []string) (business string, rest []string) {
 	if len(tokens) < 2 {
 		return "", tokens
@@ -871,6 +882,204 @@ func protectDecimalPeriods(s string) string {
 func restoreDecimalPeriods(s string) string {
 	return strings.ReplaceAll(s, string(decimalPeriodSentinel), ".")
 }
+
+func reorderLeadingSecondary(tokens []string, isPR bool) []string {
+	if len(tokens) < 3 {
+		// Need designator/number plus at least one rest token to move.
+		return tokens
+	}
+
+	// Trailing secondaries on ordinary streets stay put for reverse peels.
+	if looksLikeStreetPrimaryNumber(tokens[0]) {
+		return tokens
+	}
+
+	// Locate the primary house number: first street-primary candidate that is
+	// not the unit id of a secondary designator preceding a later primary.
+	primaryIdx := -1
+	for i := 0; i < len(tokens)-1; i++ {
+		if !looksLikeStreetPrimaryNumber(tokens[i]) {
+			continue
+		}
+		if i > 0 && isSecondaryUnitPairAt(tokens, i-1, isPR) {
+			// designator + this number — unit id when another primary follows
+			// (Suite 480 411 … / # 3200 152 …).
+			if hasLaterStreetPrimary(tokens, i+1, isPR) {
+				continue
+			}
+			// No later primary. Pure leading secondary at start of line
+			// ("# 3200 South Tech Drive") has no house number — reorder to end.
+			// Mid-prefix designator without later primary is business text and
+			// this token is the street primary ("UCENT Building 847 N …").
+			if i-1 == 0 {
+				return reorderLeadingSecondaryAtStart(tokens, isPR)
+			}
+		}
+		primaryIdx = i
+		break
+	}
+	if primaryIdx <= 0 {
+		// No mid-line primary after a prefix; fall back to pure leading forms
+		// at index 0 ("APT 4 123 …" / "# 4 123 …").
+		return reorderLeadingSecondaryAtStart(tokens, isPR)
+	}
+
+	// Pull numbered secondary pairs out of the pre-primary prefix; leave other
+	// tokens (business/narrative text, bare "Building" without a unit id) in place.
+	prefix := tokens[:primaryIdx]
+	var pairs []string
+	var kept []string
+	for i := 0; i < len(prefix); {
+		if isSecondaryUnitPairAt(prefix, i, isPR) {
+			desig, _ := secondaryPairTokens(prefix, i, isPR)
+			pairs = append(pairs, desig, prefix[i+1])
+			i += 2
+			continue
+		}
+		kept = append(kept, prefix[i])
+		i++
+	}
+	if len(pairs) == 0 {
+		return tokens
+	}
+
+	out := make([]string, 0, len(tokens))
+	out = append(out, kept...)
+	out = append(out, tokens[primaryIdx:]...)
+	out = append(out, pairs...)
+	return out
+}
+
+// isSecondaryUnitPairAt reports designator/# + unit number at tokens[i].
+
+func reorderLeadingSecondaryAtStart(tokens []string, isPR bool) []string {
+	if len(tokens) < 3 {
+		return tokens
+	}
+
+	// "# NUMBER rest…"
+	if tokens[0] == "#" && looksLikeSecondaryNumber(tokens[1]) {
+		rest := tokens[2:]
+		out := make([]string, 0, len(tokens))
+		out = append(out, rest...)
+		out = append(out, "#", tokens[1])
+		return out
+	}
+
+	// "APT NUMBER rest…" (numbered secondary designator only)
+	if desig, ok := numberedSecondaryDesignatorToken(tokens[0], isPR); ok {
+		if looksLikeSecondaryNumber(tokens[1]) {
+			rest := tokens[2:]
+			out := make([]string, 0, len(tokens))
+			out = append(out, rest...)
+			out = append(out, desig, tokens[1])
+			return out
+		}
+	}
+
+	return tokens
+}
+
+// isNumberedSecondaryDesignator reports whether tok is a numbered secondary
+// unit designator (English USPS or, when isPR, Puerto Rico Spanish).
+
+func isSecondaryUnitPairAt(tokens []string, i int, isPR bool) bool {
+	if i < 0 || i+1 >= len(tokens) {
+		return false
+	}
+	if tokens[i] == "#" && looksLikeSecondaryNumber(tokens[i+1]) {
+		return true
+	}
+	if _, ok := numberedSecondaryDesignatorToken(tokens[i], isPR); ok && looksLikeSecondaryNumber(tokens[i+1]) {
+		return true
+	}
+	return false
+}
+
+func hasLaterStreetPrimary(tokens []string, start int, isPR bool) bool {
+	for j := start; j < len(tokens)-1; j++ {
+		if isSecondaryUnitPairAt(tokens, j, isPR) {
+			j++ // skip unit number (loop also advances)
+			continue
+		}
+		if looksLikeStreetPrimaryNumber(tokens[j]) {
+			return true
+		}
+	}
+	return false
+}
+
+// looksLikeStreetPrimaryNumber is looksLikeHouseNumber excluding ordinal street
+// name tokens (12TH, 3RD) so "49TH" is not treated as a house number when
+// deciding whether "Building 847" has a later primary.
+
+func looksLikeStreetPrimaryNumber(tok string) bool {
+	if isOrdinalHouseToken(tok) {
+		return false
+	}
+	return looksLikeHouseNumber(tok)
+}
+
+// isOrdinalHouseToken reports digits + ST/ND/RD/TH (12TH, 3RD, 1ST, 2ND).
+
+func secondaryPairTokens(tokens []string, i int, isPR bool) (desig, num string) {
+	num = tokens[i+1]
+	if tokens[i] == "#" {
+		return "#", num
+	}
+	desig, _ = numberedSecondaryDesignatorToken(tokens[i], isPR)
+	return desig, num
+}
+
+// hasLaterStreetPrimary reports whether tokens[start:] contain a street primary
+// house number (skipping secondary designator+unit pairs).
+
+func isOrdinalHouseToken(tok string) bool {
+	upper := strings.ToUpper(tok)
+	if len(upper) < 3 {
+		return false
+	}
+	suf := upper[len(upper)-2:]
+	body := upper[:len(upper)-2]
+	if !isAllDigits(body) {
+		return false
+	}
+	switch suf {
+	case "ST", "ND", "RD", "TH":
+		return true
+	default:
+		return false
+	}
+}
+
+// reorderLeadingSecondaryAtStart handles pure leading "APT N rest" / "# N rest"
+// when a primary house number was not detected mid-line (legacy path).
+
+func isNumberedSecondaryDesignator(tok string, isPR bool) bool {
+	_, ok := numberedSecondaryDesignatorToken(tok, isPR)
+	return ok
+}
+
+// numberedSecondaryDesignatorToken returns the designator token to emit when
+// reordering. English keeps the input spelling (peelSecondary normalizes);
+// PR Spanish uses the short form from NormalizeSecondary.
+
+func numberedSecondaryDesignatorToken(tok string, isPR bool) (string, bool) {
+	if info, err := secondaryunit.Info(tok); err == nil && info.Numbered {
+		return tok, true
+	}
+	if isPR {
+		if short, err := puertorico.NormalizeSecondary(tok); err == nil {
+			// PR secondaries that accept unit numbers are always treated as numbered.
+			return short, true
+		}
+	}
+	return "", false
+}
+
+// looksLikeSecondaryNumber reports whether tok is a plausible unit number
+// (contains a digit). Pure alpha tokens are not treated as unit numbers so
+// "APT SOUTH …" is not reordered.
 
 // takeLeadingSecondary extracts a leading secondary designator (or #) plus its
 // unit number so it can be folded first in multi-secondary order (preserving

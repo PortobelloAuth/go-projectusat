@@ -68,7 +68,10 @@ func rewritePOBox(cleaned string) (string, bool) {
 }
 
 // rewriteRuralRoute matches rural-route prefixes with a numeric route and a
-// box marker (BOX or #) plus box id. Output: "RR {route} BOX {id}".
+// box marker (BOX / # / BUZON / BZN) plus box id. Output: "RR {route} BOX {id}".
+//
+// expandHashTokens runs before expandGluedRRTokens so glued forms like
+// "RR0061#87b" become RR / 0061 / # / 87B before prefix matching.
 func rewriteRuralRoute(cleaned string) (string, bool) {
 	tokens := expandHashTokens(strings.Fields(cleaned))
 	tokens = expandGluedRRTokens(tokens)
@@ -90,12 +93,11 @@ func rewriteRuralRoute(cleaned string) (string, bool) {
 	}
 	i++
 
-	// Require BOX or # — this keeps bare "RD 5A" / "RD 61" out of RR.
+	// Require a box marker — keeps bare "RD 5A" / "RD 61" out of RR.
 	if i >= len(tokens) {
 		return "", false
 	}
-	marker := tokens[i]
-	if marker != "BOX" && marker != "#" {
+	if !isRuralBoxMarker(tokens[i]) {
 		return "", false
 	}
 	i++
@@ -108,26 +110,70 @@ func rewriteRuralRoute(cleaned string) (string, bool) {
 	return "RR " + route + " BOX " + boxID, true
 }
 
+// isRuralBoxMarker reports BOX / # / Spanish BUZON / BZN box designators.
+func isRuralBoxMarker(t string) bool {
+	switch t {
+	case "BOX", "#", "BUZON", "BZN":
+		return true
+	default:
+		return false
+	}
+}
+
 // matchRuralPrefix consumes a rural-route designator and returns the next index.
-// Accepts: RURAL ROUTE, RUTA RURAL, RFD, RR, RD, RUTA.
+// Accepts:
+//
+//	RURAL ROUTE [NO|NUMBER|NUM]
+//	RUTA RURAL [NO|NUMBER|NUM]
+//	RFD [ROUTE] [NO|NUMBER|NUM]
+//	RR / RD / RUTA [NO|NUMBER|NUM]
+//
+// Optional NO/NUMBER/NUM words (from "Rural Route NO. 91", "RFD Route Number 61")
+// are consumed so the following token is the numeric route id.
 func matchRuralPrefix(tokens []string) (int, bool) {
 	if len(tokens) >= 2 && tokens[0] == "RURAL" && tokens[1] == "ROUTE" {
-		return 2, true
+		return consumeOptionalRouteNumberWord(tokens, 2), true
 	}
 	if len(tokens) >= 2 && tokens[0] == "RUTA" && tokens[1] == "RURAL" {
-		return 2, true
+		return consumeOptionalRouteNumberWord(tokens, 2), true
 	}
 	if len(tokens) >= 1 {
 		switch tokens[0] {
-		case "RFD", "RR", "RD", "RUTA":
-			return 1, true
+		case "RFD":
+			i := 1
+			// "RFD Route 61 …" — ROUTE is part of the phrase, not the route id.
+			if i < len(tokens) && tokens[i] == "ROUTE" {
+				i++
+			}
+			return consumeOptionalRouteNumberWord(tokens, i), true
+		case "RR", "RD", "RUTA":
+			return consumeOptionalRouteNumberWord(tokens, 1), true
 		}
 	}
 	return 0, false
 }
 
+// consumeOptionalRouteNumberWord skips a single NO / NUMBER / NUM / NUMERO token
+// after a rural-route designator (punctuation already stripped: "NO." → "NO").
+func consumeOptionalRouteNumberWord(tokens []string, i int) int {
+	if i < len(tokens) && isRouteNumberWord(tokens[i]) {
+		return i + 1
+	}
+	return i
+}
+
+func isRouteNumberWord(t string) bool {
+	switch t {
+	case "NO", "NUMBER", "NUM", "NUMERO":
+		return true
+	default:
+		return false
+	}
+}
+
 // expandGluedRRTokens splits tokens like "RR0061" / "RFD61" / "RD12" into
-// designator + digits so "RR0061 #87b" parses as RR / 0061 / # / 87B.
+// designator + digits so "RR0061 #87b" / "RR0061#87b" (after expandHashTokens)
+// parse as RR / 0061 / # / 87B.
 func expandGluedRRTokens(tokens []string) []string {
 	out := make([]string, 0, len(tokens)+1)
 	for _, t := range tokens {
@@ -141,20 +187,14 @@ func expandGluedRRTokens(tokens []string) []string {
 }
 
 func splitGluedRR(t string) (prefix, num string, ok bool) {
+	// Longer prefixes first so RURALROUTE / RUTARURAL win over RR / RUTA.
 	for _, p := range []string{"RURALROUTE", "RUTARURAL", "RFD", "RR", "RD", "RUTA"} {
 		if strings.HasPrefix(t, p) && len(t) > len(p) {
 			rest := t[len(p):]
 			if isAllDigits(rest) {
-				// Map multi-word glued forms back to spaced designators via
-				// matchRuralPrefix-compatible single tokens; RURALROUTE is
-				// handled specially.
+				// Map multi-word glued forms to the single RR designator.
 				switch p {
-				case "RURALROUTE":
-					// Expand to RURAL ROUTE <num> as three logical pieces:
-					// caller only gets two strings; re-inject as RURAL, ROUTE handled below.
-					// Use RR as equivalent single designator for glued form.
-					return "RR", rest, true
-				case "RUTARURAL":
+				case "RURALROUTE", "RUTARURAL":
 					return "RR", rest, true
 				default:
 					return p, rest, true
