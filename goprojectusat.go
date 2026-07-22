@@ -14,6 +14,8 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/military"
+	"github.com/PortobelloAuth/go-projectusat/pkg/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
@@ -58,6 +60,13 @@ type Options struct {
 // usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
 var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
+// Canadian postal: compact A1A1A1, or FSA (A1A) + LDU (1A1) as two tokens.
+var (
+	caPostalCompact = regexp.MustCompile(`^[A-Z]\d[A-Z]\d[A-Z]\d$`)
+	caPostalFSA     = regexp.MustCompile(`^[A-Z]\d[A-Z]$`)
+	caPostalLDU     = regexp.MustCompile(`^\d[A-Z]\d$`)
+)
+
 // Normalize returns a content-normalized copy (uppercase, standard abbreviations).
 // Diacritics are preserved; callers may pre-run diacritics.Substitute if needed.
 // Empty optional fields stay blank. Unrecognized non-empty controlled vocabulary
@@ -77,12 +86,6 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 	if out.BusinessName, err = freeTextField(a.BusinessName, opts.DiacriticMode); err != nil {
 		return Address{}, fmt.Errorf("business name: %w", err)
 	}
-	if out.PrimaryNumber, err = freeTextField(a.PrimaryNumber, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("primary number: %w", err)
-	}
-	if out.SecondaryNumber, err = freeTextField(a.SecondaryNumber, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("secondary number: %w", err)
-	}
 	if out.City, err = freeTextField(a.City, opts.DiacriticMode); err != nil {
 		return Address{}, fmt.Errorf("city: %w", err)
 	}
@@ -91,63 +94,10 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 	}
 	out.Postal = normalizePostal(a.Postal)
 
-	if sn, err := freeTextField(a.StreetName, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("street name: %w", err)
-	} else if sn != "" {
-		// Highway forms normalize; ordinary free-text street names pass through uppercased.
-		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
-		if hw, err := highways.NormalizeStreetName(sn); err == nil {
-			out.StreetName = hw
-		} else {
-			out.StreetName = sn
-		}
-	}
-
-	if v := baseField(a.Predirectional); v != "" {
-		abbr, err := directionals.AbbreviateDirectional(v)
-		if err != nil {
-			return Address{}, fmt.Errorf("predirectional: %w", err)
-		}
-		out.Predirectional = abbr
-	}
-
-	if v := baseField(a.Postdirectional); v != "" {
-		abbr, err := directionals.AbbreviateDirectional(v)
-		if err != nil {
-			return Address{}, fmt.Errorf("postdirectional: %w", err)
-		}
-		out.Postdirectional = abbr
-	}
-
-	if v := baseField(a.StreetSuffix); v != "" {
-		var abbr string
-		var err error
-		if opts.Fuzzy {
-			abbr, err = streetsuffixes.FuzzyNormalizeStreetSuffixAbreviation(v)
-		} else {
-			abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
-		}
-		if err != nil {
-			return Address{}, fmt.Errorf("street suffix: %w", err)
-		}
-		out.StreetSuffix = abbr
-	}
-
-	if v := baseField(a.SecondaryDesignator); v != "" {
-		abbr, err := secondaryunit.Normalize(v)
-		if err != nil {
-			return Address{}, fmt.Errorf("secondary designator: %w", err)
-		}
-		if opts.SecondaryAsHash {
-			out.SecondaryDesignator = "#"
-		} else {
-			out.SecondaryDesignator = abbr
-		}
-	}
-
+	// Normalize region early so Puerto Rico street/secondary vocabulary can be
+	// applied when region is PR.
 	if v := baseField(a.Region); v != "" {
 		var abbr string
-		var err error
 		if opts.Fuzzy {
 			abbr, err = region.FuzzyNormalizeRegion(v)
 		} else {
@@ -157,6 +107,93 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 			return Address{}, fmt.Errorf("region: %w", err)
 		}
 		out.Region = abbr
+	}
+	isPR := out.Region == "PR"
+
+	// Overseas military street lines (e.g. "PSC 3 BOX 4120") live entirely in
+	// StreetName. Detect on the joined candidate; on success skip civilian
+	// primary/directional/suffix/secondary controlled-vocab fields.
+	streetCandidate := joinNonEmpty(" ",
+		baseField(a.PrimaryNumber),
+		baseField(a.Predirectional),
+		baseField(a.StreetName),
+		baseField(a.StreetSuffix),
+		baseField(a.Postdirectional),
+		baseField(a.SecondaryDesignator),
+		baseField(a.SecondaryNumber),
+	)
+	if mil, milErr := military.NormalizeStreetLine(streetCandidate); milErr == nil {
+		out.StreetName = mil
+	} else {
+		if out.PrimaryNumber, err = freeTextField(a.PrimaryNumber, opts.DiacriticMode); err != nil {
+			return Address{}, fmt.Errorf("primary number: %w", err)
+		}
+		if out.SecondaryNumber, err = freeTextField(a.SecondaryNumber, opts.DiacriticMode); err != nil {
+			return Address{}, fmt.Errorf("secondary number: %w", err)
+		}
+
+		if sn, err := freeTextField(a.StreetName, opts.DiacriticMode); err != nil {
+			return Address{}, fmt.Errorf("street name: %w", err)
+		} else if sn != "" {
+			// Highway forms normalize; ordinary free-text street names pass through uppercased.
+			// On error (e.g. empty after internal trim), keep collapsed uppercase name.
+			if hw, err := highways.NormalizeStreetName(sn); err == nil {
+				out.StreetName = hw
+			} else {
+				out.StreetName = sn
+			}
+		}
+
+		if v := baseField(a.Predirectional); v != "" {
+			abbr, err := directionals.AbbreviateDirectional(v)
+			if err != nil {
+				return Address{}, fmt.Errorf("predirectional: %w", err)
+			}
+			out.Predirectional = abbr
+		}
+
+		if v := baseField(a.Postdirectional); v != "" {
+			abbr, err := directionals.AbbreviateDirectional(v)
+			if err != nil {
+				return Address{}, fmt.Errorf("postdirectional: %w", err)
+			}
+			out.Postdirectional = abbr
+		}
+
+		if v := baseField(a.StreetSuffix); v != "" {
+			var abbr string
+			var err error
+			if opts.Fuzzy {
+				abbr, err = streetsuffixes.FuzzyNormalizeStreetSuffixAbreviation(v)
+			} else {
+				abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
+			}
+			// PR Spanish street types (CLL, CAM, …) are not in the USPS English
+			// suffix table; fall back to puertorico when region is PR.
+			if err != nil && isPR {
+				abbr, err = puertorico.AbbreviateStreetType(v)
+			}
+			if err != nil {
+				return Address{}, fmt.Errorf("street suffix: %w", err)
+			}
+			out.StreetSuffix = abbr
+		}
+
+		if v := baseField(a.SecondaryDesignator); v != "" {
+			abbr, err := secondaryunit.Normalize(v)
+			// PR Spanish secondaries (URB, EDIF, BDA, …) fall back when region is PR.
+			if err != nil && isPR {
+				abbr, err = puertorico.NormalizeSecondary(v)
+			}
+			if err != nil {
+				return Address{}, fmt.Errorf("secondary designator: %w", err)
+			}
+			if opts.SecondaryAsHash {
+				out.SecondaryDesignator = "#"
+			} else {
+				out.SecondaryDesignator = abbr
+			}
+		}
 	}
 
 	return out, nil
@@ -194,8 +231,8 @@ func baseField(s string) string {
 	return textutil.Upper(textutil.CollapseSpace(s))
 }
 
-// normalizePostal formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
-// as uppercase alphanumerics with collapsed spacing.
+// normalizePostal formats US ZIP / ZIP+4 and Canadian A1A 1A1; other patterns
+// remain uppercase alphanumerics with collapsed spacing.
 func normalizePostal(s string) string {
 	s = baseField(s)
 	if s == "" {
@@ -212,7 +249,12 @@ func normalizePostal(s string) string {
 		return m[1]
 	}
 
-	// Canadian / other international: uppercase, collapse space, drop punctuation.
+	// Canadian: compact or spaced → "A1A 1A1"
+	if caPostalCompact.MatchString(compact) {
+		return compact[:3] + " " + compact[3:]
+	}
+
+	// Other international: uppercase, collapse space, drop punctuation.
 	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{}))
 }
 

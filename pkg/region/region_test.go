@@ -19,6 +19,8 @@ func TestNormalizeRegion(t *testing.T) {
 		{"NY", "NY"},
 		{"Texas", "TX"},
 		{"Illinois", "IL"},
+		{"Wyoming", "WY"},
+		{"WY", "WY"},
 
 		// Correct spelling and common misspelling of Delaware
 		{"Delaware", "DE"},

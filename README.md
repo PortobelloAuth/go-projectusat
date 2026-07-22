@@ -5,25 +5,107 @@ This module implements the
 (which is an extension of the USPS publication 28 standard) for US Address
 Normalization directly in Go.
 
-## This implementation is currently incomplete and its API should be considered unstable.
+## Status
 
-This implementation is incomplete and has not reached release status. It is
-being built in public to facilitate feedback from potential users and support
-from potential backers.
+This library is **built in public** and has **not** cut a stable release. The
+**API may change** without a major-version guarantee.
 
-**What works today:** structured `Address` normalization (`Normalize` /
-`NormalizeWithOptions`), street/last-line formatting, and component packages
-under `pkg/` (regions, street suffixes, directionals, secondary units, diacritics,
-highways, text helpers).
+### Feature readiness
 
-**Not yet:** free-text multi-line address parsing (`Parse`), and root-level
-orchestration of Puerto Rico or military address flows. Use `pkg/puertorico` and
-`pkg/military` directly for those vocabularies and line helpers until they are
-wired into the root pipeline.
+Scores are engineering judgment for **production use of that feature**, not a
+marketing claim. Scale: **Ready** (solid tests + common cases), **Beta** (works
+for main paths; edge cases remain), **Alpha** (usable but incomplete), **Planned**
+(not implemented).
+
+| Feature | Readiness | Notes |
+|---------|-----------|--------|
+| Structured `Normalize` / `NormalizeWithOptions` | **Ready** | Content vs exchange options; controlled vocab; errors on unknown tokens |
+| Format street / last line / full address | **Ready** | Composes normalized fields |
+| Regions (US states, territories, AA/AE/AP, Canada) | **Ready** | Exact + optional fuzzy |
+| Street suffixes (USPS / Project US@ tables) | **Ready** | Exact + optional fuzzy |
+| Directionals (N/S/E/W and compounds) | **Ready** | Single- and multi-token (`SOUTH WEST` → `SW`) |
+| Secondary units (APT, STE, `#`, multi-unit) | **Ready** | Leading / trailing / multi-secondary |
+| Highways & routes (`I10`, `US 41`, `CR`, `FM`, …) | **Ready** | Including decimal grid designators (`RD 39.4` → `ROAD 39.4`) |
+| Diacritics (`substitute` / `transliterate`) | **Ready** | Via options or `pkg/diacritics` |
+| Free-text `Parse` (multi-line / common single-line) | **Beta** | Strong on common US shapes; rare dual-interpretation cases still conservative |
+| C# street-line parity (tracked 55-case battery) | **Ready** | `go test . -run TestCSharpParityScore` → **55/55** |
+| Rural route & PO Box free-text | **Ready** | RR / RFD / PO / POB / Apartado (PR) |
+| Overseas military (APO/FPO/DPO) | **Ready** | Multi-line, comma, and space-separated single line |
+| Same-line business / narrative prefix | **Beta** | Works when a clear house number follows; odd firm names can still surprise |
+| Puerto Rico Spanish street / secondary vocab | **Beta** | Wired into `Parse` when region is `PR`; Spanish primary forms (e.g. `CALLE LUNA`) |
+| Last-line city / region / postal (incl. ZIP+4, CA) | **Beta** | Multi-word cities on multi-line and improved single-line; unusual last lines may fail closed |
+| Full C# `StreetLineNormalizerTests` dump | **Alpha** | Representative parity is green; not every historical C# edge is claimed |
+| Geocoder / official-ID validation of numeric streets | **Planned** | Out of scope (no network / external services) |
+| Stable v1 API / semver release | **Planned** | Still pre-release |
 
 **Prefer content form** (`Normalize`) when writing patient records; use
 `NormalizeWithOptions` when preparing addresses for match/exchange (see Options
-below).
+below). Use `Parse` when the input is a free-text multi-line or comma-separated
+address string, then `Normalize` for content form.
+
+### Parse (free-text)
+
+```go
+addr, err := goprojectusat.Parse("123 North Main Street Apt 4\nSpringfield IL 62701")
+if err != nil {
+	// handle
+}
+norm, err := goprojectusat.Normalize(addr)
+// Format(norm) =>
+// 123 N MAIN ST APT 4
+// SPRINGFIELD IL 62701
+```
+
+Overseas military:
+
+```go
+addr, err := goprojectusat.Parse("PSC 3 BOX 4120\nAPO AE 09021-0002")
+norm, err := goprojectusat.Normalize(addr)
+// Format(norm) =>
+// PSC 3 BOX 4120
+// APO AE 09021-0002
+```
+
+Rural route and PO Box (stored wholly in `StreetName`, like military):
+
+```go
+addr, err := goprojectusat.Parse("Rural Route 91 Box A7\nSpringfield IL 62701")
+// Format(Normalize(addr)) =>
+// RR 91 BOX A7
+// SPRINGFIELD IL 62701
+
+addr, err = goprojectusat.Parse("PO Box 11890\nSpringfield IL 62701")
+// Format(Normalize(addr)) =>
+// PO BOX 11890
+// SPRINGFIELD IL 62701
+```
+
+`Parse` is conservative: it splits on newlines and commas, peels last-line
+city/region/postal, rewrites rural route / PO Box (and PR `Apartado`) street lines,
+merges multi-token directionals (`SOUTH WEST` → `SW`), reorders leading secondary / `#`,
+extracts same-line business/narrative prefixes before the house number, reverse-token
+peels street components (including multi-secondary `BLDG 420 RM 120`), handles grid
+directionals (`1016 E 1700 S`), fractions and hyphenated primaries, and uses a military
+fast path for APO/FPO/DPO. When region is `PR`, Spanish street types stay as Spanish words (`CALLE LUNA`,
+not English-style `LUNA CLL`) and secondaries (`URB`, `APARTAMENTO`) apply. It does not call `Normalize`; compose
+`Normalize(Parse(raw))` for content form. Ambiguous input returns an error rather than
+inventing structure.
+
+Puerto Rico:
+
+```go
+addr, err := goprojectusat.Parse("Calle Luna 123\nSan Juan PR 00901")
+// Format(Normalize(addr)) =>
+// 123 CALLE LUNA
+// SAN JUAN PR 00901
+```
+
+Same-line business / narrative:
+
+```go
+addr, err := goprojectusat.Parse("Williamson Medical Center 3000 Edward Curd Lane\nSpringfield IL 62701")
+// BusinessName WILLIAMSON MEDICAL CENTER; street 3000 EDWARD CURD LN
+```
 
 ## Normalization of Input vs. Normalization for Comparison
 

@@ -255,6 +255,7 @@ var regionMap = map[string]string{
 	"WISCONSIN":                      "WI",
 	"WI":                             "WI",
 	"WYOMING":                        "WY",
+	"WY":                             "WY",
 
 	"ALBERTA":                   "AB",
 	"AB":                        "AB",

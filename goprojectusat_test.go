@@ -131,6 +131,8 @@ func TestNormalizePostalVariants(t *testing.T) {
 		{"62701 1234", "62701-1234"},
 		{"k1a 0b1", "K1A 0B1"},
 		{"K1A  0B1", "K1A 0B1"},
+		{"K1A0B1", "K1A 0B1"},
+		{"k1a0b1", "K1A 0B1"},
 		{"", ""},
 		{"unknown", ""},
 	}
@@ -666,5 +668,51 @@ func TestNormalizeDelegatesToZeroOptions(t *testing.T) {
 	}
 	if a != b {
 		t.Fatalf("Normalize = %+v, NormalizeWithOptions(zero) = %+v", a, b)
+	}
+}
+
+func TestNormalizeMilitaryOverseas(t *testing.T) {
+	in := Address{
+		StreetName: "psc 3 box 4120",
+		City:       "apo",
+		Region:     "ae",
+		Postal:     "09021-0002",
+	}
+	got, err := Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	// Military street line lives in StreetName; no primary/suffix/dir.
+	if got.StreetName != "PSC 3 BOX 4120" {
+		t.Errorf("StreetName = %q, want PSC 3 BOX 4120", got.StreetName)
+	}
+	if got.City != "APO" || got.Region != "AE" || got.Postal != "09021-0002" {
+		t.Errorf("last line = %q %q %q", got.City, got.Region, got.Postal)
+	}
+	if got.PrimaryNumber != "" || got.StreetSuffix != "" {
+		t.Errorf("expected empty primary/suffix for military street, got primary=%q suffix=%q",
+			got.PrimaryNumber, got.StreetSuffix)
+	}
+	if Format(got) != "PSC 3 BOX 4120\nAPO AE 09021-0002" {
+		t.Errorf("Format = %q", Format(got))
+	}
+}
+
+func TestNormalizeMilitaryStreetOnlyWhenLooksMilitary(t *testing.T) {
+	// Ordinary street must not be forced through military.
+	in := Address{
+		PrimaryNumber: "123",
+		StreetName:    "Main",
+		StreetSuffix:  "Street",
+		City:          "Springfield",
+		Region:        "IL",
+		Postal:        "62701",
+	}
+	got, err := Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if got.StreetName != "MAIN" || got.StreetSuffix != "ST" {
+		t.Fatalf("got StreetName=%q Suffix=%q", got.StreetName, got.StreetSuffix)
 	}
 }

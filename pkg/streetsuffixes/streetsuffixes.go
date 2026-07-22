@@ -1469,8 +1469,11 @@ var streetSuffixes = []StreetSuffix{
 		},
 	},
 	{
+		// USPS preferred abbreviation is WAY (not WY). WY remains an accepted
+		// input alt so "… Way" / "… WY" both normalize to StreetSuffix WAY.
+		// This also disambiguates state-as-name "WY WY" → WYOMING WAY.
 		Primary: "WAY",
-		Short:   "WY",
+		Short:   "WAY",
 		Alt: []string{
 			"WY", "WAY",
 		},
