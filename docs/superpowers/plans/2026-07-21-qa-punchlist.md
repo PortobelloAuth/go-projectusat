@@ -52,7 +52,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Expected:** Same as multi-line military: `StreetName=PSC 3 BOX 4120`, `City=APO`, `Region=AE`, `Postal=09021-0002`  
 - **Root cause:** Military fast path requires ≥2 logical lines; space-only form never matches; `splitPreStreet` steals `PSC`.  
 - **Falsifiable test:** `TestPunchlist_PL001_SpaceSeparatedMilitary`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-002: Single-line multi-word city invents wrong city
 
@@ -63,7 +63,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Expected:** `City=NEW YORK`, `Region=NY`, `Postal=10005`, street `123 MAIN ST`  
 - **Root cause:** `parseSingleLineCivilian` takes only one city token.  
 - **Falsifiable test:** `TestPunchlist_PL002_SingleLineMultiWordCity`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-003: `peelPostal` over-accepts letter-bearing pairs (CA compact + trailing USA)
 
@@ -75,7 +75,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Expected B:** postal `62701`, country `USA` or country stripped from last line per Project US@  
 - **Root cause:** Canadian two-token branch accepts any `len≥6` letter-bearing join; trailing tokens stick to postal.  
 - **Falsifiable tests:** `TestPunchlist_PL003a_CompactCanadianPostal`, `TestPunchlist_PL003b_TrailingCountryOnLastLine`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ---
 
@@ -90,7 +90,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro C:** `Parse("4004 PINE Circle, Court\nSpringfield IL 62701")` (C# → `PINE CIRCLE CT`)  
 - **Expected:** commas as soft separators within a line, not always hard line breaks for last-line/unit contexts  
 - **Falsifiable tests:** `TestPunchlist_PL004a_CommaInLastLine`, `TestPunchlist_PL004b_CommaBeforeApt`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-005: Postdirectional peels the only street-name token
 
@@ -100,7 +100,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Actual:** `unrecognized street line`  
 - **Expected:** primary `123`, street name `SOUTH` (directional-as-name), matching predir empty-name guard already used for predirectionals  
 - **Falsifiable test:** `TestPunchlist_PL005_DirectionalOnlyStreetName`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-006: Digit-leading firm name steals primary number
 
@@ -110,7 +110,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Actual:** `PrimaryNumber=3M` (or business empty / primary wrong)  
 - **Expected:** business contains `3M CORPORATION`, primary `100`, street `MAIN ST`  
 - **Falsifiable test:** `TestPunchlist_PL006_DigitLeadingBusiness`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-007: Grid-style decimal period stripped
 
@@ -120,7 +120,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Actual:** street involves `394` (period removed)  
 - **Expected:** C# / grid rule keeps decimal: `ROAD 39.4` (or `123 ROAD 39.4`)  
 - **Falsifiable test:** `TestPunchlist_PL007_GridDecimalPeriod`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-008: WAY/WY and state-as-name collisions
 
@@ -213,7 +213,7 @@ go test -tags punchlist . -run 'TestPunchlist_' -v -count=1
 - **Repro:** `Parse("UNIT 2050 BOX 4190\nSpringfield IL 62701")` errors; structured Normalize of same street OK  
 - **Expected:** consistent accept or clear error; prefer accept street as military form even with civilian city  
 - **Falsifiable test:** `TestPunchlist_PL017_UnitBoxCivilianCity`  
-- **Status:** open
+- **Status:** **done** (minion wave 2026-07-21)
 
 ### PL-018: Mid-line hash secondary not reordered
 
