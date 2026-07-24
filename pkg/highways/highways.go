@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 /*
@@ -121,56 +122,21 @@ var routeID = regexp.MustCompile(`^(\d+(\.\d+)?[A-Z]*|[A-Z]+)$`)
 // Letter-only tokens are excluded.
 var digitRouteID = regexp.MustCompile(`^\d+(\.\d+)?[A-Z]*$`)
 
-// multiWordStateNames are full US state/possession names (sorted longest-first for greedy match).
-// Built from region keys that contain a space and are not already two-letter codes.
-var multiWordStateNames = []string{
-	"DISTRICT OF COLUMBIA",
-	"FEDERATED STATES OF MICRONESIA",
-	"NORTHERN MARIANA ISLANDS",
-	"NEW HAMPSHIRE",
-	"NEW JERSEY",
-	"NEW MEXICO",
-	"NEW YORK",
-	"NORTH CAROLINA",
-	"NORTH DAKOTA",
-	"RHODE ISLAND",
-	"SOUTH CAROLINA",
-	"SOUTH DAKOTA",
-	"WEST VIRGINIA",
-	"AMERICAN SAMOA",
-	"MARSHALL ISLANDS",
-	"PUERTO RICO",
-	"VIRGIN ISLANDS",
-}
+// State name tables are owned by pkg/region; highways composes them at init.
+var (
+	multiWordStateNames  []string
+	singleWordStateNames map[string]bool
+	usStateAbbrevs       map[string]bool
+)
 
-// singleWordStateNames are full single-token US state names (not abbreviations).
-var singleWordStateNames = map[string]bool{
-	"ALABAMA": true, "ALASKA": true, "ARIZONA": true, "ARKANSAS": true,
-	"CALIFORNIA": true, "COLORADO": true, "CONNECTICUT": true, "DELAWARE": true,
-	"FLORIDA": true, "GEORGIA": true, "GUAM": true, "HAWAII": true,
-	"IDAHO": true, "ILLINOIS": true, "INDIANA": true, "IOWA": true,
-	"KANSAS": true, "KENTUCKY": true, "LOUISIANA": true, "MAINE": true,
-	"MARYLAND": true, "MASSACHUSETTS": true, "MICHIGAN": true, "MINNESOTA": true,
-	"MISSISSIPPI": true, "MISSOURI": true, "MONTANA": true, "NEBRASKA": true,
-	"NEVADA": true, "OHIO": true, "OKLAHOMA": true, "OREGON": true,
-	"PALAU": true, "PENNSYLVANIA": true, "TENNESSEE": true, "TEXAS": true,
-	"UTAH": true, "VERMONT": true, "VIRGINIA": true, "WASHINGTON": true,
-	"WISCONSIN": true, "WYOMING": true, "MICRONESIA": true,
-}
-
-// usStateAbbrevs are the two-letter US state/possession codes we treat as highway state prefixes.
-// Excludes ambiguous codes that double as highway vocabulary (FM = Farm to Market).
-var usStateAbbrevs = map[string]bool{
-	"AL": true, "AK": true, "AS": true, "AZ": true, "AR": true, "CA": true,
-	"CO": true, "CT": true, "DE": true, "DC": true, "FL": true, "GA": true,
-	"GU": true, "HI": true, "ID": true, "IL": true, "IN": true, "IA": true,
-	"KS": true, "KY": true, "LA": true, "ME": true, "MH": true, "MD": true,
-	"MA": true, "MI": true, "MN": true, "MS": true, "MO": true, "MT": true,
-	"NE": true, "NV": true, "NH": true, "NJ": true, "NM": true, "NY": true,
-	"NC": true, "ND": true, "MP": true, "OH": true, "OK": true, "OR": true,
-	"PW": true, "PA": true, "PR": true, "RI": true, "SC": true, "SD": true,
-	"TN": true, "TX": true, "UT": true, "VT": true, "VI": true, "VA": true,
-	"WA": true, "WV": true, "WI": true, "WY": true,
+func init() {
+	multiWordStateNames = region.MultiWordStateNames()
+	singleWordStateNames = region.SingleWordStateNames()
+	// MICRONESIA is an alias full name used as highway prefix (maps to FM).
+	singleWordStateNames["MICRONESIA"] = true
+	usStateAbbrevs = region.USStateAbbrevs()
+	// Exclude FM — farm-to-market highway vocabulary, not a state prefix here.
+	delete(usStateAbbrevs, "FM")
 }
 
 // NormalizeStreetName normalizes highway-style primary street names per Project US@.
@@ -178,7 +144,7 @@ var usStateAbbrevs = map[string]bool{
 // Names that match no highway rule are returned uppercased with collapsed whitespace.
 // An error is returned only when the input is empty after trim.
 func NormalizeStreetName(name string) (string, error) {
-	s := collapseSpace(strings.ToUpper(strings.TrimSpace(name)))
+	s := textutil.CollapseSpace(strings.ToUpper(strings.TrimSpace(name)))
 	if s == "" {
 		return "", fmt.Errorf("empty street name")
 	}
@@ -192,10 +158,6 @@ func NormalizeStreetName(name string) (string, error) {
 
 	// No highway rule matched: pass through uppercased / collapsed form.
 	return s, nil
-}
-
-func collapseSpace(s string) string {
-	return strings.Join(strings.Fields(s), " ")
 }
 
 // expandGluedInterstate rewrites tokens like I10 / IH280 to "I 10" / "IH 280".
@@ -526,4 +488,24 @@ func isLetterOnly(t string) bool {
 
 func join(parts []string) string {
 	return strings.Join(parts, " ")
+}
+
+// Score returns how strongly token looks like highway vocabulary (not a full street).
+// Single tokens: HWY, I, FM, SR, CR, etc. score high; 0 if not highway vocab.
+func Score(token string) (int, error) {
+	token = strings.ToUpper(strings.TrimSpace(token))
+	if token == "" {
+		return 0, nil
+	}
+	switch token {
+	case "HWY", "HIGHWAY", "INTERSTATE", "I", "IH", "US", "FM",
+		"SR", "CR", "TSR", "RD", "ROAD", "RT", "RTE", "ROUTE",
+		"COUNTY", "CNTY", "STATE", "TOWNSHIP", "RANCH", "EXPRESSWAY":
+		return 80, nil
+	}
+	// Glued interstate I10 / IH280
+	if gluedInterstate.MatchString(token) {
+		return 90, nil
+	}
+	return 0, nil
 }

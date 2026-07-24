@@ -130,3 +130,16 @@ func Info(u string) (*SecondaryUnit, error) {
 
 	return nil, fmt.Errorf("Unrecognized unit type")
 }
+
+// Score returns how strongly token looks like a secondary unit designator.
+// 0 = not a designator; 100 = known unit type or "#".
+func Score(token string) (int, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return 0, nil
+	}
+	if _, err := Info(token); err != nil {
+		return 0, nil
+	}
+	return 100, nil
+}

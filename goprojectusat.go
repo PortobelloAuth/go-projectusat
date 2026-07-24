@@ -15,6 +15,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/military"
+	"github.com/PortobelloAuth/go-projectusat/pkg/parse"
 	"github.com/PortobelloAuth/go-projectusat/pkg/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
@@ -108,7 +109,8 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 		}
 		out.Region = abbr
 	}
-	isPR := out.Region == "PR"
+	// Puerto Rico dialect from region and/or PR ZIP ranges.
+	usePR := puertorico.UsePRDialect(out.Region, out.Postal)
 
 	// Overseas military street lines (e.g. "PSC 3 BOX 4120") live entirely in
 	// StreetName. Detect on the joined candidate; on success skip civilian
@@ -170,8 +172,10 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 			}
 			// PR Spanish street types (CLL, CAM, …) are not in the USPS English
 			// suffix table; fall back to puertorico when region is PR.
-			if err != nil && isPR {
-				abbr, err = puertorico.AbbreviateStreetType(v)
+			if err != nil && usePR {
+				if a, ok := puertorico.TryAbbreviateStreetType(v); ok {
+					abbr, err = a, nil
+				}
 			}
 			if err != nil {
 				return Address{}, fmt.Errorf("street suffix: %w", err)
@@ -182,8 +186,10 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 		if v := baseField(a.SecondaryDesignator); v != "" {
 			abbr, err := secondaryunit.Normalize(v)
 			// PR Spanish secondaries (URB, EDIF, BDA, …) fall back when region is PR.
-			if err != nil && isPR {
-				abbr, err = puertorico.NormalizeSecondary(v)
+			if err != nil && usePR {
+				if a, ok := puertorico.TryNormalizeSecondary(v); ok {
+					abbr, err = a, nil
+				}
 			}
 			if err != nil {
 				return Address{}, fmt.Errorf("secondary designator: %w", err)
@@ -293,4 +299,32 @@ func joinNonEmpty(sep string, parts ...string) string {
 		}
 	}
 	return strings.Join(out, sep)
+}
+
+// Parse converts free-text multi-line or comma-separated address text into a
+// structured Address via pkg/parse (token scoring + component assignment).
+// It does not call Normalize; compose Normalize(Parse(raw)) for content form.
+func Parse(raw string) (Address, error) {
+	a, err := parse.Parse(raw)
+	if err != nil {
+		return Address{}, err
+	}
+	return addressFromParse(a), nil
+}
+
+func addressFromParse(a parse.Address) Address {
+	return Address{
+		BusinessName:        a.BusinessName,
+		PrimaryNumber:       a.PrimaryNumber,
+		Predirectional:      a.Predirectional,
+		StreetName:          a.StreetName,
+		StreetSuffix:        a.StreetSuffix,
+		Postdirectional:     a.Postdirectional,
+		SecondaryDesignator: a.SecondaryDesignator,
+		SecondaryNumber:     a.SecondaryNumber,
+		City:                a.City,
+		Region:              a.Region,
+		Postal:              a.Postal,
+		Country:             a.Country,
+	}
 }

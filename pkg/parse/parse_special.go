@@ -1,4 +1,4 @@
-package goprojectusat
+package parse
 
 import (
 	"strings"

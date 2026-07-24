@@ -1,7 +1,8 @@
-package goprojectusat
+package parse
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -15,10 +16,78 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
+// Address is a structured patient address produced by Parse.
+// Empty string means unknown / not present. The root package maps this to its Address type.
+type Address struct {
+	BusinessName string
+
+	PrimaryNumber       string
+	Predirectional      string
+	StreetName          string
+	StreetSuffix        string
+	Postdirectional     string
+	SecondaryDesignator string
+	SecondaryNumber     string
+
+	City   string
+	Region string
+	Postal string
+
+	Country string
+}
+
+// usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
+var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
+
+// Canadian postal: compact A1A1A1, or FSA (A1A) + LDU (1A1) as two tokens.
+var (
+	caPostalCompact = regexp.MustCompile(`^[A-Z]\d[A-Z]\d[A-Z]\d$`)
+	caPostalFSA     = regexp.MustCompile(`^[A-Z]\d[A-Z]$`)
+	caPostalLDU     = regexp.MustCompile(`^\d[A-Z]\d$`)
+)
+
+// normalizePostal formats US ZIP / ZIP+4 and Canadian A1A 1A1; other patterns
+// remain uppercase alphanumerics with collapsed spacing.
+func normalizePostal(s string) string {
+	s = textutil.Upper(textutil.CollapseSpace(s))
+	if s == "" {
+		return ""
+	}
+	cleaned := textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{KeepHyphen: true}))
+	compact := strings.ReplaceAll(cleaned, " ", "")
+	if m := usZIPCompact.FindStringSubmatch(compact); m != nil {
+		if m[2] != "" {
+			return m[1] + "-" + m[2]
+		}
+		return m[1]
+	}
+	if caPostalCompact.MatchString(compact) {
+		return compact[:3] + " " + compact[3:]
+	}
+	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{}))
+}
+
 // Parse converts free-text multi-line or comma-separated address text into a
-// structured Address. It does not call Normalize; compose Normalize(Parse(raw))
-// for content form. Empty input returns an error.
+// structured Address.
+//
+// Architecture (Project US@ Go layout):
+//  1. Split the input into Tokens (position, comma/newline context).
+//  2. Score tokens against pkg/* vocabularies (region, directionals, suffixes, …).
+//  3. Assign tokens to address components using score, order, and punctuation.
+//
+// Special forms (military, rural route, PO Box) are recognized when scores and
+// patterns align. Business/narrative prefixes are residual tokens before the
+// street components when parsing from the end.
+//
+// Parse does not call content Normalize; callers compose as needed. Empty input
+// returns an error.
 func Parse(raw string) (Address, error) {
+	// Tokenize for position/punctuation context (used by scoring helpers and
+	// available for multi-interpretation assignment). Line routing still uses
+	// splitAddressLines for military comma bipartition and multi-line shapes.
+	if len(Tokenize(raw)) == 0 {
+		return Address{}, fmt.Errorf("empty address")
+	}
 	lines := splitAddressLines(raw)
 	if len(lines) == 0 {
 		return Address{}, fmt.Errorf("empty address")
@@ -181,9 +250,15 @@ func parseCivilian(lines []string) (Address, error) {
 	streetLine := lines[len(lines)-2]
 	business := ""
 	if len(lines) > 2 {
+		// Everything before the street+last-line address is business/narrative residual.
 		business = strings.ToUpper(textutil.CollapseSpace(strings.Join(lines[:len(lines)-2], " ")))
 	}
-	street, err := parseStreetLine(streetLine, reg)
+	// Region and PR ZIP ranges both engage PR dialect (score-collocated in puertorico).
+	streetRegion := reg
+	if usePRDialect(reg, zip) {
+		streetRegion = "PR"
+	}
+	street, err := parseStreetLine(streetLine, streetRegion)
 	if err != nil {
 		return Address{}, err
 	}
@@ -215,6 +290,9 @@ func mergeBusinessName(multiLine, sameLine string) string {
 // parseLastLine extracts city, region (abbreviated), and postal from a last line
 // like "SPRINGFIELD IL 62701" or "OTTAWA ON K1A 0B1". City is multi-word capable.
 // Trailing country tokens (USA/US/UNITED STATES) are stripped into country.
+//
+// Assignment is score-driven from the right: postal score, then region.Score /
+// ScorePhrase on longest-right candidates, residual tokens form the city.
 func parseLastLine(line string) (city, reg, postal, country string, err error) {
 	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
 	if len(tokens) < 2 {
@@ -224,25 +302,39 @@ func parseLastLine(line string) (city, reg, postal, country string, err error) {
 	if len(tokens) < 2 {
 		return "", "", "", "", fmt.Errorf("invalid last line: %q", line)
 	}
-	postal, rest, ok := peelPostal(tokens)
+	postal, rest, ok := extractPostal(tokens)
 	if !ok {
 		return "", "", "", "", fmt.Errorf("invalid last line postal: %q", line)
 	}
 	if len(rest) < 1 {
 		return "", "", "", "", fmt.Errorf("invalid last line: missing region in %q", line)
 	}
-	// Longest region match from the right of rest (e.g. DISTRICT OF COLUMBIA).
+	// Prefer the longest right-hand region phrase with the best region.Score.
+	bestN, bestScore := 0, 0
+	var bestAbbr string
 	for n := len(rest); n >= 1; n-- {
 		cand := strings.Join(rest[len(rest)-n:], " ")
-		if abbr, e := region.NormalizeRegion(cand); e == nil {
-			city = strings.Join(rest[:len(rest)-n], " ")
-			if city == "" {
-				return "", "", "", "", fmt.Errorf("invalid last line: missing city in %q", line)
-			}
-			return city, abbr, postal, country, nil
+		sc, _ := region.ScorePhrase(cand)
+		if sc == 0 {
+			continue
+		}
+		abbr, e := region.NormalizeRegion(cand)
+		if e != nil {
+			continue
+		}
+		// Prefer longer matches when scores tie (DISTRICT OF COLUMBIA over COLUMBIA).
+		if sc > bestScore || (sc == bestScore && n > bestN) {
+			bestScore, bestN, bestAbbr = sc, n, abbr
 		}
 	}
-	return "", "", "", "", fmt.Errorf("unrecognized region in last line: %q", line)
+	if bestN == 0 {
+		return "", "", "", "", fmt.Errorf("unrecognized region in last line: %q", line)
+	}
+	city = strings.Join(rest[:len(rest)-bestN], " ")
+	if city == "" {
+		return "", "", "", "", fmt.Errorf("invalid last line: missing city in %q", line)
+	}
+	return city, bestAbbr, postal, country, nil
 }
 
 // stripTrailingCountry removes a trailing country designator (USA, US, UNITED
@@ -265,8 +357,8 @@ func stripTrailingCountry(tokens []string) (rest []string, country string) {
 	return tokens, ""
 }
 
-// peelPostal removes US ZIP / ZIP+4 or Canadian postal from the right of tokens.
-func peelPostal(tokens []string) (postal string, rest []string, ok bool) {
+// extractPostal removes US ZIP / ZIP+4 or Canadian postal from the right of tokens.
+func extractPostal(tokens []string) (postal string, rest []string, ok bool) {
 	if len(tokens) == 0 {
 		return "", nil, false
 	}
@@ -304,7 +396,7 @@ func peelPostal(tokens []string) (postal string, rest []string, ok bool) {
 func parseSingleLineCivilian(line string) (Address, error) {
 	tokens := strings.Fields(strings.ToUpper(textutil.CollapseSpace(line)))
 	tokens, country := stripTrailingCountry(tokens)
-	postal, rest, ok := peelPostal(tokens)
+	postal, rest, ok := extractPostal(tokens)
 	if !ok || len(rest) < 2 {
 		return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
 	}
@@ -317,7 +409,11 @@ func parseSingleLineCivilian(line string) (Address, error) {
 			if len(before) < 2 {
 				return Address{}, fmt.Errorf("cannot parse single-line address: %q", line)
 			}
-			street, city, err := splitStreetAndCity(before, abbr)
+			streetRegion := abbr
+			if usePRDialect(abbr, postal) {
+				streetRegion = "PR"
+			}
+			street, city, err := splitStreetAndCity(before, streetRegion)
 			if err != nil {
 				return Address{}, err
 			}
@@ -381,6 +477,11 @@ func splitStreetAndCity(tokens []string, regionCode string) (Address, string, er
 		return Address{}, "", fmt.Errorf("cannot split street and city from %q", strings.Join(tokens, " "))
 	}
 	return best.street, best.city, nil
+}
+
+// usePRDialect reports whether Spanish PR vocabulary applies for this address.
+func usePRDialect(regionCode, postal string) bool {
+	return puertorico.UsePRDialect(regionCode, postal)
 }
 
 // parseStreetLine reverse-token peels secondary, postdirectional, and suffix,
@@ -466,7 +567,7 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 		out.BusinessName = preStreet
 	}
 
-	tokens = peelSecondary(tokens, &out, isPR, leadingSecondary)
+	tokens = extractSecondary(tokens, &out, isPR, leadingSecondary)
 
 	// Postdirectional (right) only when a street-name token remains after the peel
 	// (accounting for an optional leading primary). Same empty-name guard as
@@ -486,7 +587,7 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	}
 
 	// Street suffix (right) via peelStreetSuffix (handles Annex after Boulevard).
-	if suffix, rest, ok := peelStreetSuffix(tokens); ok {
+	if suffix, rest, ok := extractStreetSuffix(tokens); ok {
 		out.StreetSuffix = suffix
 		tokens = rest
 	}
@@ -639,70 +740,6 @@ func parseStreetLine(line string, regionCode string) (Address, error) {
 	return out, nil
 }
 
-// usStateFullNames maps US state/possession two-letter codes to their fully
-// spelled primary names. Excludes military AE/AP/AA and Canadian provinces.
-var usStateFullNames = map[string]string{
-	"AL": "ALABAMA",
-	"AK": "ALASKA",
-	"AS": "AMERICAN SAMOA",
-	"AZ": "ARIZONA",
-	"AR": "ARKANSAS",
-	"CA": "CALIFORNIA",
-	"CO": "COLORADO",
-	"CT": "CONNECTICUT",
-	"DE": "DELAWARE",
-	"DC": "DISTRICT OF COLUMBIA",
-	"FM": "FEDERATED STATES OF MICRONESIA",
-	"FL": "FLORIDA",
-	"GA": "GEORGIA",
-	"GU": "GUAM",
-	"HI": "HAWAII",
-	"ID": "IDAHO",
-	"IL": "ILLINOIS",
-	"IN": "INDIANA",
-	"IA": "IOWA",
-	"KS": "KANSAS",
-	"KY": "KENTUCKY",
-	"LA": "LOUISIANA",
-	"ME": "MAINE",
-	"MH": "MARSHALL ISLANDS",
-	"MD": "MARYLAND",
-	"MA": "MASSACHUSETTS",
-	"MI": "MICHIGAN",
-	"MN": "MINNESOTA",
-	"MS": "MISSISSIPPI",
-	"MO": "MISSOURI",
-	"MT": "MONTANA",
-	"NE": "NEBRASKA",
-	"NV": "NEVADA",
-	"NH": "NEW HAMPSHIRE",
-	"NJ": "NEW JERSEY",
-	"NM": "NEW MEXICO",
-	"NY": "NEW YORK",
-	"NC": "NORTH CAROLINA",
-	"ND": "NORTH DAKOTA",
-	"MP": "NORTHERN MARIANA ISLANDS",
-	"OH": "OHIO",
-	"OK": "OKLAHOMA",
-	"OR": "OREGON",
-	"PW": "PALAU",
-	"PA": "PENNSYLVANIA",
-	"PR": "PUERTO RICO",
-	"RI": "RHODE ISLAND",
-	"SC": "SOUTH CAROLINA",
-	"SD": "SOUTH DAKOTA",
-	"TN": "TENNESSEE",
-	"TX": "TEXAS",
-	"UT": "UTAH",
-	"VT": "VERMONT",
-	"VI": "VIRGIN ISLANDS",
-	"VA": "VIRGINIA",
-	"WA": "WASHINGTON",
-	"WV": "WEST VIRGINIA",
-	"WI": "WISCONSIN",
-	"WY": "WYOMING",
-}
-
 // fullySpelledUSState returns the fully spelled US state/possession name when
 // name (possibly multi-word) normalizes to a known US region code. Military
 // and Canadian codes are excluded.
@@ -711,8 +748,7 @@ func fullySpelledUSState(name string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	full, ok := usStateFullNames[abbr]
-	return full, ok
+	return region.FullName(abbr)
 }
 
 // leadingTokensAreMultiWordState reports whether tokens begin with a multi-word
@@ -722,30 +758,12 @@ func leadingTokensAreMultiWordState(tokens []string) bool {
 	if len(tokens) < 2 {
 		return false
 	}
-	// Longest multi-word US names are up to 4 tokens (FEDERATED STATES OF MICRONESIA).
-	maxN := 4
-	if maxN > len(tokens) {
-		maxN = len(tokens)
+	code, n, ok := region.LeadingStateMatch(tokens, false)
+	if !ok || n < 2 {
+		return false
 	}
-	for n := maxN; n >= 2; n-- {
-		candidate := strings.Join(tokens[:n], " ")
-		abbr, err := region.NormalizeRegion(candidate)
-		if err != nil {
-			continue
-		}
-		if _, ok := usStateFullNames[abbr]; !ok {
-			continue
-		}
-		// Require a multi-word full name (or multi-word alias), not a 1-token abbrev.
-		if full, ok := usStateFullNames[abbr]; ok && len(strings.Fields(full)) >= 2 {
-			// Accept when the candidate equals the full name or a known multi-word alias
-			// that NormalizeRegion maps to the same code (e.g. S CAROLINA → SC).
-			if candidate == full || len(strings.Fields(candidate)) >= 2 {
-				return true
-			}
-		}
-	}
-	return false
+	full, ok := region.FullName(code)
+	return ok && len(strings.Fields(full)) >= 2
 }
 
 // abbreviateLeadingStatePortion replaces a leading full US state name with its
@@ -760,33 +778,18 @@ func abbreviateLeadingStatePortion(tokens []string) []string {
 	if len(tokens) < 2 {
 		return tokens
 	}
-	// Leave at least one residual name token after the state portion.
-	maxN := 4
-	if maxN > len(tokens)-1 {
-		maxN = len(tokens) - 1
+	abbr, n, ok := region.LeadingStateMatch(tokens, true)
+	if !ok {
+		return tokens
 	}
-	for n := maxN; n >= 1; n-- {
-		// Two-letter codes are already abbreviated — do not rewrite.
-		if n == 1 && len(tokens[0]) <= 2 {
-			continue
-		}
-		candidate := strings.Join(tokens[:n], " ")
-		abbr, err := region.NormalizeRegion(candidate)
-		if err != nil {
-			continue
-		}
-		if _, ok := usStateFullNames[abbr]; !ok {
-			continue
-		}
-		out := make([]string, 0, len(tokens)-n+1)
-		out = append(out, abbr)
-		out = append(out, tokens[n:]...)
-		return out
-	}
-	return tokens
+	out := make([]string, 0, len(tokens)-n+1)
+	out = append(out, abbr)
+	out = append(out, tokens[n:]...)
+	return out
 }
 
-// expandHashTokens splits glued forms like "#12" into "#", "12".
+// expandHyphenatedStreetTokens splits Main-Street style compounds when the
+// right side is a street suffix.
 func expandHyphenatedStreetTokens(tokens []string) []string {
 	if len(tokens) == 0 {
 		return tokens
@@ -814,7 +817,7 @@ func expandHyphenatedStreetTokens(tokens []string) []string {
 	return out
 }
 
-// peelStreetSuffix peels a street suffix from the right of tokens.
+// extractStreetSuffix extracts a street suffix from the right of tokens.
 // Returns the abbreviated suffix, residual tokens, and whether a peel occurred.
 //
 // When the rightmost token is a trailing-junk suffix (ANX/ANNEX) and the
@@ -834,7 +837,7 @@ func isTrailingJunkSuffix(abbr string) bool {
 // Leading "# NUM rest" is already handled by reorderLeadingSecondary; this
 // covers house-number-first forms like "100 #12 MAIN STREET".
 
-func peelStreetSuffix(tokens []string) (suffix string, rest []string, ok bool) {
+func extractStreetSuffix(tokens []string) (suffix string, rest []string, ok bool) {
 	if len(tokens) < 2 {
 		return "", tokens, false
 	}
@@ -1264,7 +1267,7 @@ type secondaryPeel struct {
 	number     string // unit number, or empty for non-numbered designators
 }
 
-// peelSecondary repeatedly peels trailing secondary designators from the right,
+// extractSecondary repeatedly extracts trailing secondary designators from the right,
 // then folds them with an optional leading secondary (from takeLeadingSecondary)
 // so Format preserves left-to-right designator order of original appearance.
 //
@@ -1280,7 +1283,7 @@ type secondaryPeel struct {
 //
 // So "Building 420 Room 120" → BLDG / "420 RM 120", and
 // "Unit 3200 152 Tech Drive Room 12" → UNIT / "3200 RM 12".
-func peelSecondary(tokens []string, out *Address, isPR bool, leading *secondaryPeel) []string {
+func extractSecondary(tokens []string, out *Address, isPR bool, leading *secondaryPeel) []string {
 	var peels []secondaryPeel // rightmost first
 
 	for len(tokens) > 0 {
@@ -1312,7 +1315,8 @@ func peelSecondary(tokens []string, out *Address, isPR bool, leading *secondaryP
 		// TRLR), leave it for the suffix peel rather than treating it as a unit
 		// type: "8007 EAST KENTUCKY KEY" → E KENTUCKY KY, not secondary KEY.
 		if info, err := secondaryunit.Info(tokens[len(tokens)-1]); err == nil {
-			if _, sErr := streetsuffixes.NormalizeStreetSuffixAbreviation(tokens[len(tokens)-1]); sErr == nil {
+			// Prefer street suffix when the same token scores as a suffix (e.g. KEY).
+			if sc, _ := streetsuffixes.Score(tokens[len(tokens)-1]); sc > 0 {
 				// Also a street suffix — prefer suffix over bare secondary.
 				break
 			}

@@ -88,3 +88,23 @@ func TestFuzzyNormalizeRegion(t *testing.T) {
 		t.Fatalf("FuzzyNormalizeRegion(Californa) = %q, want CA", got)
 	}
 }
+
+func TestScoreAndFullName(t *testing.T) {
+	if sc, _ := region.Score("IL"); sc != 100 {
+		t.Fatalf("Score(IL)=%d want 100", sc)
+	}
+	if sc, _ := region.Score("ILLINOIS"); sc != 90 {
+		t.Fatalf("Score(ILLINOIS)=%d want 90", sc)
+	}
+	if sc, _ := region.Score("MAIN"); sc != 0 {
+		t.Fatalf("Score(MAIN)=%d want 0", sc)
+	}
+	full, ok := region.FullName("CT")
+	if !ok || full != "CONNECTICUT" {
+		t.Fatalf("FullName(CT)=%q,%v", full, ok)
+	}
+	code, n, ok := region.LeadingStateMatch([]string{"SOUTH", "CAROLINA", "COUNTY", "ROAD", "22"}, true)
+	if !ok || code != "SC" || n != 2 {
+		t.Fatalf("LeadingStateMatch = %s %d %v", code, n, ok)
+	}
+}

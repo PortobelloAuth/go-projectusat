@@ -1,8 +1,10 @@
-package goprojectusat
+package goprojectusat_test
 
 import (
 	"fmt"
 	"testing"
+
+	goprojectusat "github.com/PortobelloAuth/go-projectusat"
 )
 
 var csharpParityCases = []struct {
@@ -67,18 +69,18 @@ var csharpParityCases = []struct {
 
 func streetOut(t *testing.T, in string) (string, error) {
 	t.Helper()
-	p, err := Parse(in + "\nSpringfield IL 62701")
+	p, err := goprojectusat.Parse(in + "\nSpringfield IL 62701")
 	if err != nil {
 		return "", err
 	}
-	n, err := Normalize(p)
+	n, err := goprojectusat.Normalize(p)
 	if err != nil {
 		return "", err
 	}
 	if n.BusinessName != "" {
-		return n.BusinessName + " " + FormatStreetLine(n), nil
+		return n.BusinessName + " " + goprojectusat.FormatStreetLine(n), nil
 	}
-	return FormatStreetLine(n), nil
+	return goprojectusat.FormatStreetLine(n), nil
 }
 
 func TestCSharpParityScore(t *testing.T) {

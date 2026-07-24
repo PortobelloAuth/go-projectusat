@@ -342,3 +342,142 @@ func NormalizeRegion(r string) (string, error) {
 func FuzzyNormalizeRegion(r string) (string, error) {
 	return normalizeRegion(r, true)
 }
+
+// Score returns how strongly token looks like a region (state/province/military).
+// 0 means not a region; higher is more confident. Exact two-letter codes and full
+// names score highest; multi-word names should be scored via ScorePhrase.
+func Score(token string) (int, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return 0, nil
+	}
+	if _, err := NormalizeRegion(token); err != nil {
+		return 0, nil
+	}
+	u := strings.ToUpper(alphaspace.ReplaceAllString(token, ""))
+	// Two-letter postal code: strongest single-token region signal.
+	if len(u) == 2 {
+		return 100, nil
+	}
+	// Full name or alias.
+	if len(strings.Fields(u)) == 1 {
+		return 90, nil
+	}
+	return 85, nil
+}
+
+// ScorePhrase scores a multi-token region candidate (e.g. "SOUTH CAROLINA").
+func ScorePhrase(phrase string) (int, error) {
+	return Score(phrase)
+}
+
+// usStateFullNames maps US state/possession codes to fully spelled primary names.
+// Excludes military AE/AP/AA and Canadian provinces.
+var usStateFullNames = map[string]string{
+	"AL": "ALABAMA", "AK": "ALASKA", "AS": "AMERICAN SAMOA", "AZ": "ARIZONA",
+	"AR": "ARKANSAS", "CA": "CALIFORNIA", "CO": "COLORADO", "CT": "CONNECTICUT",
+	"DE": "DELAWARE", "DC": "DISTRICT OF COLUMBIA", "FM": "FEDERATED STATES OF MICRONESIA",
+	"FL": "FLORIDA", "GA": "GEORGIA", "GU": "GUAM", "HI": "HAWAII", "ID": "IDAHO",
+	"IL": "ILLINOIS", "IN": "INDIANA", "IA": "IOWA", "KS": "KANSAS", "KY": "KENTUCKY",
+	"LA": "LOUISIANA", "ME": "MAINE", "MH": "MARSHALL ISLANDS", "MD": "MARYLAND",
+	"MA": "MASSACHUSETTS", "MI": "MICHIGAN", "MN": "MINNESOTA", "MS": "MISSISSIPPI",
+	"MO": "MISSOURI", "MT": "MONTANA", "NE": "NEBRASKA", "NV": "NEVADA",
+	"NH": "NEW HAMPSHIRE", "NJ": "NEW JERSEY", "NM": "NEW MEXICO", "NY": "NEW YORK",
+	"NC": "NORTH CAROLINA", "ND": "NORTH DAKOTA", "MP": "NORTHERN MARIANA ISLANDS",
+	"OH": "OHIO", "OK": "OKLAHOMA", "OR": "OREGON", "PW": "PALAU", "PA": "PENNSYLVANIA",
+	"PR": "PUERTO RICO", "RI": "RHODE ISLAND", "SC": "SOUTH CAROLINA", "SD": "SOUTH DAKOTA",
+	"TN": "TENNESSEE", "TX": "TEXAS", "UT": "UTAH", "VT": "VERMONT", "VI": "VIRGIN ISLANDS",
+	"VA": "VIRGINIA", "WA": "WASHINGTON", "WV": "WEST VIRGINIA", "WI": "WISCONSIN",
+	"WY": "WYOMING",
+}
+
+// FullName returns the fully spelled US state/possession name for a two-letter code.
+func FullName(code string) (string, bool) {
+	full, ok := usStateFullNames[strings.ToUpper(strings.TrimSpace(code))]
+	return full, ok
+}
+
+// IsUSStateOrPossession reports whether code is a US state/possession (not CA province/military).
+func IsUSStateOrPossession(code string) bool {
+	_, ok := usStateFullNames[strings.ToUpper(strings.TrimSpace(code))]
+	return ok
+}
+
+// LeadingStateMatch peels a leading full US state/possession name from tokens.
+// Returns the two-letter code, number of tokens consumed, and whether a match was found.
+// Prefer longer matches (up to 4 tokens). Does not match two-letter codes alone when
+// requireFullName is true.
+func LeadingStateMatch(tokens []string, requireResidual bool) (code string, n int, ok bool) {
+	if len(tokens) == 0 {
+		return "", 0, false
+	}
+	maxN := 4
+	if maxN > len(tokens) {
+		maxN = len(tokens)
+	}
+	if requireResidual && maxN > len(tokens)-1 {
+		maxN = len(tokens) - 1
+	}
+	for n := maxN; n >= 1; n-- {
+		if n == 1 && len(tokens[0]) <= 2 {
+			// Already abbreviated; only accept when not requiring a full name residual rewrite.
+			if requireResidual {
+				continue
+			}
+		}
+		candidate := strings.Join(tokens[:n], " ")
+		abbr, err := NormalizeRegion(candidate)
+		if err != nil {
+			continue
+		}
+		if !IsUSStateOrPossession(abbr) {
+			continue
+		}
+		if full, ok := FullName(abbr); ok {
+			// Prefer multi-word full names when n>=2
+			if n >= 2 || len(strings.Fields(full)) == 1 || len(tokens[0]) > 2 {
+				return abbr, n, true
+			}
+		}
+	}
+	return "", 0, false
+}
+
+// MultiWordStateNames returns full multi-token US state/possession names, longest first.
+func MultiWordStateNames() []string {
+	var out []string
+	for code, full := range usStateFullNames {
+		_ = code
+		if len(strings.Fields(full)) >= 2 {
+			out = append(out, full)
+		}
+	}
+	// longest first for greedy prefix match
+	slices.SortFunc(out, func(a, b string) int {
+		if len(b) != len(a) {
+			return len(b) - len(a)
+		}
+		return strings.Compare(a, b)
+	})
+	return out
+}
+
+// SingleWordStateNames returns a set of single-token full US state names.
+func SingleWordStateNames() map[string]bool {
+	out := make(map[string]bool)
+	for _, full := range usStateFullNames {
+		if len(strings.Fields(full)) == 1 {
+			out[full] = true
+		}
+	}
+	return out
+}
+
+// USStateAbbrevs returns two-letter US state/possession codes (excludes FM highway clash optional).
+func USStateAbbrevs() map[string]bool {
+	out := make(map[string]bool, len(usStateFullNames))
+	for code := range usStateFullNames {
+		out[code] = true
+	}
+	return out
+}

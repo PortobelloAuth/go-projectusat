@@ -174,3 +174,68 @@ func NormalizeSecondary(s string) (string, error) {
 
 	return "", fmt.Errorf("Unrecognized secondary designator")
 }
+
+// Score returns how strongly token looks like a PR Spanish street type or secondary.
+// 0 = not PR vocabulary. Street types score 100; secondaries score 90.
+func Score(token string) (int, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return 0, nil
+	}
+	if _, err := NormalizeStreetType(token); err == nil {
+		return 100, nil
+	}
+	if _, err := NormalizeSecondary(token); err == nil {
+		return 90, nil
+	}
+	return 0, nil
+}
+
+// LooksLikePRPostal reports whether a postal code falls in Puerto Rico ZIP ranges
+// (006xx–007xx, 009xx).
+func LooksLikePRPostal(postal string) bool {
+	compact := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, postal)
+	if len(compact) < 5 {
+		return false
+	}
+	prefix := compact[:3]
+	switch prefix {
+	case "006", "007", "009":
+		return true
+	default:
+		return false
+	}
+}
+
+// UsePRDialect reports whether PR Spanish vocabulary should be applied based on
+// region code and/or postal ZIP range.
+func UsePRDialect(regionCode, postal string) bool {
+	if strings.EqualFold(strings.TrimSpace(regionCode), "PR") {
+		return true
+	}
+	return LooksLikePRPostal(postal)
+}
+
+// TryAbbreviateStreetType is a high-level PR street-type lookup for normalize
+// fallbacks. ok is false when the token is not PR vocabulary.
+func TryAbbreviateStreetType(s string) (abbr string, ok bool) {
+	abbr, err := AbbreviateStreetType(s)
+	if err != nil {
+		return "", false
+	}
+	return abbr, true
+}
+
+// TryNormalizeSecondary is a high-level PR secondary lookup for normalize fallbacks.
+func TryNormalizeSecondary(s string) (abbr string, ok bool) {
+	abbr, err := NormalizeSecondary(s)
+	if err != nil {
+		return "", false
+	}
+	return abbr, true
+}

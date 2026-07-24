@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 /*
@@ -107,7 +109,7 @@ var postalCode = regexp.MustCompile(`^\d{5}(-\d{4})?$`)
 // "{TYPE} {ASSIGNED} BOX {BOXNUM}" (uppercase, single spaces).
 // TYPE is one of CMR, OMC, PSC, UMR, UNIT.
 func NormalizeStreetLine(line string) (string, error) {
-	s := collapseSpace(strings.ToUpper(strings.TrimSpace(line)))
+	s := textutil.CollapseSpace(strings.ToUpper(strings.TrimSpace(line)))
 	if s == "" {
 		return "", fmt.Errorf("empty military street line")
 	}
@@ -139,7 +141,7 @@ func NormalizeStreetLine(line string) (string, error) {
 // "{APO|FPO|DPO} {AE|AP|AA} {ZIP|ZIP+4}".
 // City or country names must not appear; extra tokens are rejected.
 func NormalizeLastLine(line string) (city, region, postal string, err error) {
-	s := collapseSpace(strings.ToUpper(strings.TrimSpace(line)))
+	s := textutil.CollapseSpace(strings.ToUpper(strings.TrimSpace(line)))
 	if s == "" {
 		return "", "", "", fmt.Errorf("empty military last line")
 	}
@@ -168,6 +170,22 @@ func NormalizeLastLine(line string) (city, region, postal string, err error) {
 	return city, region, postal, nil
 }
 
-func collapseSpace(s string) string {
-	return strings.Join(strings.Fields(s), " ")
+// Score returns how strongly token looks like a military street address type
+// (CMR/OMC/PSC/UMR/UNIT) or military city (APO/FPO/DPO) or military region.
+// 0 = not military vocabulary.
+func Score(token string) (int, error) {
+	token = strings.ToUpper(strings.TrimSpace(token))
+	if token == "" {
+		return 0, nil
+	}
+	if _, ok := validAddressTypes[token]; ok {
+		return 100, nil
+	}
+	if validCities[token] {
+		return 100, nil
+	}
+	if validRegions[token] {
+		return 100, nil
+	}
+	return 0, nil
 }

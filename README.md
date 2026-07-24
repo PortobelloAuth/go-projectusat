@@ -80,6 +80,12 @@ addr, err = goprojectusat.Parse("PO Box 11890\nSpringfield IL 62701")
 // SPRINGFIELD IL 62701
 ```
 
+Free-text parsing lives in `pkg/parse`. Tokens keep position and comma context;
+each `pkg/*` vocabulary exposes `Score(token)`, and assignment uses score, order,
+and punctuation. Region full names and leading-state peels live in `pkg/region`
+(not duplicated in the parser). Puerto Rico dialect engages from region `PR` or
+PR ZIP ranges via `pkg/puertorico`.
+
 `Parse` is conservative: it splits on newlines and commas, peels last-line
 city/region/postal, rewrites rural route / PO Box (and PR `Apartado`) street lines,
 merges multi-token directionals (`SOUTH WEST` → `SW`), reorders leading secondary / `#`,

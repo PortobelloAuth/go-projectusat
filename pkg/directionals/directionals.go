@@ -73,3 +73,16 @@ func NormalizeDirectional(d string) (string, error) {
 
 	return "", fmt.Errorf("Unrecognized directional")
 }
+
+// Score returns how strongly token looks like a directional.
+// 0 = not a directional; 100 = exact abbr/full match.
+func Score(token string) (int, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return 0, nil
+	}
+	if _, err := AbbreviateDirectional(token); err != nil {
+		return 0, nil
+	}
+	return 100, nil
+}

@@ -1575,3 +1575,16 @@ func NormalizeStreetSuffixAbreviation(r string) (string, error) {
 func FuzzyNormalizeStreetSuffixAbreviation(r string) (string, error) {
 	return normalizeStreetSuffix(r, false, true)
 }
+
+// Score returns how strongly token looks like a street suffix.
+// 0 = not a suffix; 100 = known primary or abbreviation.
+func Score(token string) (int, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return 0, nil
+	}
+	if _, err := NormalizeStreetSuffixAbreviation(token); err != nil {
+		return 0, nil
+	}
+	return 100, nil
+}
