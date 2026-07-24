@@ -8,43 +8,21 @@ package goprojectusat
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
-// Address is a Project US@ structured patient address.
-// Empty string means unknown / not present.
-type Address struct {
-	BusinessName string // firm / business line (optional)
-
-	// Street line elements
-	PrimaryNumber       string
-	Predirectional      string
-	StreetName          string
-	StreetSuffix        string
-	Postdirectional     string
-	SecondaryDesignator string // APT, STE, ...
-	SecondaryNumber     string
-
-	// Last line
-	City   string
-	Region string // state / province / military "state"
-	Postal string // ZIP, ZIP+4, or Canadian postal code
-
-	Country string // optional; often blank for domestic
-}
-
-// Options controls exchange/matching variants of normalization.
+// AddressNormalizationOptions controls exchange/matching variants of normalization.
 // Zero value is content form (same as Normalize).
-type Options struct {
+type AddressNormalizationOptions struct {
 	// Fuzzy enables FuzzyNormalize* for region and street suffix.
 	Fuzzy bool
 	// SecondaryAsHash rewrites secondary designators to "#" for matching
@@ -52,11 +30,8 @@ type Options struct {
 	SecondaryAsHash bool
 	// DiacriticMode: "" = leave as-is, "substitute" = diacritics.Substitute then upper,
 	// "transliterate" = diacritics.Transliterate (anyascii) then upper.
-	DiacriticMode string
+	DiacriticMode diacritics.DiacriticMode
 }
-
-// usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
-var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
 // Normalize returns a content-normalized copy (uppercase, standard abbreviations).
 // Diacritics are preserved; callers may pre-run diacritics.Substitute if needed.
@@ -64,35 +39,35 @@ var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 // (region, directionals, street suffix, secondary designator) returns an error.
 //
 // Equivalent to NormalizeWithOptions(a, Options{}).
-func Normalize(a Address) (Address, error) {
-	return NormalizeWithOptions(a, Options{})
+func Normalize(a address.Address) (address.Address, error) {
+	return NormalizeWithOptions(a, AddressNormalizationOptions{})
 }
 
 // NormalizeWithOptions is like Normalize but applies exchange/matching options.
 // Use for patient matching / comparison; prefer Normalize for content storage.
-func NormalizeWithOptions(a Address, opts Options) (Address, error) {
-	var out Address
+func NormalizeWithOptions(a address.Address, opts AddressNormalizationOptions) (address.Address, error) {
+	var out address.Address
 
 	var err error
-	if out.BusinessName, err = freeTextField(a.BusinessName, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("business name: %w", err)
+	if out.BusinessName, err = textutil.FreeTextField(a.BusinessName, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("business name: %w", err)
 	}
-	if out.PrimaryNumber, err = freeTextField(a.PrimaryNumber, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("primary number: %w", err)
+	if out.PrimaryNumber, err = textutil.FreeTextField(a.PrimaryNumber, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("primary number: %w", err)
 	}
-	if out.SecondaryNumber, err = freeTextField(a.SecondaryNumber, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("secondary number: %w", err)
+	if out.SecondaryNumber, err = textutil.FreeTextField(a.SecondaryNumber, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("secondary number: %w", err)
 	}
-	if out.City, err = freeTextField(a.City, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("city: %w", err)
+	if out.City, err = textutil.FreeTextField(a.City, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("city: %w", err)
 	}
-	if out.Country, err = freeTextField(a.Country, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("country: %w", err)
+	if out.Country, err = textutil.FreeTextField(a.Country, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("country: %w", err)
 	}
-	out.Postal = normalizePostal(a.Postal)
+	out.Postal = postalcode.Normalize(a.Postal)
 
-	if sn, err := freeTextField(a.StreetName, opts.DiacriticMode); err != nil {
-		return Address{}, fmt.Errorf("street name: %w", err)
+	if sn, err := textutil.FreeTextField(a.StreetName, opts.DiacriticMode); err != nil {
+		return address.Address{}, fmt.Errorf("street name: %w", err)
 	} else if sn != "" {
 		// Highway forms normalize; ordinary free-text street names pass through uppercased.
 		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
@@ -103,23 +78,23 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 		}
 	}
 
-	if v := baseField(a.Predirectional); v != "" {
+	if v := textutil.BaseField(a.Predirectional); v != "" {
 		abbr, err := directionals.AbbreviateDirectional(v)
 		if err != nil {
-			return Address{}, fmt.Errorf("predirectional: %w", err)
+			return address.Address{}, fmt.Errorf("predirectional: %w", err)
 		}
 		out.Predirectional = abbr
 	}
 
-	if v := baseField(a.Postdirectional); v != "" {
+	if v := textutil.BaseField(a.Postdirectional); v != "" {
 		abbr, err := directionals.AbbreviateDirectional(v)
 		if err != nil {
-			return Address{}, fmt.Errorf("postdirectional: %w", err)
+			return address.Address{}, fmt.Errorf("postdirectional: %w", err)
 		}
 		out.Postdirectional = abbr
 	}
 
-	if v := baseField(a.StreetSuffix); v != "" {
+	if v := textutil.BaseField(a.StreetSuffix); v != "" {
 		var abbr string
 		var err error
 		if opts.Fuzzy {
@@ -128,15 +103,15 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 			abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
 		}
 		if err != nil {
-			return Address{}, fmt.Errorf("street suffix: %w", err)
+			return address.Address{}, fmt.Errorf("street suffix: %w", err)
 		}
 		out.StreetSuffix = abbr
 	}
 
-	if v := baseField(a.SecondaryDesignator); v != "" {
+	if v := textutil.BaseField(a.SecondaryDesignator); v != "" {
 		abbr, err := secondaryunit.Normalize(v)
 		if err != nil {
-			return Address{}, fmt.Errorf("secondary designator: %w", err)
+			return address.Address{}, fmt.Errorf("secondary designator: %w", err)
 		}
 		if opts.SecondaryAsHash {
 			out.SecondaryDesignator = "#"
@@ -145,7 +120,7 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 		}
 	}
 
-	if v := baseField(a.Region); v != "" {
+	if v := textutil.BaseField(a.Region); v != "" {
 		var abbr string
 		var err error
 		if opts.Fuzzy {
@@ -154,101 +129,10 @@ func NormalizeWithOptions(a Address, opts Options) (Address, error) {
 			abbr, err = region.NormalizeRegion(v)
 		}
 		if err != nil {
-			return Address{}, fmt.Errorf("region: %w", err)
+			return address.Address{}, fmt.Errorf("region: %w", err)
 		}
 		out.Region = abbr
 	}
 
 	return out, nil
-}
-
-// freeTextField collapses whitespace, blanks UNKNOWN, uppercases, then optionally
-// applies DiacriticMode and re-uppers (Substitute/Transliterate return lowercase).
-func freeTextField(s, diacriticMode string) (string, error) {
-	s = baseField(s)
-	if s == "" || diacriticMode == "" {
-		return s, nil
-	}
-	var (
-		out string
-		err error
-	)
-	switch diacriticMode {
-	case "substitute":
-		out, err = diacritics.Substitute(s)
-	case "transliterate":
-		out, err = diacritics.Transliterate(s)
-	default:
-		return "", fmt.Errorf("unknown DiacriticMode %q (want \"\", \"substitute\", or \"transliterate\")", diacriticMode)
-	}
-	if err != nil {
-		return "", err
-	}
-	return textutil.Upper(out), nil
-}
-
-// baseField collapses whitespace, then blanks UNKNOWN and uppercases.
-// Collapse must run before Upper so padded values like " UNKNOWN " become blank
-// (Upper/NormalizeUnknown only match the exact token "UNKNOWN").
-func baseField(s string) string {
-	return textutil.Upper(textutil.CollapseSpace(s))
-}
-
-// normalizePostal formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
-// as uppercase alphanumerics with collapsed spacing.
-func normalizePostal(s string) string {
-	s = baseField(s)
-	if s == "" {
-		return ""
-	}
-
-	// Keep hyphen for ZIP+4; strip other Project US@ punctuation.
-	cleaned := textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{KeepHyphen: true}))
-	compact := strings.ReplaceAll(cleaned, " ", "")
-	if m := usZIPCompact.FindStringSubmatch(compact); m != nil {
-		if m[2] != "" {
-			return m[1] + "-" + m[2]
-		}
-		return m[1]
-	}
-
-	// Canadian / other international: uppercase, collapse space, drop punctuation.
-	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{}))
-}
-
-// FormatStreetLine joins street elements with single spaces; omits blanks.
-// Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
-func FormatStreetLine(a Address) string {
-	return joinNonEmpty(" ",
-		a.PrimaryNumber,
-		a.Predirectional,
-		a.StreetName,
-		a.StreetSuffix,
-		a.Postdirectional,
-		a.SecondaryDesignator,
-		a.SecondaryNumber,
-	)
-}
-
-// FormatLastLine joins CITY REGION POSTAL with single spaces (1+ spaces allowed
-// by standard; we use one). Omits blanks.
-func FormatLastLine(a Address) string {
-	return joinNonEmpty(" ", a.City, a.Region, a.Postal)
-}
-
-// Format returns business line (if any), street line, and last line separated
-// by newlines. Empty lines are omitted.
-func Format(a Address) string {
-	return joinNonEmpty("\n", a.BusinessName, FormatStreetLine(a), FormatLastLine(a))
-}
-
-// joinNonEmpty joins non-empty parts with sep.
-func joinNonEmpty(sep string, parts ...string) string {
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return strings.Join(out, sep)
 }

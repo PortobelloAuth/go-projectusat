@@ -12,6 +12,14 @@ import (
 	"golang.org/x/text/unicode/rangetable"
 )
 
+type DiacriticMode int
+
+const (
+	KeepDiacritics          DiacriticMode = iota // 0 (Default/Zero-value)
+	SubstituteDiacritics                         // 1
+	TransliterateDiacritics                      // 2
+)
+
 /*
 À 192 a U+00C0 Capital letter A with grave accent
 Á 193 a U+00C1 Capital letter A with acute accent
@@ -198,4 +206,15 @@ func Transliterate(source string) (string, error) {
 	clean := anyascii.Transliterate(source)
 
 	return strings.ToLower(clean), nil
+}
+
+func Normalize(source string, mode DiacriticMode) (string, error) {
+	switch mode {
+	case SubstituteDiacritics:
+		return Substitute(source)
+	case TransliterateDiacritics:
+		return Transliterate(source)
+	default:
+	}
+	return source, nil
 }

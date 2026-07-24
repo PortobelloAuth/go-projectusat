@@ -3,6 +3,8 @@ package textutil
 import (
 	"strings"
 	"unicode"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 // StripOptions controls which punctuation characters StripPunctuation retains.
@@ -76,4 +78,25 @@ func NormalizeUnknown(s string) string {
 // Upper is strings.ToUpper with UNKNOWN handling applied first.
 func Upper(s string) string {
 	return strings.ToUpper(NormalizeUnknown(s))
+}
+
+// FreeTextField collapses whitespace, blanks UNKNOWN, uppercases, then optionally
+// applies DiacriticMode and re-uppers (Substitute/Transliterate return lowercase).
+func FreeTextField(s string, diacriticMode diacritics.DiacriticMode) (string, error) {
+	s = BaseField(s)
+	if s == "" {
+		return s, nil
+	}
+	out, err := diacritics.Normalize(s, diacriticMode)
+	if err != nil {
+		return "", err
+	}
+	return Upper(out), nil
+}
+
+// baseField collapses whitespace, then blanks UNKNOWN and uppercases.
+// Collapse must run before Upper so padded values like " UNKNOWN " become blank
+// (Upper/NormalizeUnknown only match the exact token "UNKNOWN").
+func BaseField(s string) string {
+	return Upper(CollapseSpace(s))
 }

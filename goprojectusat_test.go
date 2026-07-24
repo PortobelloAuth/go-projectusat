@@ -3,11 +3,14 @@ package goprojectusat
 import (
 	"strings"
 	"testing"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 func TestNormalizeBasicStreet(t *testing.T) {
 	// 123 Main Street, Apt 4, Springfield IL 62701
-	in := Address{
+	in := address.Address{
 		PrimaryNumber:       "123",
 		StreetName:          "Main",
 		StreetSuffix:        "Street",
@@ -21,7 +24,7 @@ func TestNormalizeBasicStreet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Normalize: unexpected error: %v", err)
 	}
-	want := Address{
+	want := address.Address{
 		PrimaryNumber:       "123",
 		StreetName:          "MAIN",
 		StreetSuffix:        "ST",
@@ -37,7 +40,7 @@ func TestNormalizeBasicStreet(t *testing.T) {
 }
 
 func TestNormalizeDirectionalsAndHighway(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		PrimaryNumber:   "100",
 		Predirectional:  "North",
 		StreetName:      "US Hwy 41",
@@ -69,7 +72,7 @@ func TestNormalizeDirectionalsAndHighway(t *testing.T) {
 }
 
 func TestNormalizeUnknownAndEmpty(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		PrimaryNumber:       "UNKNOWN",
 		Predirectional:      "",
 		StreetName:          "Main",
@@ -102,7 +105,7 @@ func TestNormalizeUnknownAndEmpty(t *testing.T) {
 	}
 
 	// CollapseSpace must run before Upper/NormalizeUnknown so padded UNKNOWN blanks.
-	padded, err := Normalize(Address{
+	padded, err := Normalize(address.Address{
 		PrimaryNumber: " UNKNOWN ",
 		StreetName:    "Main",
 		StreetSuffix:  "ST",
@@ -136,7 +139,7 @@ func TestNormalizePostalVariants(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
-			got, err := Normalize(Address{Postal: tc.in, Region: "IL", City: "X", StreetName: "Main", StreetSuffix: "ST"})
+			got, err := Normalize(address.Address{Postal: tc.in, Region: "IL", City: "X", StreetName: "Main", StreetSuffix: "ST"})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -148,7 +151,7 @@ func TestNormalizePostalVariants(t *testing.T) {
 }
 
 func TestNormalizePreservesDiacritics(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		StreetName:   "José",
 		StreetSuffix: "Street",
 		City:         "San José",
@@ -168,7 +171,7 @@ func TestNormalizePreservesDiacritics(t *testing.T) {
 }
 
 func TestNormalizeBusinessNameAndWhitespace(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		BusinessName:  "  Acme   Corp.  ",
 		PrimaryNumber: "  112-10 ",
 		StreetName:    "  Bronx  ",
@@ -201,7 +204,7 @@ func TestNormalizeBusinessNameAndWhitespace(t *testing.T) {
 
 func TestNormalizeErrors(t *testing.T) {
 	t.Run("bad region", func(t *testing.T) {
-		_, err := Normalize(Address{Region: "Narnia", City: "X", StreetName: "Main", StreetSuffix: "ST"})
+		_, err := Normalize(address.Address{Region: "Narnia", City: "X", StreetName: "Main", StreetSuffix: "ST"})
 		if err == nil {
 			t.Fatal("expected error for unrecognized region")
 		}
@@ -210,19 +213,19 @@ func TestNormalizeErrors(t *testing.T) {
 		}
 	})
 	t.Run("bad predirectional", func(t *testing.T) {
-		_, err := Normalize(Address{Predirectional: "Sideways", StreetName: "Main", StreetSuffix: "ST", Region: "IL"})
+		_, err := Normalize(address.Address{Predirectional: "Sideways", StreetName: "Main", StreetSuffix: "ST", Region: "IL"})
 		if err == nil {
 			t.Fatal("expected error for unrecognized predirectional")
 		}
 	})
 	t.Run("bad street suffix", func(t *testing.T) {
-		_, err := Normalize(Address{StreetName: "Main", StreetSuffix: "NotASuffix", Region: "IL"})
+		_, err := Normalize(address.Address{StreetName: "Main", StreetSuffix: "NotASuffix", Region: "IL"})
 		if err == nil {
 			t.Fatal("expected error for unrecognized street suffix")
 		}
 	})
 	t.Run("bad secondary designator", func(t *testing.T) {
-		_, err := Normalize(Address{
+		_, err := Normalize(address.Address{
 			StreetName: "Main", StreetSuffix: "ST", Region: "IL",
 			SecondaryDesignator: "Wing",
 		})
@@ -233,11 +236,11 @@ func TestNormalizeErrors(t *testing.T) {
 }
 
 func TestNormalizeEmptyAddress(t *testing.T) {
-	got, err := Normalize(Address{})
+	got, err := Normalize(address.Address{})
 	if err != nil {
 		t.Fatalf("empty Address should not error: %v", err)
 	}
-	if got != (Address{}) {
+	if got != (address.Address{}) {
 		t.Fatalf("got %+v, want empty Address", got)
 	}
 }
@@ -245,12 +248,12 @@ func TestNormalizeEmptyAddress(t *testing.T) {
 func TestFormatStreetLine(t *testing.T) {
 	cases := []struct {
 		name string
-		in   Address
+		in   address.Address
 		want string
 	}{
 		{
 			name: "full order PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber:       "123",
 				Predirectional:      "N",
 				StreetName:          "MAIN",
@@ -263,7 +266,7 @@ func TestFormatStreetLine(t *testing.T) {
 		},
 		{
 			name: "omits blank elements",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber: "100",
 				StreetName:    "OAK",
 				StreetSuffix:  "AVE",
@@ -272,7 +275,7 @@ func TestFormatStreetLine(t *testing.T) {
 		},
 		{
 			name: "secondary without designator still emits number",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber:   "50",
 				StreetName:      "ELM",
 				StreetSuffix:    "RD",
@@ -282,17 +285,17 @@ func TestFormatStreetLine(t *testing.T) {
 		},
 		{
 			name: "empty address",
-			in:   Address{},
+			in:   address.Address{},
 			want: "",
 		},
 		{
 			name: "only street name",
-			in:   Address{StreetName: "BROADWAY"},
+			in:   address.Address{StreetName: "BROADWAY"},
 			want: "BROADWAY",
 		},
 		{
 			name: "highway style no suffix",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber:   "100",
 				Predirectional:  "N",
 				StreetName:      "US HIGHWAY 41",
@@ -303,7 +306,7 @@ func TestFormatStreetLine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := FormatStreetLine(tc.in)
+			got := address.FormatStreetLine(tc.in)
 			if got != tc.want {
 				t.Fatalf("FormatStreetLine = %q, want %q", got, tc.want)
 			}
@@ -314,12 +317,12 @@ func TestFormatStreetLine(t *testing.T) {
 func TestFormatLastLine(t *testing.T) {
 	cases := []struct {
 		name string
-		in   Address
+		in   address.Address
 		want string
 	}{
 		{
 			name: "city region postal",
-			in: Address{
+			in: address.Address{
 				City:   "SPRINGFIELD",
 				Region: "IL",
 				Postal: "62701",
@@ -328,7 +331,7 @@ func TestFormatLastLine(t *testing.T) {
 		},
 		{
 			name: "ZIP+4",
-			in: Address{
+			in: address.Address{
 				City:   "MIAMI",
 				Region: "FL",
 				Postal: "33101-1234",
@@ -337,7 +340,7 @@ func TestFormatLastLine(t *testing.T) {
 		},
 		{
 			name: "omits blank city",
-			in: Address{
+			in: address.Address{
 				Region: "IL",
 				Postal: "62701",
 			},
@@ -345,7 +348,7 @@ func TestFormatLastLine(t *testing.T) {
 		},
 		{
 			name: "omits blank postal",
-			in: Address{
+			in: address.Address{
 				City:   "SPRINGFIELD",
 				Region: "IL",
 			},
@@ -353,12 +356,12 @@ func TestFormatLastLine(t *testing.T) {
 		},
 		{
 			name: "empty",
-			in:   Address{},
+			in:   address.Address{},
 			want: "",
 		},
 		{
 			name: "canadian postal spaced",
-			in: Address{
+			in: address.Address{
 				City:   "OTTAWA",
 				Region: "ON",
 				Postal: "K1A 0B1",
@@ -368,7 +371,7 @@ func TestFormatLastLine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := FormatLastLine(tc.in)
+			got := address.FormatLastLine(tc.in)
 			if got != tc.want {
 				t.Fatalf("FormatLastLine = %q, want %q", got, tc.want)
 			}
@@ -379,12 +382,12 @@ func TestFormatLastLine(t *testing.T) {
 func TestFormat(t *testing.T) {
 	cases := []struct {
 		name string
-		in   Address
+		in   address.Address
 		want string
 	}{
 		{
 			name: "business street last",
-			in: Address{
+			in: address.Address{
 				BusinessName:        "ACME CORP",
 				PrimaryNumber:       "123",
 				StreetName:          "MAIN",
@@ -399,7 +402,7 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "no business line",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber: "100",
 				StreetName:    "OAK",
 				StreetSuffix:  "AVE",
@@ -411,7 +414,7 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "street only omits empty last",
-			in: Address{
+			in: address.Address{
 				PrimaryNumber: "50",
 				StreetName:    "ELM",
 				StreetSuffix:  "RD",
@@ -420,7 +423,7 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "last line only",
-			in: Address{
+			in: address.Address{
 				City:   "SPRINGFIELD",
 				Region: "IL",
 				Postal: "62701",
@@ -429,7 +432,7 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "business and last no street",
-			in: Address{
+			in: address.Address{
 				BusinessName: "ACME",
 				City:         "CHICAGO",
 				Region:       "IL",
@@ -439,18 +442,18 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "empty address",
-			in:   Address{},
+			in:   address.Address{},
 			want: "",
 		},
 		{
 			name: "business only",
-			in:   Address{BusinessName: "ACME"},
+			in:   address.Address{BusinessName: "ACME"},
 			want: "ACME",
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := Format(tc.in)
+			got := address.Format(tc.in)
 			if got != tc.want {
 				t.Fatalf("Format = %q, want %q", got, tc.want)
 			}
@@ -460,7 +463,7 @@ func TestFormat(t *testing.T) {
 
 func TestFormatAfterNormalize(t *testing.T) {
 	// Integration: Normalize then Format yields content-form multiline address.
-	in := Address{
+	in := address.Address{
 		BusinessName:        "Acme Corp",
 		PrimaryNumber:       "123",
 		Predirectional:      "North",
@@ -477,7 +480,7 @@ func TestFormatAfterNormalize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Normalize: %v", err)
 	}
-	got := Format(norm)
+	got := address.Format(norm)
 	want := "ACME CORP\n123 N MAIN ST SW APT 4\nSPRINGFIELD IL 62701"
 	if got != want {
 		t.Fatalf("Format(Normalize(...)) = %q, want %q", got, want)
@@ -485,7 +488,7 @@ func TestFormatAfterNormalize(t *testing.T) {
 }
 
 func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		PrimaryNumber:       "123",
 		StreetName:          "Main",
 		StreetSuffix:        "Street",
@@ -505,7 +508,7 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 
 	// Exchange/matching form rewrites to #.
-	got, err := NormalizeWithOptions(in, Options{SecondaryAsHash: true})
+	got, err := NormalizeWithOptions(in, AddressNormalizationOptions{SecondaryAsHash: true})
 	if err != nil {
 		t.Fatalf("NormalizeWithOptions: %v", err)
 	}
@@ -516,10 +519,10 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 		t.Errorf("SecondaryNumber = %q, want 4", got.SecondaryNumber)
 	}
 	// Suite also becomes #.
-	suite, err := NormalizeWithOptions(Address{
+	suite, err := NormalizeWithOptions(address.Address{
 		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
 		SecondaryDesignator: "Suite", SecondaryNumber: "100",
-	}, Options{SecondaryAsHash: true})
+	}, AddressNormalizationOptions{SecondaryAsHash: true})
 	if err != nil {
 		t.Fatalf("Suite: %v", err)
 	}
@@ -528,10 +531,10 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 
 	// Input already "#" (SecondaryAsHash output) re-normalizes cleanly.
-	hashIn, err := NormalizeWithOptions(Address{
+	hashIn, err := NormalizeWithOptions(address.Address{
 		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
 		SecondaryDesignator: "#", SecondaryNumber: "4",
-	}, Options{SecondaryAsHash: true})
+	}, AddressNormalizationOptions{SecondaryAsHash: true})
 	if err != nil {
 		t.Fatalf("SecondaryDesignator \"#\": %v", err)
 	}
@@ -540,7 +543,7 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 
 	// Round-trip: SecondaryAsHash then normalize again succeeds with "#".
-	again, err := NormalizeWithOptions(got, Options{SecondaryAsHash: true})
+	again, err := NormalizeWithOptions(got, AddressNormalizationOptions{SecondaryAsHash: true})
 	if err != nil {
 		t.Fatalf("round-trip SecondaryAsHash: %v", err)
 	}
@@ -548,7 +551,7 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 		t.Fatalf("round-trip SecondaryDesignator = %q, want #", again.SecondaryDesignator)
 	}
 	// Content form also accepts "#".
-	contentHash, err := Normalize(Address{
+	contentHash, err := Normalize(address.Address{
 		StreetName: "Main", StreetSuffix: "ST", Region: "IL",
 		SecondaryDesignator: "#", SecondaryNumber: "4",
 	})
@@ -563,7 +566,7 @@ func TestNormalizeWithOptionsSecondaryAsHash(t *testing.T) {
 func TestNormalizeWithOptionsFuzzy(t *testing.T) {
 	// Mild typos: Californa → CA, Aveneu → AVE (Fuzzy* threshold 0.7).
 	// "Aveneu" is a real typo (not an alt form); "Avenu"/"AVENU" is a listed alt.
-	in := Address{
+	in := address.Address{
 		PrimaryNumber: "10",
 		StreetName:    "Oak",
 		StreetSuffix:  "Aveneu",
@@ -575,11 +578,11 @@ func TestNormalizeWithOptionsFuzzy(t *testing.T) {
 	if _, err := Normalize(in); err == nil {
 		t.Fatal("expected error without Fuzzy for mild typos")
 	}
-	if _, err := NormalizeWithOptions(in, Options{}); err == nil {
+	if _, err := NormalizeWithOptions(in, AddressNormalizationOptions{}); err == nil {
 		t.Fatal("expected error with zero Options for mild typos")
 	}
 
-	got, err := NormalizeWithOptions(in, Options{Fuzzy: true})
+	got, err := NormalizeWithOptions(in, AddressNormalizationOptions{Fuzzy: true})
 	if err != nil {
 		t.Fatalf("Fuzzy: unexpected error: %v", err)
 	}
@@ -592,7 +595,7 @@ func TestNormalizeWithOptionsFuzzy(t *testing.T) {
 }
 
 func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
-	in := Address{
+	in := address.Address{
 		StreetName:   "José",
 		StreetSuffix: "Street",
 		City:         "San José",
@@ -602,7 +605,7 @@ func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// Default / empty: preserve diacritics (content form).
-	preserved, err := NormalizeWithOptions(in, Options{})
+	preserved, err := NormalizeWithOptions(in, AddressNormalizationOptions{})
 	if err != nil {
 		t.Fatalf("empty DiacriticMode: %v", err)
 	}
@@ -612,7 +615,7 @@ func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// substitute: strip Project US@ diacritics then re-upper (Substitute returns lower).
-	sub, err := NormalizeWithOptions(in, Options{DiacriticMode: "substitute"})
+	sub, err := NormalizeWithOptions(in, AddressNormalizationOptions{DiacriticMode: diacritics.SubstituteDiacritics})
 	if err != nil {
 		t.Fatalf("substitute: %v", err)
 	}
@@ -627,7 +630,7 @@ func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// transliterate: anyascii path then upper.
-	tr, err := NormalizeWithOptions(in, Options{DiacriticMode: "transliterate"})
+	tr, err := NormalizeWithOptions(in, AddressNormalizationOptions{DiacriticMode: diacritics.TransliterateDiacritics})
 	if err != nil {
 		t.Fatalf("transliterate: %v", err)
 	}
@@ -640,16 +643,11 @@ func TestNormalizeWithOptionsDiacriticMode(t *testing.T) {
 	if tr.BusinessName != "CAFE" {
 		t.Errorf("transliterate BusinessName = %q, want CAFE", tr.BusinessName)
 	}
-
-	// Invalid mode errors.
-	if _, err := NormalizeWithOptions(in, Options{DiacriticMode: "bogus"}); err == nil {
-		t.Fatal("expected error for unknown DiacriticMode")
-	}
 }
 
 func TestNormalizeDelegatesToZeroOptions(t *testing.T) {
 	// Normalize is content form: equivalent to NormalizeWithOptions(..., Options{}).
-	in := Address{
+	in := address.Address{
 		PrimaryNumber:       "123",
 		StreetName:          "Main",
 		StreetSuffix:        "Street",
@@ -660,7 +658,7 @@ func TestNormalizeDelegatesToZeroOptions(t *testing.T) {
 		Postal:              "62701",
 	}
 	a, err1 := Normalize(in)
-	b, err2 := NormalizeWithOptions(in, Options{})
+	b, err2 := NormalizeWithOptions(in, AddressNormalizationOptions{})
 	if err1 != nil || err2 != nil {
 		t.Fatalf("errors: Normalize=%v WithOptions=%v", err1, err2)
 	}
