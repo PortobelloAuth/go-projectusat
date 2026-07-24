@@ -1,9 +1,8 @@
 package address
 
 import (
+	"slices"
 	"strings"
-
-	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 // Address is a Project US@ structured patient address.
@@ -28,23 +27,29 @@ type Address struct {
 	Country string // optional; often blank for domestic
 }
 
-func (a *Address) Format(opt AddressFormatOptions) string {
+type FormatOptions int
+
+const (
+	SingleLine              FormatOptions = iota // 0 (Default/Zero-value)
+	SubstituteDiacritics                         // 1
+	TransliterateDiacritics                      // 2
+)
+
+func (a *Address) Format(opts ...FormatOptions) string {
 	sep := "\n"
-	if opt.Oneline {
+	if slices.Contains(opts, SingleLine) {
 		sep = " "
 	}
-	return joinNonEmpty(sep, a.BusinessName, FormatStreetLine(*a), FormatLastLine(*a))
+	return joinNonEmpty(sep, a.BusinessName, a.FormatStreetLine(), a.FormatLastLine())
 }
 
-type AddressFormatOptions struct {
-	Oneline    bool
-	Comma      bool
-	Diacritics diacritics.DiacriticMode
+func (a *Address) FormatSingleLine() string {
+	return a.Format(SingleLine)
 }
 
 // FormatStreetLine joins street elements with single spaces; omits blanks.
 // Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
-func FormatStreetLine(a Address) string {
+func (a *Address) FormatStreetLine() string {
 	return joinNonEmpty(" ",
 		a.PrimaryNumber,
 		a.Predirectional,
@@ -58,14 +63,8 @@ func FormatStreetLine(a Address) string {
 
 // FormatLastLine joins CITY REGION POSTAL with single spaces (1+ spaces allowed
 // by standard; we use one). Omits blanks.
-func FormatLastLine(a Address) string {
+func (a *Address) FormatLastLine() string {
 	return joinNonEmpty(" ", a.City, a.Region, a.Postal)
-}
-
-// Format returns business line (if any), street line, and last line separated
-// by newlines. Empty lines are omitted.
-func Format(a Address) string {
-	return joinNonEmpty("\n", a.BusinessName, FormatStreetLine(a), FormatLastLine(a))
 }
 
 // joinNonEmpty joins non-empty parts with sep.
