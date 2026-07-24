@@ -85,7 +85,9 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	if out.Country, err = textutil.FreeTextField(a.Country, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("country: %w", err)
 	}
-	out.Postal = postalcode.Normalize(a.Postal)
+	if out.Postal, err = postalcode.Normalize(a.Postal); err != nil {
+		return nil, fmt.Errorf("postal code: %w", err)
+	}
 
 	if sn, err := textutil.FreeTextField(a.StreetName, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("street name: %w", err)

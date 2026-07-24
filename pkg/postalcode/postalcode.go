@@ -12,10 +12,10 @@ var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
 // Normalize formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
 // as uppercase alphanumerics with collapsed spacing.
-func Normalize(s string) string {
+func Normalize(s string) (string, error) {
 	s = textutil.Upper(textutil.CollapseSpace(s))
 	if s == "" {
-		return ""
+		return "", nil
 	}
 
 	// Keep hyphen for ZIP+4; strip other Project US@ punctuation.
@@ -23,11 +23,11 @@ func Normalize(s string) string {
 	compact := strings.ReplaceAll(cleaned, " ", "")
 	if m := usZIPCompact.FindStringSubmatch(compact); m != nil {
 		if m[2] != "" {
-			return m[1] + "-" + m[2]
+			return m[1] + "-" + m[2], nil
 		}
-		return m[1]
+		return m[1], nil
 	}
 
 	// Canadian / other international: uppercase, collapse space, drop punctuation.
-	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{}))
+	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{})), nil
 }
