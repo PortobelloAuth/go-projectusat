@@ -128,35 +128,6 @@ func TestContentNormalizerUnknownAndEmpty(t *testing.T) {
 	}
 }
 
-// TODO: move or replicate this test in the postalcode package
-func TestContentNormalizerPostalVariants(t *testing.T) {
-	cases := []struct {
-		in   string
-		want string
-	}{
-		{"62701", "62701"},
-		{"62701-1234", "62701-1234"},
-		{"627011234", "62701-1234"},
-		{"62701 1234", "62701-1234"},
-		{"k1a 0b1", "K1A 0B1"},
-		{"K1A  0B1", "K1A 0B1"},
-		{"", ""},
-		{"unknown", ""},
-	}
-	n := normalizer.NewContentNomalizer()
-	for _, tc := range cases {
-		t.Run(tc.in, func(t *testing.T) {
-			got, err := n.Normalize(&address.Address{Postal: tc.in, Region: "IL", City: "X", StreetName: "Main", StreetSuffix: "ST"})
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got.Postal != tc.want {
-				t.Fatalf("Postal %q → %q, want %q", tc.in, got.Postal, tc.want)
-			}
-		})
-	}
-}
-
 func TestContentNormalizerPreservesDiacritics(t *testing.T) {
 	in := &address.Address{
 		StreetName:   "José",

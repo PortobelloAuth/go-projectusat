@@ -1,8 +1,9 @@
 package address
 
 import (
-	"slices"
 	"strings"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 // Address is a Project US@ structured patient address.
@@ -27,24 +28,40 @@ type Address struct {
 	Country string // optional; often blank for domestic
 }
 
-type FormatOptions int
+type FormatOptions struct {
+	SingleLine    bool
+	DiacriticMode diacritics.DiacriticMode
+}
 
-const (
-	SingleLine              FormatOptions = iota // 0 (Default/Zero-value)
-	SubstituteDiacritics                         // 1
-	TransliterateDiacritics                      // 2
-)
-
+// Format converts an Address struct to a string according to the
+// supplied FormatOptions.
+//
+// Although options is variadic, only the first options object will
+// actually be used.
 func (a *Address) Format(opts ...FormatOptions) string {
+	o := variadicOptions(opts)
 	sep := "\n"
-	if slices.Contains(opts, SingleLine) {
+	if o.SingleLine {
 		sep = " "
 	}
 	return joinNonEmpty(sep, a.BusinessName, a.FormatStreetLine(), a.FormatLastLine())
 }
 
-func (a *Address) FormatSingleLine() string {
-	return a.Format(SingleLine)
+func (a *Address) FormatSingleLine(opts ...FormatOptions) string {
+	o := variadicOptions(opts)
+	o.SingleLine = true
+	return a.Format(o)
+}
+
+func variadicOptions(opts []FormatOptions) FormatOptions {
+	o := FormatOptions{
+		SingleLine:    false,
+		DiacriticMode: diacritics.KeepDiacritics,
+	}
+	if len(opts) > 0 {
+		o = opts[0]
+	}
+	return o
 }
 
 // FormatStreetLine joins street elements with single spaces; omits blanks.

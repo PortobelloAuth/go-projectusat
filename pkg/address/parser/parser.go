@@ -45,5 +45,12 @@ func New(opts ...AddressParsingOptions) *Parser {
 }
 
 func (p *Parser) Parse(source string) (*address.Address, error) {
+	// TODO: implement Parse
+	/*
+		- split the string on newlines, commas, and spaces
+		- score each token
+		- use scores to determine which Address parts each token belongs to
+		- run verifier to check whether the address is verifiable (does not error)
+	*/
 	return nil, fmt.Errorf("Not implemented")
 }
