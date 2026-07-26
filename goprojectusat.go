@@ -11,7 +11,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
-// TODO: export the primary interfaces for the package
+// Export the primary interfaces for the package
 
 type USAtNormalizeOption func(*parser.AddressParsingOptions, *normalizer.AddressNormalizationOptions, *address.FormatOptions) error
 
@@ -28,11 +28,22 @@ func Normalize(source string, opts ...USAtNormalizeOption) (string, error) {
 		}
 	}
 
-	// TODO: create a parser, then Parse(popts)
-	// TODO: create a normalizer, then Normalize(nopts)
-	// TODO: call *address.Format(fopts)
+	// create a parser, then Parse(popts)
+	p := parser.New(*popts)
+	addr, err := p.Parse(source)
+	if err != nil {
+		return "", fmt.Errorf("Unable to parse address: %w", err)
+	}
+	// create a normalizer, then Normalize(nopts)
+	n := normalizer.NewNomalizer(*nopts)
+	addr, err = n.Normalize(addr)
+	if err != nil {
+		return "", fmt.Errorf("Unable to normalize address: %w", err)
+	}
+	// call *address.Format(fopts)
+	r := addr.Format(*fopts)
 
-	return "", fmt.Errorf("Not implemented")
+	return r, nil
 }
 
 func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
@@ -63,6 +74,15 @@ func WithDiacriticNormalization(d diacritics.DiacriticMode) USAtNormalizeOption 
 	}
 }
 
+func WithContentNormalization() USAtNormalizeOption {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+		nopts.Fuzzy = false
+		nopts.SecondaryAsHash = false
+		nopts.DiacriticMode = diacritics.KeepDiacritics
+		return nil
+	}
+}
+
 func WithMatchingNormalization() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = true
@@ -87,5 +107,11 @@ func WithDiacriticFormating(d diacritics.DiacriticMode) USAtNormalizeOption {
 }
 
 func Parse(source string, opts ...parser.AddressParsingOptions) (*address.Address, error) {
-	return nil, fmt.Errorf("Not implemented")
+	o := parser.AddressParsingOptions{}
+	if len(opts) > 0 {
+		o = opts[0]
+	}
+	// create a parser, then Parse(opts)
+	p := parser.New(o)
+	return p.Parse(source)
 }
