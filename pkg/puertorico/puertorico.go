@@ -116,6 +116,7 @@ var secondaryMap = map[string]string{
 	"SECTOR":          "SEC",
 	"TERRAZA":         "TERR",
 	"URBANIZATION":    "URB",
+	"URBANIZACION":    "URB",
 	"VILLA":           "VIL",
 }
 
