@@ -41,7 +41,7 @@ func CollapseSpace(s string) string {
 //   - pound sign #
 //   - slash when KeepSlash is set (fractional addresses)
 //
-// Default: remove * , . ( ) " : ; ` @ & / and hyphens.
+// Default: remove * , . ( ) " : ; ` @ & / ' and hyphens.
 func StripPunctuation(s string, opts StripOptions) string {
 	var b strings.Builder
 	b.Grow(len(s))
@@ -56,7 +56,7 @@ func StripPunctuation(s string, opts StripOptions) string {
 
 func stripRune(r rune, opts StripOptions) bool {
 	switch r {
-	case '*', ',', '.', '(', ')', '"', ':', ';', '`', '@', '&':
+	case '*', ',', '.', '(', ')', '"', ':', ';', '`', '@', '&', '\'', '\u2019':
 		return true
 	case '-':
 		return !opts.KeepHyphen

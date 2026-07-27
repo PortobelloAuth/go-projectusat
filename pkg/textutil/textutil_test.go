@@ -42,7 +42,7 @@ func TestStripPunctuation(t *testing.T) {
 	}{
 		{
 			name: "default strips specials",
-			in:   `*Hello*, "World". (Test): foo; bar` + "`" + `baz@qux&`,
+			in:   `*Hello*, "World". (Test): foo; 'bar` + "\u2019`" + `baz@qux&`,
 			opts: textutil.StripOptions{},
 			want: `Hello World Test foo bar` + `bazqux`,
 		},
