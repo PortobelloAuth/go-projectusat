@@ -53,7 +53,7 @@ func TestParse(t *testing.T) {
 	for _, tc := range cases {
 		got, err := p.Parse(tc.In)
 		if err != nil {
-			t.Errorf("Error parsing '%s': %s", tc.In, err)
+			t.Fatalf("Error parsing '%s': %s", tc.In, err)
 		}
 
 		if *got != tc.Want {
