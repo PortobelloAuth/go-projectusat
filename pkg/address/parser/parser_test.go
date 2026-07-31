@@ -133,4 +133,23 @@ func TestTokenize(t *testing.T) {
 	if !slices.Equal(out, want) {
 		t.Fatalf("Tokenize returned unexpected tokens: %v want: %v", out, want)
 	}
+
+	// 1445 VALLEYHIGH DR NW ROCHESTER MN 55901-0776 UNITED STATES
+	addr = "1445 VALLEYHIGH DR NW ROCHESTER MN 55901-0776 UNITED STATES"
+	want = []parser.Token{
+		{"1445", 0, 1, 0, -1},
+		{"VALLEYHIGH", 0, 1, 1, -1},
+		{"DR", 0, 1, 2, -1},
+		{"NW", 0, 1, 3, -1},
+		{"ROCHESTER", 0, 1, 4, -1},
+		{"MN", 0, 1, 5, -1},
+		{"55901-0776", 0, 1, 6, -1},
+		{"UNITED", 0, 1, 7, -1},
+		{"STATES", 0, 1, 8, -1},
+	}
+
+	out = parser.Tokenize(addr)
+	if !slices.Equal(out, want) {
+		t.Fatalf("Tokenize returned unexpected tokens: %v want: %v", out, want)
+	}
 }

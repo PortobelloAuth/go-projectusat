@@ -79,6 +79,14 @@ func TestNormalize(t *testing.T) {
 		{"3253 W 9200 S, West Jordan, UT 84088", "3253 W 9200 S WEST JORDAN UT 84088", "directional city"},
 	}
 
+	// TODO: make sure we have multiline versions of all these test addresses and results
+	saintCases := []NormalizeTestCase{
+		{"915 2ND ST N SAINT CLOUD MN 56301", "915 2ND ST N SAINT CLOUD MN 56301", "city"},
+		{"915 2ND ST N ST CLOUD MN 56301", "915 2ND ST N SAINT CLOUD MN 56301", "city"},
+		{"435 S SAINT CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST TOLEDO OH 43601", "street"},
+		{"435 S ST CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST TOLEDO OH 43601", "street"},
+	}
+
 	cases := slices.Collect(func(yield func(NormalizeTestCase) bool) {
 		for _, v := range csharpParityCases {
 			if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("parity - %s", v.group)}) {
@@ -88,6 +96,12 @@ func TestNormalize(t *testing.T) {
 
 		for _, v := range gridCases {
 			if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("grid - %s", v.group)}) {
+				return
+			}
+		}
+
+		for _, v := range saintCases {
+			if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("saint - %s", v.group)}) {
 				return
 			}
 		}
