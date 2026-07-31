@@ -7,6 +7,14 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
+// TODO: create or generate an efficient data structure to look up known
+// possible city and state combinations by zip or zip+4 from the 3 sheets
+// exported from https://postalpro.usps.com/ZIP_Locale_Detail as of July 2026.
+// TODO: if nothing that looks like a reasonable city and state exists, try
+// using the city and state of the physical delivery address (the post office?)
+// TODO: identify a strategy for checking whether the ZIP Locale spreadsheet
+// has been updated - likely via an environment variable
+
 // usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
 var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 

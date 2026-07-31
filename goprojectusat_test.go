@@ -72,9 +72,22 @@ func TestNormalize(t *testing.T) {
 		{"3010 NORTH-EAST MAIN STREET", "3010 NE MAIN ST", "dir"},
 	}
 
+	gridCases := []NormalizeTestCase{
+		// Post-directional followed by a City with a directional prefix
+		{"43 E 200 N, NORTH SALT LAKE, UT", "43 E 200 N NORTH SALT LAKE UT", "directional city"},
+		{"43 E 200 N NORTH SALT LAKE UT", "43 E 200 N NORTH SALT LAKE UT", "directional city"},
+		{"3253 W 9200 S, West Jordan, UT 84088", "3253 W 9200 S WEST JORDAN UT 84088", "directional city"},
+	}
+
 	cases := slices.Collect(func(yield func(NormalizeTestCase) bool) {
 		for _, v := range csharpParityCases {
 			if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("parity - %s", v.group)}) {
+				return
+			}
+		}
+
+		for _, v := range gridCases {
+			if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("grid - %s", v.group)}) {
 				return
 			}
 		}
