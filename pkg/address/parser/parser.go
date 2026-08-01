@@ -2,10 +2,10 @@ package parser
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
 )
 
 // AddressVerifier functions take an address.Address and return it if it
@@ -54,51 +54,11 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 		- use scores to determine which Address parts each token belongs to
 		- run verifier to check whether the address is verifiable (does not error)
 	*/
-	tokens := Tokenize(source)
+	tokens := token.Tokenize(source)
 	fmt.Printf("tokens: %v\n", tokens)
+
+	postalcode.MostLikelyTokens(tokens)
+	// use the most likely zip code and/or region to select Puerto Rico or military
+	// specific parsers.
 	return nil, fmt.Errorf("Not implemented")
-}
-
-type Token struct {
-	Text         string
-	Line         int
-	OfLines      int
-	Position     int
-	FollowsComma int // -1 means no, 0+ is the ordinal of the comma it follows on the line
-}
-
-var bycommaspace = regexp.MustCompile(`([^,\s]+|[,\s]+)`)
-var whitespace = regexp.MustCompile(`\s`)
-
-func Tokenize(source string) []Token {
-	tokens := make([]Token, 0)
-	lines := strings.Split(source, "\n")
-	fmt.Printf("lines: %s %d\n", lines, len(lines))
-	for lnum, ln := range lines {
-		texts := bycommaspace.FindAllString(ln, -1)
-		follows := -1
-		pcomma := -1
-		pos := 0
-		for _, txt := range texts {
-			txt = whitespace.ReplaceAllString(txt, "")
-			if len(txt) > 0 {
-				if txt[0] == ',' {
-					pcomma += len(txt) // there might be more than one comma
-					follows = pcomma
-				} else {
-					tokens = append(tokens, Token{
-						Text:         txt,
-						Line:         lnum,
-						OfLines:      len(lines),
-						Position:     pos,
-						FollowsComma: follows,
-					})
-					follows = -1
-					pos += 1
-				}
-			}
-		}
-	}
-
-	return tokens
 }

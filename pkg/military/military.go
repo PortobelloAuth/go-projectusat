@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 )
 
 /*
@@ -170,4 +173,30 @@ func NormalizeLastLine(line string) (city, region, postal string, err error) {
 
 func collapseSpace(s string) string {
 	return strings.Join(strings.Fields(s), " ")
+}
+
+func MostLikelyTokens(t []token.Token) []int {
+	// for military addresses, we basically need all of the tokens to match
+	if len(t) != 7 {
+		return nil
+	}
+
+	c := t[4]
+	_, ok := validCities[c.Text]
+	if !ok {
+		return nil
+	}
+
+	r := t[5]
+	_, ok = validRegions[r.Text]
+	if !ok {
+		return nil
+	}
+
+	return nil
+}
+
+func AddressFromTokens(t []token.Token) *address.Address {
+	//
+	return nil
 }
