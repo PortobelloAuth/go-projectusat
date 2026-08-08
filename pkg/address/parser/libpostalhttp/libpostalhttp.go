@@ -12,6 +12,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
+	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 )
@@ -183,6 +184,10 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 			// FIXME: this doesn't necessarily handle puertorico addresses well
 			found := -1
 			numparts := len(stparts)
+			if numparts < 2 {
+				a.StreetName = part
+				continue
+			}
 			aftersuffix := numparts
 			beforesuffix := numparts
 			suffix := ""
@@ -201,10 +206,11 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 			// check for two part predirectionals
 			pre2part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[0:2], ""))
 			pre1part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[0:1], ""))
+			possiblestate, _ := region.Info(strings.Join(stparts[0:2], " "), false)
 			post2part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[numparts-2:], ""))
 			post1part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[numparts-1:], ""))
 
-			fmt.Printf("pre2part: %s\npre1part: %s\n", pre2part, pre1part)
+			fmt.Printf("pre2part: %s\npre1part: %s\npossiblestate: %v\n", pre2part, pre1part, possiblestate)
 			fmt.Printf("post2part:%s \npost1part: %s\n", post2part, post1part)
 			fmt.Printf("found:%d \nsuffix: %s\n", found, suffix)
 			fmt.Printf("numparts: %d\nbeforesuffix: %d\naftersuffix: %d\n", numparts, beforesuffix, aftersuffix)
@@ -227,7 +233,7 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 				} else {
 					// no post directional
 				}
-			} else if len(pre1part) > 0 && (beforesuffix > 1 || (beforesuffix == 1 && aftersuffix >= max(len(post2part), len(post1part)))) {
+			} else if len(pre1part) > 0 && possiblestate == nil && (beforesuffix > 1 || (beforesuffix == 1 && aftersuffix >= max(len(post2part), len(post1part)))) {
 				// 1 part predirectional
 				a.Predirectional = pre1part
 				nondirparts = nondirparts[1:]

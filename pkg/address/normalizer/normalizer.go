@@ -146,6 +146,7 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 
 		// Highway forms normalize; ordinary street names pass through uppercased.
 		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
+		// TODO: check for an errantly parsed predirectional as well
 		hw, err := highways.NormalizeStreetName(sn)
 		fmt.Printf("sn: %s hw: %s err: %s\n", sn, hw, err)
 		if err == nil {
