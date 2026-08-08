@@ -9,6 +9,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
@@ -99,6 +100,10 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	}
 
 	if sn != "" {
+		poboxsn, err := pobox.Normalize(sn)
+		if err == nil {
+			sn = poboxsn
+		}
 		// if street name has only 1 word, run it through the streetsuffix normalizer
 		snparts := whitespace.Split(sn, -1)
 		fmt.Printf("sn: %s parts: %v\n", sn, snparts)

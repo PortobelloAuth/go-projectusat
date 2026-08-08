@@ -65,7 +65,6 @@ var specialCases = slices.Collect(func(yield func(string) bool) {
 			return
 		}
 	}
-
 })
 var specialCaseReplacer = strings.NewReplacer(specialCases...)
 
@@ -304,12 +303,17 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 		case LIBPOSTAL_LABEL_COUNTRY:
 			a.Country = part
 
-		// TODO: handle POBOX, LEVEL, and other options
-		// case LIBPOSTAL_LABEL_PO_BOX:
-		// case LIBPOSTAL_LABEL_BUILDING:
-		// case LIBPOSTAL_LABEL_ENTRANCE:
-		// case LIBPOSTAL_LABEL_STAIRCASE:
-		// case LIBPOSTAL_LABEL_LEVEL:
+		// TODO?: handle POBOX, LEVEL, and other options
+		case LIBPOSTAL_LABEL_PO_BOX:
+			a.StreetName = part
+		case LIBPOSTAL_LABEL_BUILDING:
+			a.SecondaryDesignator = part
+		case LIBPOSTAL_LABEL_ENTRANCE:
+			a.SecondaryDesignator = part
+		case LIBPOSTAL_LABEL_STAIRCASE:
+			a.SecondaryDesignator = part
+		case LIBPOSTAL_LABEL_LEVEL:
+			a.SecondaryDesignator = part
 		// case LIBPOSTAL_LABEL_METRO_STATION:
 		// case LIBPOSTAL_LABEL_SUBURB:
 		// case LIBPOSTAL_LABEL_CITY_DISTRICT:
