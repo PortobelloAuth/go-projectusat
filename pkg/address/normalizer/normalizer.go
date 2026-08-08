@@ -16,7 +16,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
-var wordboundary = regexp.MustCompile(`\b\s*`)
+var whitespace = regexp.MustCompile(`\s+`)
 
 // AddressNormalizationOptions controls exchange/matching variants of normalization.
 // Zero value is content form (the same settings used by NewContentNormalizer).
@@ -100,7 +100,7 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 
 	if sn != "" {
 		// if street name has only 1 word, run it through the streetsuffix normalizer
-		snparts := wordboundary.Split(sn, -1)
+		snparts := whitespace.Split(sn, -1)
 		fmt.Printf("sn: %s parts: %v\n", sn, snparts)
 		if snparts[0] == sn {
 			ss, err := streetsuffixes.NormalizeStreetSuffix(sn)

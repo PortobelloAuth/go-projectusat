@@ -19,6 +19,7 @@ import (
 )
 
 var boundaryWithSpace = regexp.MustCompile(`\b\s*`)
+var whitespace = regexp.MustCompile(`\s+`)
 
 type LibpostalAddressPart struct {
 	Label string `json:"label"`
@@ -197,7 +198,7 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 				a.SecondaryNumber = secparts[1]
 			}
 		case LIBPOSTAL_LABEL_ROAD:
-			stparts := boundaryWithSpace.Split(part, -1)
+			stparts := whitespace.Split(part, -1)
 			// find the street suffix
 			// if there's a directional as the first (or first and second) parts
 			// before the suffix and there is another part grouped with the suffix, treat it as the
