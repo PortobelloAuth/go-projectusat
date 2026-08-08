@@ -1498,10 +1498,10 @@ var streetSuffixes = []StreetSuffix{
 	},
 }
 
-var streetSuffixPrimaryMap = maps.Collect(func(yield func(string, string) bool) {
+var streetSuffixPrimaryMap = maps.Collect(func(yield func(string, StreetSuffix) bool) {
 	for _, v := range streetSuffixes {
 		for _, a := range v.Alt {
-			if !yield(a, v.Primary) {
+			if !yield(a, v) {
 				return
 			}
 		}
@@ -1520,9 +1520,23 @@ var streetSuffixKeys = slices.Collect(maps.Keys(streetSuffixPrimaryMap))
 
 var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
 
-func normalizeStreetSuffix(r string, primary bool, fuzzy bool) (string, error) {
+func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error) {
+	info, err := Info(src, fuzzy)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Printf("src: %s info: %v\n", src, info)
+	if primary {
+		return info.Primary, nil
+	}
+
+	return info.Short, nil
+}
+
+func Info(src string, fuzzy bool) (*StreetSuffix, error) {
 	// clean out any punctuation
-	clean := alphaspace.ReplaceAllString(r, "")
+	clean := alphaspace.ReplaceAllString(src, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 	// if requested, fuzzy match keys
@@ -1538,23 +1552,28 @@ func normalizeStreetSuffix(r string, primary bool, fuzzy bool) (string, error) {
 		}
 	}
 
-	if primary {
-		// look up the primary
-		primary, ok := streetSuffixPrimaryMap[rkey]
-		if !ok {
-			return "", fmt.Errorf("Unrecognized street suffix: %s", rkey)
-		}
-
-		return primary, nil
-	}
-
-	// look up the abbreviation
-	abrev, ok := streetSuffixShortMap[rkey]
+	// look up the primary
+	short, ok := streetSuffixShortMap[rkey]
 	if !ok {
-		return "", fmt.Errorf("Unrecognized street suffix: %s", rkey)
+		short = rkey
 	}
 
-	return abrev, nil
+	info, ok := streetSuffixPrimaryMap[short]
+	if ok {
+		return &StreetSuffix{
+			Primary: info.Primary,
+			Short:   info.Short,
+			Alt: slices.Collect(func(yield func(string) bool) {
+				for _, a := range info.Alt {
+					if !yield(a) {
+						return
+					}
+				}
+			}),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("Unrecognized street suffix")
 }
 
 func NormalizeStreetSuffix(r string) (string, error) {

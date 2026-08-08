@@ -2,6 +2,8 @@ package normalizer
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
@@ -13,6 +15,8 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
+
+var wordboundary = regexp.MustCompile(`\b\s*`)
 
 // AddressNormalizationOptions controls exchange/matching variants of normalization.
 // Zero value is content form (the same settings used by NewContentNormalizer).
@@ -89,12 +93,62 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		return nil, fmt.Errorf("postal code: %w", err)
 	}
 
-	if sn, err := textutil.FreeTextField(a.StreetName, n.Options.DiacriticMode); err != nil {
+	sn, err := textutil.FreeTextField(a.StreetName, n.Options.DiacriticMode)
+	if err != nil {
 		return nil, fmt.Errorf("street name: %w", err)
-	} else if sn != "" {
-		// Highway forms normalize; ordinary free-text street names pass through uppercased.
+	}
+
+	if sn != "" {
+		// if street name has only 1 word, run it through the streetsuffix normalizer
+		snparts := wordboundary.Split(sn, -1)
+		fmt.Printf("sn: %s parts: %v\n", sn, snparts)
+		if snparts[0] == sn {
+			ss, err := streetsuffixes.NormalizeStreetSuffix(sn)
+			if err == nil {
+				sn = ss
+			}
+		} else {
+			for i, snp := range snparts {
+				// directionals left in the street name should be the full text
+				full, err := directionals.NormalizeDirectional(snp)
+				fmt.Printf("sn: %s snp: %s full: %s i: %d\n", sn, snp, full, i)
+				if err == nil {
+					// replace the part
+					snparts[i] = full
+				}
+
+				if i < len(snparts)-1 {
+					// state names in the street name should be full text if there are not
+					// other, non-suffix elements in the street name.
+					regioninfo, err := region.Info(snp, false)
+					if err == nil {
+						fmt.Printf("snp: %s regioninfo: %v i: %d len(snparts): %d\n", snp, regioninfo, i, len(snparts))
+						if i == 0 && len(snparts) <= 2 {
+							// replace the part with the full state name
+							snparts[i] = regioninfo.Primary
+						} else {
+							snparts[i] = regioninfo.Short
+						}
+						continue
+					}
+
+					// Street suffixes left inside the street name should be the full text
+					// Only replace street suffix abreviations if we have not already
+					// replaced this index with a state / region.
+					fullss, err := streetsuffixes.NormalizeStreetSuffix(snp)
+					if err == nil {
+						snparts[i] = fullss
+					}
+				}
+			}
+			sn = strings.Join(snparts, " ")
+		}
+
+		// Highway forms normalize; ordinary street names pass through uppercased.
 		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
-		if hw, err := highways.NormalizeStreetName(sn); err == nil {
+		hw, err := highways.NormalizeStreetName(sn)
+		fmt.Printf("sn: %s hw: %s err: %s\n", sn, hw, err)
+		if err == nil {
 			out.StreetName = hw
 		} else {
 			out.StreetName = sn

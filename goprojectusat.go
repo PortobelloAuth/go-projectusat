@@ -53,6 +53,13 @@ func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
 	}
 }
 
+func WithCustomAddressParser(cp parser.ParsingFunc) USAtNormalizeOption {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+		popts.CustomParser = cp
+		return nil
+	}
+}
+
 func WithFuzzyNormalization() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = true

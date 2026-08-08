@@ -16,7 +16,17 @@ type AddressVerifier func(*address.Address) (*address.Address, error)
 // AddressParsingOptions controls how address parsing is done.
 // The zero value has no Verifier function
 type AddressParsingOptions struct {
-	Verifier AddressVerifier
+	Verifier     AddressVerifier
+	CustomParser ParsingFunc
+}
+
+type ParsingFunc interface {
+	Parse(source string) (*address.Address, error)
+}
+type ParsingFn func(source string) (*address.Address, error)
+
+func (pf ParsingFn) Parse(source string) (*address.Address, error) {
+	return pf(source)
 }
 
 func IdentityVerifier(a *address.Address) (*address.Address, error) {
@@ -47,6 +57,9 @@ func New(opts ...AddressParsingOptions) *Parser {
 }
 
 func (p *Parser) Parse(source string) (*address.Address, error) {
+	if p.Options.CustomParser != nil {
+		return p.Options.CustomParser.Parse(source)
+	}
 	// TODO: implement Parse
 	/*
 		- split the string on newlines, commas, and spaces

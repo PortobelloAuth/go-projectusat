@@ -96,219 +96,299 @@ Armed Forces Pacific                               AP
 Armed Forces Americas (except Canada)              AA
 */
 
-var regionMap = map[string]string{
-	"ALABAMA":                        "AL",
-	"AL":                             "AL",
-	"ALASKA":                         "AK",
-	"AK":                             "AK",
-	"AMERICAN SAMOA":                 "AS",
-	"AS":                             "AS",
-	"ARIZONA":                        "AZ",
-	"AZ":                             "AZ",
-	"ARKANSAS":                       "AR",
-	"AR":                             "AR",
-	"CALIFORNIA":                     "CA",
-	"CA":                             "CA",
-	"COLORADO":                       "CO",
-	"CO":                             "CO",
-	"CONNECTICUT":                    "CT",
-	"CT":                             "CT",
-	"DELAWARE":                       "DE",
-	"DELEWARE":                       "DE", // common misspelling
-	"DE":                             "DE",
-	"DISTRICT OF COLUMBIA":           "DC",
-	"DC":                             "DC",
-	"FEDERATED STATES OF MICRONESIA": "FM",
-	"MICRONESIA":                     "FM",
-	"FM":                             "FM",
-	"FLORIDA":                        "FL",
-	"FL":                             "FL",
-	"GEORGIA":                        "GA",
-	"GA":                             "GA",
-	"GUAM":                           "GU",
-	"GU":                             "GU",
-	"HAWAII":                         "HI",
-	"HI":                             "HI",
-	"IDAHO":                          "ID",
-	"ID":                             "ID",
-	"ILLINOIS":                       "IL",
-	"IL":                             "IL",
-	"INDIANA":                        "IN",
-	"IN":                             "IN",
-	"IOWA":                           "IA",
-	"IA":                             "IA",
-	"KANSAS":                         "KS",
-	"KS":                             "KS",
-	"KENTUCKY":                       "KY",
-	"KY":                             "KY",
-	"LOUISIANA":                      "LA",
-	"LA":                             "LA",
-	"MAINE":                          "ME",
-	"ME":                             "ME",
-	"MARSHALL ISLANDS":               "MH",
-	"MARSHALL IS":                    "MH",
-	"MARSHALL ISL":                   "MH",
-	"MARSHALL ISLS":                  "MH",
-	"MARSHALL ISS":                   "MH",
-	"MARSHALL ISLD":                  "MH",
-	"MH":                             "MH",
-	"MARYLAND":                       "MD",
-	"MD":                             "MD",
-	"MASSACHUSETTS":                  "MA",
-	"MA":                             "MA",
-	"MICHIGAN":                       "MI",
-	"MI":                             "MI",
-	"MINNESOTA":                      "MN",
-	"MN":                             "MN",
-	"MISSISSIPPI":                    "MS",
-	"MS":                             "MS",
-	"MISSOURI":                       "MO",
-	"MO":                             "MO",
-	"MONTANA":                        "MT",
-	"MT":                             "MT",
-	"NEBRASKA":                       "NE",
-	"NE":                             "NE",
-	"NEVADA":                         "NV",
-	"NV":                             "NV",
-	"NEW HAMPSHIRE":                  "NH",
-	"NH":                             "NH",
-	"NEW JERSEY":                     "NJ",
-	"NJ":                             "NJ",
-	"NEW MEXICO":                     "NM",
-	"NM":                             "NM",
-	"NEW YORK":                       "NY",
-	"NY":                             "NY",
-	"NORTH CAROLINA":                 "NC",
-	"N CAROLINA":                     "NC",
-	"NC":                             "NC",
-	"NORTH DAKOTA":                   "ND",
-	"N DAKOTA":                       "ND",
-	"ND":                             "ND",
-	"NORTHERN MARIANA ISLANDS":       "MP",
-	"NORTHERN MARIANA IS":            "MP",
-	"NORTHERN MARIANA ISL":           "MP",
-	"NORTHERN MARIANA ISLS":          "MP",
-	"NORTHERN MARIANA ISS":           "MP",
-	"NORTHERN MARIANA ISLD":          "MP",
-	"N MARIANA ISLANDS":              "MP",
-	"N MARIANA IS":                   "MP",
-	"N MARIANA ISL":                  "MP",
-	"N MARIANA ISLS":                 "MP",
-	"N MARIANA ISS":                  "MP",
-	"N MARIANA ISLD":                 "MP",
-	"MP":                             "MP",
-	"OHIO":                           "OH",
-	"OH":                             "OH",
-	"OKLAHOMA":                       "OK",
-	"OK":                             "OK",
-	"OREGON":                         "OR",
-	"OR":                             "OR",
-	"PALAU":                          "PW",
-	"PW":                             "PW",
-	"PENNSYLVANIA":                   "PA",
-	"PA":                             "PA",
-	"PUERTO RICO":                    "PR",
-	"PR":                             "PR",
-	"RHODE ISLAND":                   "RI",
-	"RHODE IS":                       "RI",
-	"RHODE ISL":                      "RI",
-	"RHODE ISLD":                     "RI",
-	"RI":                             "RI",
-	"SOUTH CAROLINA":                 "SC",
-	"S CAROLINA":                     "SC",
-	"SC":                             "SC",
-	"SOUTH DAKOTA":                   "SD",
-	"S DAKOTA":                       "SD",
-	"SD":                             "SD",
-	"TENNESSEE":                      "TN",
-	"TN":                             "TN",
-	"TEXAS":                          "TX",
-	"TX":                             "TX",
-	"UTAH":                           "UT",
-	"UT":                             "UT",
-	"VERMONT":                        "VT",
-	"VT":                             "VT",
-	"VIRGIN ISLANDS":                 "VI",
-	"VIRGIN IS":                      "VI",
-	"VIRGIN ISL":                     "VI",
-	"VIRGIN ISLS":                    "VI",
-	"VIRGIN ISS":                     "VI",
-	"VIRGIN ISLD":                    "VI",
-	"US VIRGIN ISLANDS":              "VI",
-	"US VIRGIN IS":                   "VI",
-	"US VIRGIN ISL":                  "VI",
-	"US VIRGIN ISLS":                 "VI",
-	"US VIRGIN ISS":                  "VI",
-	"US VIRGIN ISLD":                 "VI",
-	"USVI":                           "VI",
-	"VIS":                            "VI",
-	"USA VI":                         "VI",
-	"VI USA":                         "VI",
-	"VI":                             "VI",
-	"VIRGINIA":                       "VA",
-	"VA":                             "VA",
-	"WASHINGTON":                     "WA",
-	"WA":                             "WA",
-	"WEST VIRGINIA":                  "WV",
-	"W VIRGINIA":                     "WV",
-	"WV":                             "WV",
-	"WISCONSIN":                      "WI",
-	"WI":                             "WI",
-	"WYOMING":                        "WY",
-	"WY":                             "WY",
-
-	"ALBERTA":                   "AB",
-	"AB":                        "AB",
-	"BRITISH COLUMBIA":          "BC",
-	"BC":                        "BC",
-	"MANITOBA":                  "MB",
-	"MB":                        "MB",
-	"NEW BRUNSWICK":             "NB",
-	"NB":                        "NB",
-	"NEWFOUNDLAND AND LABRADOR": "NL",
-	"NEWFOUNDLAND":              "NL",
-	"LABRADOR":                  "NL",
-	"NL":                        "NL",
-	"NORTHWEST TERRITORIES":     "NT",
-	"NORTHWEST TERR":            "NT",
-	"NW TERRITORIES":            "NT",
-	"NW TERR":                   "NT",
-	"NT":                        "NT",
-	"NOVA SCOTIA":               "NS",
-	"NS":                        "NS",
-	"NUNAVAT TERRITORY":         "NU",
-	"NUNAVAT TERR":              "NU",
-	"NU":                        "NU",
-	"ONTARIO":                   "ON",
-	"ON":                        "ON",
-	"PRINCE EDWARD ISLAND":      "PE",
-	"PRINCE EDWARD IS":          "PE",
-	"PRINCE EDWARD ISL":         "PE",
-	"PRINCE EDWARD ISLD":        "PE",
-	"PE":                        "PE",
-	"QUEBEC":                    "QC",
-	"QC":                        "QC",
-	"SASKATCHEWAN":              "SK",
-	"SK":                        "SK",
-	"YUKON TERRITORY":           "YT",
-	"YUKON TERR":                "YT",
-	"YUKON":                     "YT",
-	"YT":                        "YT",
-
-	"ARMED FORCES EUROPE THE MIDDLE EAST AND CANADA": "AE",
-	"ARMED FORCES EUROPE":                            "AE",
-	"AE":                                             "AE",
-	"ARMED FORCES PACIFIC":                           "AP",
-	"AP":                                             "AP",
-	"ARMED FORCES AMERICA":                           "AA",
-	"ARMED FORCES AMERICAS":                          "AA",
-	"AA":                                             "AA",
+type RegionInfo struct {
+	Primary string
+	Short   string
+	Alt     []string
 }
+
+var usStatesAndTerretories = []RegionInfo{
+	{Primary: "ALABAMA", Short: "AL", Alt: []string{"ALABAMA", "AL"}},
+	{"ALASKA", "AK", []string{"ALASKA", "AK"}},
+	{"AMERICAN SAMOA", "AS", []string{"AMERICAN SAMOA", "AS"}},
+	{"ARIZONA", "AZ", []string{"ARIZONA", "AZ"}},
+	{"ARKANSAS", "AR", []string{"ARKANSAS", "AR"}},
+	{"CALIFORNIA", "CA", []string{"CALIFORNIA", "CA"}},
+	{"COLORADO", "CO", []string{"COLORADO", "CO"}},
+	{"CONNECTICUT", "CT", []string{"CONNECTICUT", "CT", "CONN"}},
+	{"DELAWARE", "DE", []string{"DELAWARE", "DELEWARE", "DE"}},
+	{"DISTRICT OF COLUMBIA", "DC", []string{"DISTRICT OF COLUMBIA", "DC"}},
+	{
+		Primary: "FEDERATED STATES OF MICRONESIA",
+		Short:   "FM",
+		Alt: []string{
+			"FEDERATED STATES OF MICRONESIA",
+			"MICRONESIA",
+			"FM",
+		},
+	},
+	{"FLORIDA", "FL", []string{"FLORIDA", "FL"}},
+	{"GEORGIA", "GA", []string{"GEORGIA", "GA"}},
+	{"GUAM", "GU", []string{"GUAM", "GU"}},
+	{"HAWAII", "HI", []string{"HAWAII", "HI"}},
+	{"IDAHO", "ID", []string{"IDAHO", "ID"}},
+	{"ILLINOIS", "IL", []string{"ILLINOIS", "IL"}},
+	{"INDIANA", "IN", []string{"INDIANA", "IN"}},
+	{"IOWA", "IA", []string{"IOWA", "IA"}},
+	{"KANSAS", "KS", []string{"KANSAS", "KS"}},
+	{"KENTUCKY", "KY", []string{"KENTUCKY", "KY"}},
+	{"LOUISIANA", "LA", []string{"LOUISIANA", "LA"}},
+	{"MAINE", "ME", []string{"MAINE", "ME"}},
+	{
+		Primary: "MARSHALL ISLANDS",
+		Short:   "MH",
+		Alt: []string{
+			"MARSHALL ISLANDS",
+			"MARSHALL IS",
+			"MARSHALL ISL",
+			"MARSHALL ISLS",
+			"MARSHALL ISS",
+			"MARSHALL ISLD",
+			"MH",
+		},
+	},
+	{"MARYLAND", "MD", []string{"MARYLAND", "MD"}},
+	{"MASSACHUSETTS", "MA", []string{"MASSACHUSETTS", "MA", "MASS"}},
+	{"MICHIGAN", "MI", []string{"MICHIGAN", "MI"}},
+	{"MINNESOTA", "MN", []string{"MINNESOTA", "MN", "MINN"}},
+	{"MISSISSIPPI", "MS", []string{"MISSISSIPPI", "MS"}},
+	{"MISSOURI", "MO", []string{"MISSOURI", "MO"}},
+	{"MONTANA", "MT", []string{"MONTANA", "MT"}},
+	{"NEBRASKA", "NE", []string{"NEBRASKA", "NE"}},
+	{"NEVADA", "NV", []string{"NEVADA", "NV"}},
+	{"NEW HAMPSHIRE", "NH", []string{"NEW HAMPSHIRE", "NH"}},
+	{"NEW JERSEY", "NJ", []string{"NEW JERSEY", "NJ"}},
+	{"NEW MEXICO", "NM", []string{"NEW MEXICO", "NM"}},
+	{"NEW YORK", "NY", []string{"NEW YORK", "NY"}},
+	{
+		Primary: "NORTH CAROLINA",
+		Short:   "NC",
+		Alt: []string{
+			"NORTH CAROLINA",
+			"N CAROLINA",
+			"NC",
+		},
+	},
+	{
+		Primary: "NORTH DAKOTA",
+		Short:   "ND",
+		Alt: []string{
+			"NORTH DAKOTA",
+			"N DAKOTA",
+			"ND",
+		},
+	},
+	{
+		Primary: "NORTHERN MARIANA ISLANDS",
+		Short:   "MP",
+		Alt: []string{
+			"NORTHERN MARIANA ISLANDS",
+			"NORTHERN MARIANA IS",
+			"NORTHERN MARIANA ISL",
+			"NORTHERN MARIANA ISLS",
+			"NORTHERN MARIANA ISS",
+			"NORTHERN MARIANA ISLD",
+			"N MARIANA ISLANDS",
+			"N MARIANA IS",
+			"N MARIANA ISL",
+			"N MARIANA ISLS",
+			"N MARIANA ISS",
+			"N MARIANA ISLD",
+			"MP",
+		},
+	},
+	{"OHIO", "OH", []string{"OHIO", "OH"}},
+	{"OKLAHOMA", "OK", []string{"OKLAHOMA", "OK"}},
+	{"OREGON", "OR", []string{"OREGON", "OR"}},
+	{"PALAU", "PW", []string{"PALAU", "PW"}},
+	{"PENNSYLVANIA", "PA", []string{"PENNSYLVANIA", "PENN", "PA"}},
+	{"PUERTO RICO", "PR", []string{"PUERTO RICO", "PR"}},
+	{
+		Primary: "RHODE ISLAND",
+		Short:   "RI",
+		Alt: []string{
+			"RHODE ISLAND",
+			"RHODE IS",
+			"RHODE ISL",
+			"RHODE ISLD",
+			"RI",
+		},
+	},
+	{
+		Primary: "SOUTH CAROLINA",
+		Short:   "SC",
+		Alt: []string{
+			"SOUTH CAROLINA",
+			"S CAROLINA",
+			"SC",
+		},
+	},
+	{
+		Primary: "SOUTH DAKOTA",
+		Short:   "SD",
+		Alt: []string{
+			"SOUTH DAKOTA",
+			"S DAKOTA",
+			"SD",
+		},
+	},
+	{"TENNESSEE", "TN", []string{"TENNESSEE", "TENN", "TN"}},
+	{"TEXAS", "TX", []string{"TEXAS", "TX"}},
+	{"UTAH", "UT", []string{"UTAH", "UT"}},
+	{"VERMONT", "VT", []string{"VERMONT", "VT"}},
+	{
+		Primary: "VIRGIN ISLANDS",
+		Short:   "VI",
+		Alt: []string{
+			"VIRGIN ISLANDS",
+			"VIRGIN IS",
+			"VIRGIN ISL",
+			"VIRGIN ISLS",
+			"VIRGIN ISS",
+			"VIRGIN ISLD",
+			"US VIRGIN ISLANDS",
+			"US VIRGIN IS",
+			"US VIRGIN ISL",
+			"US VIRGIN ISLS",
+			"US VIRGIN ISS",
+			"US VIRGIN ISLD",
+			"USVI",
+			"VIS",
+			"USA VI",
+			"VI USA",
+			"VI",
+		},
+	},
+	{"VIRGINIA", "VA", []string{"VIRGINIA", "VA"}},
+	{"WASHINGTON", "WA", []string{"WASHINGTON", "WA"}},
+	{"WEST VIRGINIA", "WV", []string{"WEST VIRGINIA", "W VIRGINIA", "VW"}},
+	{"WISCONSIN", "WI", []string{"WISCONSIN", "WI"}},
+	{"WYOMING", "WY", []string{"WYOMING", "WY"}},
+}
+
+var canadianProvincesAndTerritories = []RegionInfo{
+	{"ALBERTA", "AB", []string{"ALBERTA", "AB"}},
+	{"BRITISH COLUMBIA", "BC", []string{"BRITISH COLUMBIA", "BC"}},
+	{"MANITOBA", "MB", []string{"MANITOBA", "MB"}},
+	{"NEW BRUNSWICK", "NB", []string{"NEW BRUNSWICK", "NB"}},
+	{
+		Primary: "NEWFOUNDLAND AND LABRADOR",
+		Short:   "NL",
+		Alt: []string{
+			"NEWFOUNDLAND AND LABRADOR",
+			"NEWFOUNDLAND",
+			"LABRADOR",
+			"NL",
+		},
+	},
+	{
+		Primary: "NORTHWEST TERRITORIES",
+		Short:   "NT",
+		Alt: []string{
+			"NORTHWEST TERRITORIES",
+			"NORTHWEST TERR",
+			"NW TERRITORIES",
+			"NW TERR",
+			"NT",
+		},
+	},
+	{"NOVA SCOTIA", "NS", []string{"NOVA SCOTIA", "NS"}},
+	{
+		Primary: "NUNAVAT TERRITORIES",
+		Short:   "NU",
+		Alt: []string{
+			"NUNAVAT TERRITORY",
+			"NUNAVAT TERR",
+			"NU",
+		},
+	},
+	{"ONTARIO", "ON", []string{"ONTARIO", "ON"}},
+	{
+		Primary: "PRINCE EDWARD ISLAND",
+		Short:   "PE",
+		Alt: []string{
+			"PRINCE EDWARD ISLAND",
+			"PRINCE EDWARD IS",
+			"PRINCE EDWARD ISL",
+			"PRINCE EDWARD ISLD",
+			"PE",
+		},
+	},
+	{"QUEBEC", "QC", []string{"QUEBEC", "QC"}},
+	{"SASKATCHEWAN", "SK", []string{"SASKATCHEWAN", "SK"}},
+	{
+		Primary: "YUKON TERRITORY",
+		Short:   "YT",
+		Alt: []string{
+			"YUKON TERRITORY",
+			"YUKON TERR",
+			"YUKON",
+			"YT",
+		},
+	},
+}
+
+var usMillitaryRegions = []RegionInfo{
+	{
+		Primary: "ARMED FORCES EUROPE THE MIDDLE EAST AND CANADA",
+		Short:   "AE",
+		Alt: []string{
+			"ARMED FORCES EUROPE THE MIDDLE EAST AND CANADA",
+			"ARMED FORCES EUROPE",
+			"AE",
+		},
+	},
+	{"ARMED FORCES PACIFIC", "AP", []string{"ARMED FORCES PACIFIC", "AP"}},
+	{
+		Primary: "ARMED FORCES AMERICA",
+		Short:   "AA",
+		Alt: []string{
+			"ARMED FORCES AMERICAS",
+			"ARMED FORCES AMERICA",
+			"AA",
+		},
+	},
+}
+
+var regionMap = maps.Collect(func(yield func(string, RegionInfo) bool) {
+	for _, v := range usStatesAndTerretories {
+		for _, a := range v.Alt {
+			if !yield(a, v) {
+				return
+			}
+		}
+	}
+
+	for _, v := range canadianProvincesAndTerritories {
+		for _, a := range v.Alt {
+			if !yield(a, v) {
+				return
+			}
+		}
+	}
+
+	for _, v := range usMillitaryRegions {
+		for _, a := range v.Alt {
+			if !yield(a, v) {
+				return
+			}
+		}
+	}
+})
 
 var regionKeys = slices.Collect(maps.Keys(regionMap))
 var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
 
 func normalizeRegion(r string, fuzzy bool) (string, error) {
+	info, err := Info(r, fuzzy)
+	if err != nil {
+		return "", err
+	}
+
+	return info.Short, nil
+}
+
+func Info(r string, fuzzy bool) (*RegionInfo, error) {
 	// clean out any punctuation
 	clean := alphaspace.ReplaceAllString(r, "")
 	// capitalize
@@ -327,12 +407,17 @@ func normalizeRegion(r string, fuzzy bool) (string, error) {
 	}
 
 	// look up the abbreviation
-	abrev, ok := regionMap[rkey]
+	info, ok := regionMap[rkey]
 	if !ok {
-		return "", fmt.Errorf("Unrecognized state, possession, Canadian provice, or US Armed Forces region")
+		return nil, fmt.Errorf("Unrecognized state, possession, Canadian provice, or US Armed Forces region")
 	}
+	fmt.Printf("r: %s info: %v\n", r, info)
 
-	return abrev, nil
+	return &RegionInfo{
+		Primary: info.Primary,
+		Short:   info.Short,
+		Alt:     slices.Clone(info.Alt),
+	}, nil
 }
 
 func NormalizeRegion(r string) (string, error) {
