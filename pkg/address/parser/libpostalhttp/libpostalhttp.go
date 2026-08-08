@@ -167,6 +167,12 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 	uppercase := strings.ToUpper(input)
 	replaced := specialCaseReplacer.Replace(uppercase)
 
+	// FIXME: libpostal also completely fails to understand "Rural Route 91 Box A7",
+	// where "Box A7" is technically the primary street number and RR 91 is the
+	// standardized street name. libpostal parses "91" as the primary address, and
+	// "Box A7" as a PO Box. It does understand "RR 3 BOX 98D", but is inconsistent
+	// with leading alphabetical characters on the box number.
+
 	parsed, err := l.HTTPParse(replaced)
 	if err != nil {
 		return nil, err

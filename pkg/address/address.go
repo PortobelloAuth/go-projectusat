@@ -65,7 +65,8 @@ func variadicOptions(opts []FormatOptions) FormatOptions {
 }
 
 // FormatStreetLine joins street elements with single spaces; omits blanks.
-// Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
+// Normal Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
+// Rural Route Order: STREET PRIMARY SEC SECNUM.
 func (a *Address) FormatStreetLine() string {
 	return joinNonEmpty(" ",
 		a.PrimaryNumber,
