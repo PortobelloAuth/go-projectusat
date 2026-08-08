@@ -97,22 +97,23 @@ Armed Forces Americas (except Canada)              AA
 */
 
 type RegionInfo struct {
-	Primary string
-	Short   string
-	Alt     []string
+	Primary            string
+	Short              string
+	Alt                []string
+	PossibleStreetName bool
 }
 
-var usStatesAndTerretories = []RegionInfo{
-	{Primary: "ALABAMA", Short: "AL", Alt: []string{"ALABAMA", "AL"}},
-	{"ALASKA", "AK", []string{"ALASKA", "AK"}},
-	{"AMERICAN SAMOA", "AS", []string{"AMERICAN SAMOA", "AS"}},
-	{"ARIZONA", "AZ", []string{"ARIZONA", "AZ"}},
-	{"ARKANSAS", "AR", []string{"ARKANSAS", "AR"}},
-	{"CALIFORNIA", "CA", []string{"CALIFORNIA", "CA"}},
-	{"COLORADO", "CO", []string{"COLORADO", "CO"}},
-	{"CONNECTICUT", "CT", []string{"CONNECTICUT", "CT", "CONN"}},
-	{"DELAWARE", "DE", []string{"DELAWARE", "DELEWARE", "DE"}},
-	{"DISTRICT OF COLUMBIA", "DC", []string{"DISTRICT OF COLUMBIA", "DC"}},
+var usStatesAndPossessions = []RegionInfo{
+	{Primary: "ALABAMA", Short: "AL", Alt: []string{"ALABAMA", "AL"}, PossibleStreetName: true},
+	{"ALASKA", "AK", []string{"ALASKA", "AK"}, true},
+	{"AMERICAN SAMOA", "AS", []string{"AMERICAN SAMOA", "AS"}, false},
+	{"ARIZONA", "AZ", []string{"ARIZONA", "AZ"}, true},
+	{"ARKANSAS", "AR", []string{"ARKANSAS", "AR"}, true},
+	{"CALIFORNIA", "CA", []string{"CALIFORNIA", "CA"}, true},
+	{"COLORADO", "CO", []string{"COLORADO", "CO"}, true},
+	{"CONNECTICUT", "CT", []string{"CONNECTICUT", "CT", "CONN"}, true},
+	{"DELAWARE", "DE", []string{"DELAWARE", "DELEWARE", "DE"}, true},
+	{"DISTRICT OF COLUMBIA", "DC", []string{"DISTRICT OF COLUMBIA", "DC"}, true},
 	{
 		Primary: "FEDERATED STATES OF MICRONESIA",
 		Short:   "FM",
@@ -121,19 +122,20 @@ var usStatesAndTerretories = []RegionInfo{
 			"MICRONESIA",
 			"FM",
 		},
+		PossibleStreetName: false,
 	},
-	{"FLORIDA", "FL", []string{"FLORIDA", "FL"}},
-	{"GEORGIA", "GA", []string{"GEORGIA", "GA"}},
-	{"GUAM", "GU", []string{"GUAM", "GU"}},
-	{"HAWAII", "HI", []string{"HAWAII", "HI"}},
-	{"IDAHO", "ID", []string{"IDAHO", "ID"}},
-	{"ILLINOIS", "IL", []string{"ILLINOIS", "IL"}},
-	{"INDIANA", "IN", []string{"INDIANA", "IN"}},
-	{"IOWA", "IA", []string{"IOWA", "IA"}},
-	{"KANSAS", "KS", []string{"KANSAS", "KS"}},
-	{"KENTUCKY", "KY", []string{"KENTUCKY", "KY"}},
-	{"LOUISIANA", "LA", []string{"LOUISIANA", "LA"}},
-	{"MAINE", "ME", []string{"MAINE", "ME"}},
+	{"FLORIDA", "FL", []string{"FLORIDA", "FL"}, true},
+	{"GEORGIA", "GA", []string{"GEORGIA", "GA"}, true},
+	{"GUAM", "GU", []string{"GUAM", "GU"}, true},
+	{"HAWAII", "HI", []string{"HAWAII", "HI"}, true},
+	{"IDAHO", "ID", []string{"IDAHO", "ID"}, true},
+	{"ILLINOIS", "IL", []string{"ILLINOIS", "IL"}, true},
+	{"INDIANA", "IN", []string{"INDIANA", "IN"}, true},
+	{"IOWA", "IA", []string{"IOWA", "IA"}, true},
+	{"KANSAS", "KS", []string{"KANSAS", "KS"}, true},
+	{"KENTUCKY", "KY", []string{"KENTUCKY", "KY"}, true},
+	{"LOUISIANA", "LA", []string{"LOUISIANA", "LA"}, true},
+	{"MAINE", "ME", []string{"MAINE", "ME"}, true},
 	{
 		Primary: "MARSHALL ISLANDS",
 		Short:   "MH",
@@ -146,20 +148,21 @@ var usStatesAndTerretories = []RegionInfo{
 			"MARSHALL ISLD",
 			"MH",
 		},
+		PossibleStreetName: true,
 	},
-	{"MARYLAND", "MD", []string{"MARYLAND", "MD"}},
-	{"MASSACHUSETTS", "MA", []string{"MASSACHUSETTS", "MA", "MASS"}},
-	{"MICHIGAN", "MI", []string{"MICHIGAN", "MI"}},
-	{"MINNESOTA", "MN", []string{"MINNESOTA", "MN", "MINN"}},
-	{"MISSISSIPPI", "MS", []string{"MISSISSIPPI", "MS"}},
-	{"MISSOURI", "MO", []string{"MISSOURI", "MO"}},
-	{"MONTANA", "MT", []string{"MONTANA", "MT"}},
-	{"NEBRASKA", "NE", []string{"NEBRASKA", "NE"}},
-	{"NEVADA", "NV", []string{"NEVADA", "NV"}},
-	{"NEW HAMPSHIRE", "NH", []string{"NEW HAMPSHIRE", "NH"}},
-	{"NEW JERSEY", "NJ", []string{"NEW JERSEY", "NJ"}},
-	{"NEW MEXICO", "NM", []string{"NEW MEXICO", "NM"}},
-	{"NEW YORK", "NY", []string{"NEW YORK", "NY"}},
+	{"MARYLAND", "MD", []string{"MARYLAND", "MD"}, true},
+	{"MASSACHUSETTS", "MA", []string{"MASSACHUSETTS", "MA", "MASS"}, true},
+	{"MICHIGAN", "MI", []string{"MICHIGAN", "MI"}, true},
+	{"MINNESOTA", "MN", []string{"MINNESOTA", "MN", "MINN"}, true},
+	{"MISSISSIPPI", "MS", []string{"MISSISSIPPI", "MS"}, true},
+	{"MISSOURI", "MO", []string{"MISSOURI", "MO"}, true},
+	{"MONTANA", "MT", []string{"MONTANA", "MT"}, true},
+	{"NEBRASKA", "NE", []string{"NEBRASKA", "NE"}, true},
+	{"NEVADA", "NV", []string{"NEVADA", "NV"}, true},
+	{"NEW HAMPSHIRE", "NH", []string{"NEW HAMPSHIRE", "NH"}, true},
+	{"NEW JERSEY", "NJ", []string{"NEW JERSEY", "NJ"}, true},
+	{"NEW MEXICO", "NM", []string{"NEW MEXICO", "NM"}, true},
+	{"NEW YORK", "NY", []string{"NEW YORK", "NY"}, true},
 	{
 		Primary: "NORTH CAROLINA",
 		Short:   "NC",
@@ -168,6 +171,7 @@ var usStatesAndTerretories = []RegionInfo{
 			"N CAROLINA",
 			"NC",
 		},
+		PossibleStreetName: true,
 	},
 	{
 		Primary: "NORTH DAKOTA",
@@ -177,6 +181,7 @@ var usStatesAndTerretories = []RegionInfo{
 			"N DAKOTA",
 			"ND",
 		},
+		PossibleStreetName: true,
 	},
 	{
 		Primary: "NORTHERN MARIANA ISLANDS",
@@ -196,13 +201,14 @@ var usStatesAndTerretories = []RegionInfo{
 			"N MARIANA ISLD",
 			"MP",
 		},
+		PossibleStreetName: true,
 	},
-	{"OHIO", "OH", []string{"OHIO", "OH"}},
-	{"OKLAHOMA", "OK", []string{"OKLAHOMA", "OK"}},
-	{"OREGON", "OR", []string{"OREGON", "OR"}},
-	{"PALAU", "PW", []string{"PALAU", "PW"}},
-	{"PENNSYLVANIA", "PA", []string{"PENNSYLVANIA", "PENN", "PA"}},
-	{"PUERTO RICO", "PR", []string{"PUERTO RICO", "PR"}},
+	{"OHIO", "OH", []string{"OHIO", "OH"}, true},
+	{"OKLAHOMA", "OK", []string{"OKLAHOMA", "OK"}, true},
+	{"OREGON", "OR", []string{"OREGON", "OR"}, true},
+	{"PALAU", "PW", []string{"PALAU", "PW"}, true},
+	{"PENNSYLVANIA", "PA", []string{"PENNSYLVANIA", "PENN", "PA"}, true},
+	{"PUERTO RICO", "PR", []string{"PUERTO RICO", "PR"}, true},
 	{
 		Primary: "RHODE ISLAND",
 		Short:   "RI",
@@ -213,6 +219,7 @@ var usStatesAndTerretories = []RegionInfo{
 			"RHODE ISLD",
 			"RI",
 		},
+		PossibleStreetName: true,
 	},
 	{
 		Primary: "SOUTH CAROLINA",
@@ -222,6 +229,7 @@ var usStatesAndTerretories = []RegionInfo{
 			"S CAROLINA",
 			"SC",
 		},
+		PossibleStreetName: true,
 	},
 	{
 		Primary: "SOUTH DAKOTA",
@@ -231,11 +239,12 @@ var usStatesAndTerretories = []RegionInfo{
 			"S DAKOTA",
 			"SD",
 		},
+		PossibleStreetName: true,
 	},
-	{"TENNESSEE", "TN", []string{"TENNESSEE", "TENN", "TN"}},
-	{"TEXAS", "TX", []string{"TEXAS", "TX"}},
-	{"UTAH", "UT", []string{"UTAH", "UT"}},
-	{"VERMONT", "VT", []string{"VERMONT", "VT"}},
+	{"TENNESSEE", "TN", []string{"TENNESSEE", "TENN", "TN"}, true},
+	{"TEXAS", "TX", []string{"TEXAS", "TX"}, true},
+	{"UTAH", "UT", []string{"UTAH", "UT"}, true},
+	{"VERMONT", "VT", []string{"VERMONT", "VT"}, true},
 	{
 		Primary: "VIRGIN ISLANDS",
 		Short:   "VI",
@@ -258,19 +267,20 @@ var usStatesAndTerretories = []RegionInfo{
 			"VI USA",
 			"VI",
 		},
+		PossibleStreetName: true,
 	},
-	{"VIRGINIA", "VA", []string{"VIRGINIA", "VA"}},
-	{"WASHINGTON", "WA", []string{"WASHINGTON", "WA"}},
-	{"WEST VIRGINIA", "WV", []string{"WEST VIRGINIA", "W VIRGINIA", "VW"}},
-	{"WISCONSIN", "WI", []string{"WISCONSIN", "WI"}},
-	{"WYOMING", "WY", []string{"WYOMING", "WY"}},
+	{"VIRGINIA", "VA", []string{"VIRGINIA", "VA"}, true},
+	{"WASHINGTON", "WA", []string{"WASHINGTON", "WA"}, true},
+	{"WEST VIRGINIA", "WV", []string{"WEST VIRGINIA", "W VIRGINIA", "WV"}, true},
+	{"WISCONSIN", "WI", []string{"WISCONSIN", "WI"}, true},
+	{"WYOMING", "WY", []string{"WYOMING", "WY"}, true},
 }
 
 var canadianProvincesAndTerritories = []RegionInfo{
-	{"ALBERTA", "AB", []string{"ALBERTA", "AB"}},
-	{"BRITISH COLUMBIA", "BC", []string{"BRITISH COLUMBIA", "BC"}},
-	{"MANITOBA", "MB", []string{"MANITOBA", "MB"}},
-	{"NEW BRUNSWICK", "NB", []string{"NEW BRUNSWICK", "NB"}},
+	{"ALBERTA", "AB", []string{"ALBERTA", "AB"}, true},
+	{"BRITISH COLUMBIA", "BC", []string{"BRITISH COLUMBIA", "BC"}, true},
+	{"MANITOBA", "MB", []string{"MANITOBA", "MB"}, true},
+	{"NEW BRUNSWICK", "NB", []string{"NEW BRUNSWICK", "NB"}, true},
 	{
 		Primary: "NEWFOUNDLAND AND LABRADOR",
 		Short:   "NL",
@@ -280,6 +290,7 @@ var canadianProvincesAndTerritories = []RegionInfo{
 			"LABRADOR",
 			"NL",
 		},
+		PossibleStreetName: false,
 	},
 	{
 		Primary: "NORTHWEST TERRITORIES",
@@ -292,7 +303,7 @@ var canadianProvincesAndTerritories = []RegionInfo{
 			"NT",
 		},
 	},
-	{"NOVA SCOTIA", "NS", []string{"NOVA SCOTIA", "NS"}},
+	{"NOVA SCOTIA", "NS", []string{"NOVA SCOTIA", "NS"}, true},
 	{
 		Primary: "NUNAVAT TERRITORIES",
 		Short:   "NU",
@@ -302,7 +313,7 @@ var canadianProvincesAndTerritories = []RegionInfo{
 			"NU",
 		},
 	},
-	{"ONTARIO", "ON", []string{"ONTARIO", "ON"}},
+	{"ONTARIO", "ON", []string{"ONTARIO", "ON"}, true},
 	{
 		Primary: "PRINCE EDWARD ISLAND",
 		Short:   "PE",
@@ -314,8 +325,8 @@ var canadianProvincesAndTerritories = []RegionInfo{
 			"PE",
 		},
 	},
-	{"QUEBEC", "QC", []string{"QUEBEC", "QC"}},
-	{"SASKATCHEWAN", "SK", []string{"SASKATCHEWAN", "SK"}},
+	{"QUEBEC", "QC", []string{"QUEBEC", "QC"}, true},
+	{"SASKATCHEWAN", "SK", []string{"SASKATCHEWAN", "SK"}, true},
 	{
 		Primary: "YUKON TERRITORY",
 		Short:   "YT",
@@ -325,6 +336,7 @@ var canadianProvincesAndTerritories = []RegionInfo{
 			"YUKON",
 			"YT",
 		},
+		PossibleStreetName: true,
 	},
 }
 
@@ -337,8 +349,9 @@ var usMillitaryRegions = []RegionInfo{
 			"ARMED FORCES EUROPE",
 			"AE",
 		},
+		PossibleStreetName: false,
 	},
-	{"ARMED FORCES PACIFIC", "AP", []string{"ARMED FORCES PACIFIC", "AP"}},
+	{"ARMED FORCES PACIFIC", "AP", []string{"ARMED FORCES PACIFIC", "AP"}, false},
 	{
 		Primary: "ARMED FORCES AMERICA",
 		Short:   "AA",
@@ -347,11 +360,12 @@ var usMillitaryRegions = []RegionInfo{
 			"ARMED FORCES AMERICA",
 			"AA",
 		},
+		PossibleStreetName: false,
 	},
 }
 
 var regionMap = maps.Collect(func(yield func(string, RegionInfo) bool) {
-	for _, v := range usStatesAndTerretories {
+	for _, v := range usStatesAndPossessions {
 		for _, a := range v.Alt {
 			if !yield(a, v) {
 				return
@@ -414,9 +428,10 @@ func Info(r string, fuzzy bool) (*RegionInfo, error) {
 	fmt.Printf("r: %s info: %v\n", r, info)
 
 	return &RegionInfo{
-		Primary: info.Primary,
-		Short:   info.Short,
-		Alt:     slices.Clone(info.Alt),
+		Primary:            info.Primary,
+		Short:              info.Short,
+		Alt:                slices.Clone(info.Alt),
+		PossibleStreetName: info.PossibleStreetName,
 	}, nil
 }
 

@@ -120,9 +120,9 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 				if i < len(snparts)-1 {
 					// state names in the street name should be full text if there are not
 					// other, non-suffix elements in the street name.
-					regioninfo, err := region.Info(snp, false)
-					if err == nil {
-						fmt.Printf("snp: %s regioninfo: %v i: %d len(snparts): %d\n", snp, regioninfo, i, len(snparts))
+					regioninfo, _ := region.Info(snp, false)
+					fmt.Printf("snp: %s regioninfo: %v i: %d len(snparts): %d\n", snp, regioninfo, i, len(snparts))
+					if regioninfo != nil && regioninfo.PossibleStreetName {
 						if i == 0 && len(snparts) <= 2 {
 							// replace the part with the full state name
 							snparts[i] = regioninfo.Primary

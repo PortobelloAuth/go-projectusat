@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -50,6 +51,22 @@ const (
 	LIBPOSTAL_LABEL_WEBSITE   = "website"
 	LIBPOSTAL_LABEL_TELEPHONE = "phone"
 )
+
+var specialCaseMap = map[string]string{
+	"FARM TO MARKET": "FM",
+}
+var specialCases = slices.Collect(func(yield func(string) bool) {
+	for k, v := range specialCaseMap {
+		if !yield(k) {
+			return
+		}
+		if !yield(v) {
+			return
+		}
+	}
+
+})
+var specialCaseReplacer = strings.NewReplacer(specialCases...)
 
 type LibpostalHttpService struct {
 	BaseURL *url.URL
@@ -143,7 +160,14 @@ func (l *LibpostalHttpService) HTTPExpand(address string) ([]string, error) {
 
 func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 	fmt.Println("Using libpostalhttp.Parse()")
-	parsed, err := l.HTTPParse(input)
+
+	// FIXME?: what do we do about mismatches in libpostal parsing like
+	// the 1200 in "9062 farm to market 1200" being mis-parsed as a postal code?
+	// Some of this may be driven by not providing a full address, but...
+	uppercase := strings.ToUpper(input)
+	replaced := specialCaseReplacer.Replace(uppercase)
+
+	parsed, err := l.HTTPParse(replaced)
 	if err != nil {
 		return nil, err
 	}
