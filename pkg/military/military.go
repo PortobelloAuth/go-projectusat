@@ -7,6 +7,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 /*
@@ -110,7 +111,7 @@ var postalCode = regexp.MustCompile(`^\d{5}(-\d{4})?$`)
 // "{TYPE} {ASSIGNED} BOX {BOXNUM}" (uppercase, single spaces).
 // TYPE is one of CMR, OMC, PSC, UMR, UNIT.
 func NormalizeStreetLine(line string) (string, error) {
-	s := collapseSpace(strings.ToUpper(strings.TrimSpace(line)))
+	s := textutil.CollapseSpace(strings.ToUpper(strings.TrimSpace(line)))
 	if s == "" {
 		return "", fmt.Errorf("empty military street line")
 	}
@@ -142,7 +143,7 @@ func NormalizeStreetLine(line string) (string, error) {
 // "{APO|FPO|DPO} {AE|AP|AA} {ZIP|ZIP+4}".
 // City or country names must not appear; extra tokens are rejected.
 func NormalizeLastLine(line string) (city, region, postal string, err error) {
-	s := collapseSpace(strings.ToUpper(strings.TrimSpace(line)))
+	s := textutil.CollapseSpace(strings.ToUpper(strings.TrimSpace(line)))
 	if s == "" {
 		return "", "", "", fmt.Errorf("empty military last line")
 	}
@@ -169,10 +170,6 @@ func NormalizeLastLine(line string) (city, region, postal string, err error) {
 	}
 
 	return city, region, postal, nil
-}
-
-func collapseSpace(s string) string {
-	return strings.Join(strings.Fields(s), " ")
 }
 
 func MostLikelyTokens(t []token.Token) []int {
