@@ -68,7 +68,6 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 		- run verifier to check whether the address is verifiable (does not error)
 	*/
 	tokens := token.Tokenize(source)
-	fmt.Printf("tokens: %v\n", tokens)
 
 	postalcode.MostLikelyTokens(tokens)
 	// use the most likely zip code and/or region to select Puerto Rico or military

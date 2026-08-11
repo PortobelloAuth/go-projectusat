@@ -54,7 +54,6 @@ func Normalize(sn string) (string, error) {
 
 	replaced := poboxReplacer.Replace(capitalized)
 
-	fmt.Printf("street name: %s, capitalized: %s, replaced: %s\n", sn, capitalized, replaced)
 	// See if we replaced anything
 	if poboxPattern.MatchString(replaced) {
 		return replaced, nil

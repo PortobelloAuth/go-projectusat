@@ -1526,7 +1526,6 @@ func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error)
 		return "", err
 	}
 
-	fmt.Printf("src: %s info: %v\n", src, info)
 	if primary {
 		return info.Primary, nil
 	}

@@ -61,15 +61,12 @@ func Normalize(sn string) (string, error) {
 	capitalized = alphanumspace.ReplaceAllString(capitalized, "")
 	capitalized = whitespace.ReplaceAllString(capitalized, " ")
 
-	fmt.Printf("street name: %s, capitalized: %s\n", sn, capitalized)
 	replaced := ruralrouteReplacer.Replace(capitalized)
 	replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
-	fmt.Printf("street name: %s, capitalized: %s, replaced: %s\n", sn, capitalized, replaced)
 
 	suffix := ruralroutePattern.ReplaceAllString(replaced, "")
 	replaced, _ = strings.CutSuffix(replaced, suffix)
 
-	fmt.Printf("street name: %s, capitalized: %s, replaced: %s\n", sn, capitalized, replaced)
 	// See if we replaced anything
 	if ruralroutePattern.MatchString(replaced) {
 		return replaced, nil

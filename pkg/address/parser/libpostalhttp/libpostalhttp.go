@@ -159,8 +159,6 @@ func (l *LibpostalHttpService) HTTPExpand(address string) ([]string, error) {
 }
 
 func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
-	fmt.Println("Using libpostalhttp.Parse()")
-
 	// FIXME?: what do we do about mismatches in libpostal parsing like
 	// the 1200 in "9062 farm to market 1200" being mis-parsed as a postal code?
 	// Some of this may be driven by not providing a full address, but...
@@ -240,11 +238,6 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 			post2part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[numparts-2:], ""))
 			post1part, _ := directionals.AbbreviateDirectional(strings.Join(stparts[numparts-1:], ""))
 
-			fmt.Printf("pre2part: %s\npre1part: %s\npossiblestate: %v\n", pre2part, pre1part, possiblestate)
-			fmt.Printf("post2part:%s \npost1part: %s\n", post2part, post1part)
-			fmt.Printf("found:%d \nsuffix: %s\n", found, suffix)
-			fmt.Printf("numparts: %d\nbeforesuffix: %d\naftersuffix: %d\n", numparts, beforesuffix, aftersuffix)
-
 			nondirparts := stparts[0:]
 			// FIXME?: the before/after suffix logic may not be correct when no suffix is found
 			if len(pre2part) > 0 && (beforesuffix > 2 || (beforesuffix == 2 && aftersuffix >= max(len(post2part), len(post1part)))) {
@@ -294,7 +287,6 @@ func (l *LibpostalHttpService) Parse(input string) (*address.Address, error) {
 				}
 			}
 
-			fmt.Printf("nondirparts: %v\n", nondirparts)
 			if found >= 0 && len(nondirparts) > 1 {
 				nondirparts[found] = suffix
 			}

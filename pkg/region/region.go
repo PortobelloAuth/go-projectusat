@@ -425,8 +425,6 @@ func Info(r string, fuzzy bool) (*RegionInfo, error) {
 	if !ok {
 		return nil, fmt.Errorf("Unrecognized state, possession, Canadian provice, or US Armed Forces region")
 	}
-	fmt.Printf("r: %s info: %v\n", r, info)
-
 	return &RegionInfo{
 		Primary:            info.Primary,
 		Short:              info.Short,

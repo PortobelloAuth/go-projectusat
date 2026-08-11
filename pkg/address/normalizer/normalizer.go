@@ -106,7 +106,6 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		}
 		// if street name has only 1 word, run it through the streetsuffix normalizer
 		snparts := whitespace.Split(sn, -1)
-		fmt.Printf("sn: %s parts: %v\n", sn, snparts)
 		if snparts[0] == sn {
 			ss, err := streetsuffixes.NormalizeStreetSuffix(sn)
 			if err == nil {
@@ -116,7 +115,6 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 			for i, snp := range snparts {
 				// directionals left in the street name should be the full text
 				full, err := directionals.NormalizeDirectional(snp)
-				fmt.Printf("sn: %s snp: %s full: %s i: %d\n", sn, snp, full, i)
 				if err == nil {
 					// replace the part
 					snparts[i] = full
@@ -126,7 +124,6 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 					// state names in the street name should be full text if there are not
 					// other, non-suffix elements in the street name.
 					regioninfo, _ := region.Info(snp, false)
-					fmt.Printf("snp: %s regioninfo: %v i: %d len(snparts): %d\n", snp, regioninfo, i, len(snparts))
 					if regioninfo != nil && regioninfo.PossibleStreetName {
 						if i == 0 && len(snparts) <= 2 {
 							// replace the part with the full state name
@@ -153,7 +150,6 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		// On error (e.g. empty after internal trim), keep collapsed uppercase name.
 		// TODO: check for an errantly parsed predirectional as well
 		hw, err := highways.NormalizeStreetName(sn)
-		fmt.Printf("sn: %s hw: %s err: %s\n", sn, hw, err)
 		if err == nil {
 			out.StreetName = hw
 		} else {
