@@ -204,3 +204,57 @@ func TestNormalizeSecondaryUnknown(t *testing.T) {
 		})
 	}
 }
+
+func TestLooksLikePRPostal(t *testing.T) {
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{"00601", true}, // Adjuntas
+		{"00745", true}, // Rio Grande
+		{"00926", true}, // San Juan
+		{"00926-1234", true},
+		{"00926 1234", true},
+		{"00802", false}, // US Virgin Islands
+		{"00851", false}, // US Virgin Islands
+		{"62701", false},
+		{"0092", false}, // too short
+		{"", false},
+		{"K1A 0B1", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			if got := puertorico.LooksLikePRPostal(tc.in); got != tc.want {
+				t.Fatalf("LooksLikePRPostal(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUsePRDialect(t *testing.T) {
+	cases := []struct {
+		name   string
+		region string
+		postal string
+		want   bool
+	}{
+		{"region only", "PR", "", true},
+		{"region lowercase", "pr", "", true},
+		{"region padded", " PR ", "", true},
+		{"postal only", "", "00926", true},
+		{"both", "PR", "00926", true},
+		{"region wins over unrelated postal", "PR", "62701", true},
+		{"virgin islands", "VI", "00802", false},
+		{"mainland", "IL", "62701", false},
+		{"empty", "", "", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := puertorico.UsePRDialect(tc.region, tc.postal); got != tc.want {
+				t.Fatalf("UsePRDialect(%q, %q) = %v, want %v", tc.region, tc.postal, got, tc.want)
+			}
+		})
+	}
+}

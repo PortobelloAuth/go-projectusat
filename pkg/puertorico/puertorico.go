@@ -174,3 +174,41 @@ func NormalizeSecondary(s string) (string, error) {
 
 	return "", fmt.Errorf("Unrecognized secondary designator")
 }
+
+// prPostalPrefixes are the three-digit ZIP prefixes assigned to Puerto Rico.
+// 008 is deliberately absent: it belongs to the US Virgin Islands, which does
+// not use the Spanish vocabulary in this package.
+var prPostalPrefixes = map[string]bool{
+	"006": true,
+	"007": true,
+	"009": true,
+}
+
+// LooksLikePRPostal reports whether a postal code falls in a Puerto Rico ZIP
+// range. Non-digits are ignored, so "00926" and "00926-1234" both match.
+func LooksLikePRPostal(postal string) bool {
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, postal)
+
+	if len(digits) < 5 {
+		return false
+	}
+
+	return prPostalPrefixes[digits[:3]]
+}
+
+// UsePRDialect reports whether Puerto Rico Spanish vocabulary applies to an
+// address. A region code of PR is authoritative; a Puerto Rico ZIP range
+// engages the dialect on its own, so an address that arrives without a region
+// is still read in Spanish.
+func UsePRDialect(regionCode, postal string) bool {
+	if strings.EqualFold(strings.TrimSpace(regionCode), "PR") {
+		return true
+	}
+
+	return LooksLikePRPostal(postal)
+}
