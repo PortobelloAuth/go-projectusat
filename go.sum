@@ -2,5 +2,7 @@ github.com/anyascii/go v0.3.3 h1:A3BhW92hXPYPb8Y1+zLOip8xjSxNcdl1FaxzTmFxrhs=
 github.com/anyascii/go v0.3.3/go.mod h1:HDvbMmSpqJyIe+xtSkHmAYTjc8PzvO3l1Jmgx/IFUPs=
 github.com/hbollon/go-edlib v1.7.0 h1:Jt3AtZ+AdgtJhzkrCFvkbdbNL3KCqZlGioLnUfwsxeU=
 github.com/hbollon/go-edlib v1.7.0/go.mod h1:wnt6o6EIVEzUfgbUZY7BerzQ2uvzp354qmS2xaLkrhM=
+github.com/my-eq/go-usps v0.0.0-20251104211456-bed83412cac1 h1:bXbEHJhJUNk2u9WqQjMQu04d75wxTQy1EsNIi1lTOCY=
+github.com/my-eq/go-usps v0.0.0-20251104211456-bed83412cac1/go.mod h1:clMGxC88vCmbMeWamsK7LlSYKgJ6OKMhO75SaCxAfA4=
 golang.org/x/text v0.39.0 h1:UbZz4pLOvn600D6Oh6GGEI6VAmndrEBLv8/6BEXzyus=
 golang.org/x/text v0.39.0/go.mod h1:3UwRclnC2g0TU9x8PZiyfOajCd1zaUNHF9cvqcQZ+ZM=
