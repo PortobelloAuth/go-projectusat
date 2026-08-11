@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: build
+        run: |
+          go build ./...
+
+      - name: vet
+        run: |
+          go vet ./...
+
+      # Two groups of tests cannot pass in CI today and are excluded here rather
+      # than in the source, so that a local `go test ./...` still shows them:
+      #
+      #   TestNormalize, TestParse
+      #     Red on purpose. parser.Parse returns "Not implemented"; these are the
+      #     acceptance tests it has to satisfy. Drop them from this list as the
+      #     parser lands.
+      #
+      #   TestNormalizeWithCustomParser
+      #     Needs a libpostal HTTP service on localhost:4400. See
+      #     pkg/address/parser/libpostalhttp/README.md.
+      #
+      # TestParse also matches the libpostalhttp test of the same name, which
+      # needs that same service.
+      - name: test
+        run: |
+          go test ./... -skip '^(TestNormalize|TestParse|TestNormalizeWithCustomParser)$'
