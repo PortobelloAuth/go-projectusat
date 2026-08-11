@@ -15,6 +15,9 @@ type NormalizeTestCase struct {
 	in, want, group string
 }
 
+// cSharp parity test cases derrived from https://github.com/ica-carealign/project-us-normalizer.
+// https://github.com/ica-carealign/project-us-normalizer/blob/00e40d7c3ee3145655d14c4262a37640446ab491/src/ProjectUsNormalizer.csproj#L17
+// indicates that https://github.com/ica-carealign/project-us-normalizer is MIT licensed.
 var csharpParityCases = []NormalizeTestCase{
 	{"1011 South West Main Thing St North East Apt 12", "1011 SW MAIN THING ST NE APT 12", "dir"},
 	{"3002 NORTH EAST MAIN STREET", "3002 NE MAIN ST", "dir"},

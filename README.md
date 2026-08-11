@@ -5,6 +5,10 @@ This module implements the
 (which is an extension of the USPS publication 28 standard) for US Address
 Normalization directly in Go.
 
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE.md) file for details.
+
 ## This implementation is currently incomplete and its API should be considered unstable
 
 This implementation is incomplete and has not reached release status. It is
