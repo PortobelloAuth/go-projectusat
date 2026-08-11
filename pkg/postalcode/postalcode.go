@@ -19,6 +19,10 @@ import (
 // usZIPCompact matches ##### or #####-#### / ######### after punctuation strip.
 var usZIPCompact = regexp.MustCompile(`^(\d{5})(?:-?(\d{4}))?$`)
 
+// caPostalCompact matches a Canadian postal code with the separating space
+// removed (A1A1A1). Canada Post writes these as "A1A 1A1".
+var caPostalCompact = regexp.MustCompile(`^[A-Z]\d[A-Z]\d[A-Z]\d$`)
+
 // Normalize formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
 // as uppercase alphanumerics with collapsed spacing.
 func Normalize(s string) (string, error) {
@@ -37,7 +41,14 @@ func Normalize(s string) (string, error) {
 		return m[1], nil
 	}
 
-	// Canadian / other international: uppercase, collapse space, drop punctuation.
+	// Canadian: the forward sortation area and local delivery unit are separated
+	// by a single space, whether or not the input separated them at all. Unlike
+	// ZIP+4 the hyphen carries no meaning here, so treat it as a separator.
+	if caCompact := strings.ReplaceAll(compact, "-", ""); caPostalCompact.MatchString(caCompact) {
+		return caCompact[:3] + " " + caCompact[3:], nil
+	}
+
+	// Other international: uppercase, collapse space, drop punctuation.
 	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{})), nil
 }
 
