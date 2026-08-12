@@ -69,7 +69,7 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	*/
 	tokens := token.Tokenize(source)
 
-	postalcode.MostLikelyTokens(tokens)
+	postalcode.Claims(tokens)
 	// use the most likely zip code and/or region to select Puerto Rico or military
 	// specific parsers.
 	return nil, fmt.Errorf("Not implemented")

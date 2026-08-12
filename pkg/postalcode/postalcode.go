@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
@@ -50,9 +49,4 @@ func Normalize(s string) (string, error) {
 
 	// Other international: uppercase, collapse space, drop punctuation.
 	return textutil.CollapseSpace(textutil.StripPunctuation(s, textutil.StripOptions{})), nil
-}
-
-func MostLikelyTokens(t []token.Token) []int {
-	//
-	return nil
 }
