@@ -47,7 +47,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 	for start := range tokens {
 		span := min(maxSpan, len(tokens)-start)
 		for length := span; length >= 1; length-- {
-			candidate := strings.Join(texts(tokens[start:start+length]), " ")
+			candidate := token.Join(tokens[start : start+length])
 
 			info, err := Info(candidate, false)
 			if err != nil {
@@ -86,14 +86,4 @@ func regionConfidence(candidate string, length int) claim.Confidence {
 	}
 
 	return claim.ConfidenceStrong
-}
-
-// texts returns the Text of each token.
-func texts(tokens []token.Token) []string {
-	out := make([]string, len(tokens))
-	for i, t := range tokens {
-		out[i] = t.Text
-	}
-
-	return out
 }
