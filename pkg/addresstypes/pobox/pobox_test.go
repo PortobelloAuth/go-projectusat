@@ -3,7 +3,7 @@ package pobox_test
 import (
 	"testing"
 
-	"github.com/PortobelloAuth/go-projectusat/pkg/pobox"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 )
 
 var cases = []struct {

@@ -100,3 +100,14 @@ func FreeTextField(s string, diacriticMode diacritics.DiacriticMode) (string, er
 func BaseField(s string) string {
 	return Upper(CollapseSpace(s))
 }
+
+// JoinNonEmpty joins non-empty parts with sep.
+func JoinNonEmpty(sep string, parts ...string) string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, sep)
+}

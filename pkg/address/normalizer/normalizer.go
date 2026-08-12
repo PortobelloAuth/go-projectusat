@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
-	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
-	"github.com/PortobelloAuth/go-projectusat/pkg/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"

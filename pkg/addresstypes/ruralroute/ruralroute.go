@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 /*
@@ -73,4 +76,15 @@ func Normalize(sn string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Not a recognized rural route")
+}
+
+func FormatStreetLine(a *address.Address) string {
+	return textutil.JoinNonEmpty(" ",
+		a.Predirectional,
+		a.StreetName,
+		a.PrimaryNumber,
+		a.Postdirectional,
+		a.SecondaryDesignator,
+		a.SecondaryNumber,
+	)
 }

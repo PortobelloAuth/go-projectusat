@@ -1,14 +1,20 @@
 package address
 
 import (
-	"strings"
-
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
+
+type AddressType interface {
+	FormatStreetLine(a *Address) string
+}
 
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
 type Address struct {
+	// Type indicates that this address is a special format, such as ruralroute,
+	// military, pobox, puertorico, or streetsuffixfirst
+	Type         AddressType
 	BusinessName string // firm / business line (optional)
 
 	// Street line elements
@@ -44,7 +50,7 @@ func (a *Address) Format(opts ...FormatOptions) string {
 	if o.SingleLine {
 		sep = " "
 	}
-	return joinNonEmpty(sep, a.BusinessName, a.FormatStreetLine(), a.FormatLastLine())
+	return textutil.JoinNonEmpty(sep, a.BusinessName, a.FormatStreetLine(), a.FormatLastLine())
 }
 
 func (a *Address) FormatSingleLine(opts ...FormatOptions) string {
@@ -68,7 +74,10 @@ func variadicOptions(opts []FormatOptions) FormatOptions {
 // Normal Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
 // Rural Route Order: STREET PRIMARY SEC SECNUM.
 func (a *Address) FormatStreetLine() string {
-	return joinNonEmpty(" ",
+	if a.Type != nil {
+		return a.Type.FormatStreetLine(a)
+	}
+	return textutil.JoinNonEmpty(" ",
 		a.PrimaryNumber,
 		a.Predirectional,
 		a.StreetName,
@@ -82,16 +91,5 @@ func (a *Address) FormatStreetLine() string {
 // FormatLastLine joins CITY REGION POSTAL with single spaces (1+ spaces allowed
 // by standard; we use one). Omits blanks.
 func (a *Address) FormatLastLine() string {
-	return joinNonEmpty(" ", a.City, a.Region, a.Postal)
-}
-
-// joinNonEmpty joins non-empty parts with sep.
-func joinNonEmpty(sep string, parts ...string) string {
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return strings.Join(out, sep)
+	return textutil.JoinNonEmpty(" ", a.City, a.Region, a.Postal)
 }

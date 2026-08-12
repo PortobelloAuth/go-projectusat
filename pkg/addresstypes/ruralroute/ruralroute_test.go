@@ -3,7 +3,7 @@ package ruralroute_test
 import (
 	"testing"
 
-	"github.com/PortobelloAuth/go-projectusat/pkg/ruralroute"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
 )
 
 var cases = []struct {
