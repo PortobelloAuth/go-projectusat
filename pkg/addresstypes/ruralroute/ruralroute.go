@@ -78,7 +78,15 @@ func Normalize(sn string) (string, error) {
 	return "", fmt.Errorf("Not a recognized rural route")
 }
 
-func FormatStreetLine(a *address.Address) string {
+func NewRuralRoute(a *address.Address) (*address.Address, error) {
+	// TODO: check a to see if the type fits
+	a.Type = &RuralRouteAddress{}
+	return a, nil
+}
+
+type RuralRouteAddress struct{}
+
+func (rr *RuralRouteAddress) FormatStreetLine(a *address.Address) string {
 	return textutil.JoinNonEmpty(" ",
 		a.Predirectional,
 		a.StreetName,

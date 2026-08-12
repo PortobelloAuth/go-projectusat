@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
 )
 
 func TestFormatStreetLine(t *testing.T) {
@@ -210,6 +211,18 @@ func TestFormat(t *testing.T) {
 			name: "business only",
 			in:   address.Address{BusinessName: "ACME"},
 			want: "ACME",
+		},
+		{
+			name: "rural route address type",
+			in: address.Address{
+				Type:          &ruralroute.RuralRouteAddress{},
+				PrimaryNumber: "BOX 125",
+				StreetName:    "RR 4",
+				City:          "CUMBERLAND",
+				Region:        "IA",
+				Postal:        "50843",
+			},
+			want: "RR 4 BOX 125\nCUMBERLAND IA 50843",
 		},
 	}
 	for _, tc := range cases {
