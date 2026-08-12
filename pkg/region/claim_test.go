@@ -20,14 +20,12 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		text := ""
-		for i := c.Start; i < c.End(); i++ {
-			if text != "" {
-				text += " "
-			}
-			text += tokens[i].Text
-		}
-		out = append(out, reading{text, c.Part, c.Confidence, c.Value})
+		out = append(out, reading{
+			token.Join(tokens[c.Start:c.End()]),
+			c.Part,
+			c.Confidence,
+			c.Value,
+		})
 	}
 
 	return out
