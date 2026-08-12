@@ -3,6 +3,7 @@ package secondaryunit
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -66,8 +67,35 @@ var unitTypes = []SecondaryUnit{
 	{Primary: "Upper", Short: "UPPR", Numbered: false},
 }
 
+// DEVIATION FROM THE SPECIFICATION.
+//
+// Project US@ does not list BOX among the secondary unit designators above. It
+// appears only in the rural route, military, and post office box sections,
+// each of which describes the same thing: a designator followed by a number,
+// standardized as "BOX ___".
+//
+//	RR 4 BOX 125
+//	PSC 3 BOX 4120
+//
+// Recognizing it here rather than in each of those packages keeps one source of
+// truth for the word. The alternative — pkg/addresstypes/ruralroute and
+// pkg/addresstypes/military each knowing BOX independently — means two copies
+// of the same knowledge, which is the failure this package's table exists to
+// avoid.
+//
+// It is kept in a separate slice so that unitTypes remains a faithful
+// transcription of the list the standard gives, which is quoted above it.
+// Anything added here is this library's judgment, not the standard's.
+var nonStandardUnitTypes = []SecondaryUnit{
+	{Primary: "Box", Short: "BOX", Numbered: true},
+}
+
+// recognizedUnitTypes is every designator this library accepts, from the
+// standard and otherwise. The lookup maps derive from it.
+var recognizedUnitTypes = slices.Concat(unitTypes, nonStandardUnitTypes)
+
 var unitMap = maps.Collect(func(yield func(string, SecondaryUnit) bool) {
-	for _, v := range unitTypes {
+	for _, v := range recognizedUnitTypes {
 		if !yield(strings.ToUpper(v.Primary), v) {
 			return
 		}
@@ -75,7 +103,7 @@ var unitMap = maps.Collect(func(yield func(string, SecondaryUnit) bool) {
 })
 
 var unitShortMap = maps.Collect(func(yield func(string, string) bool) {
-	for _, v := range unitTypes {
+	for _, v := range recognizedUnitTypes {
 		if !yield(v.Short, strings.ToUpper(v.Primary)) {
 			return
 		}
