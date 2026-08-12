@@ -47,3 +47,18 @@ func Tokenize(source string) []Token {
 
 	return tokens
 }
+
+// Join reconstructs the text of a run of tokens, separated by single spaces.
+//
+// Tokenize discards the whitespace and commas between tokens, so this is the
+// canonical way to ask "what did these tokens say" — every package that matches
+// a multi-token span against a vocabulary has to agree on the answer, or claims
+// made over the same span will not compare.
+func Join(tokens []Token) string {
+	texts := make([]string, len(tokens))
+	for i, t := range tokens {
+		texts[i] = t.Text
+	}
+
+	return strings.Join(texts, " ")
+}
