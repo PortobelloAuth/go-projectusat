@@ -48,17 +48,28 @@ const (
 	// something else in the library can legitimately claim the same tokens.
 	ConfidenceLikely Confidence = 75
 
-	// ConfidenceWeak: a shape match only, with no entry in the vocabulary
-	// behind it. An unrecognized alphanumeric that merely looks postal.
+	// ConfidenceWeak: the vocabulary's own rule is satisfied by the shape of
+	// the tokens alone, with no table entry confirming them. A five digit
+	// number is a well formed ZIP whether or not it is an assigned one.
+	//
+	// This is the floor. A reading with neither a table entry nor a rule
+	// behind it is not weak evidence, it is no evidence, and is not claimed.
 	ConfidenceWeak Confidence = 50
 )
 
 // Claim is one vocabulary package's reading of a run of tokens.
 //
-// A package returns every reading it can support, including readings it
-// believes are unlikely, and does not attempt to choose between them or to
-// consider what the neighbouring tokens are. Deciding which claims survive is
-// the parser's job: a claim is evidence, not an assignment.
+// A package returns every reading that could be correct, and does not attempt
+// to choose between them or to consider what the neighbouring tokens are.
+// Deciding which claims survive is the parser's job: a claim is evidence, not
+// an assignment.
+//
+// "Could be correct" is the boundary, and it is narrower than "anything the
+// package can think of". A reading belongs in the result when something in the
+// vocabulary supports it — a table entry, an alias, or a rule the package owns
+// about the shape of a value. A reading the package can construct but has no
+// basis for is not a low confidence claim; it is not a claim. Confidence
+// ranks the readings that qualify, it is not a way to admit ones that do not.
 //
 // Because a package may return more than one Claim over the same tokens, and
 // because claims from different packages may overlap, the full set of claims
