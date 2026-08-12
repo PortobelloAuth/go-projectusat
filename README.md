@@ -9,6 +9,16 @@ Normalization directly in Go.
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE.md) file for details.
 
+## Contributing and extending
+
+This is a reference implementation, intended to be read, extended, and plugged
+into other systems. [CONTRIBUTING.md](CONTRIBUTING.md) documents the development
+guidelines that apply to everyone working on it — design principles, how the
+package layout expresses the architecture, documentation and specification
+traceability expectations, testing and patient-data rules, and guidance for
+organizations extending the library downstream. Please read it before opening a
+pull request.
+
 ## This implementation is currently incomplete and its API should be considered unstable
 
 This implementation is incomplete and has not reached release status. It is
