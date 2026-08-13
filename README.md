@@ -7,7 +7,8 @@ Normalization directly in Go.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the Apache License 2.0 - see the
+[LICENSE](LICENSE.md) file for details.
 
 ## Contributing and extending
 
@@ -27,17 +28,19 @@ from potential backers.
 
 **What works today:** structured `Address` normalization (`Normalize` /
 `NormalizeWithOptions`), street/last-line formatting, and component packages
-under `pkg/` (regions, street suffixes, directionals, secondary units, diacritics,
-highways, text helpers).
+under `pkg/` (regions, street suffixes, directionals, secondary units,
+diacritics, highways, text helpers).
 
 **Not yet:** free-text multi-line address parsing (`Parse`), and root-level
 orchestration of Puerto Rico or military address flows. Use `pkg/puertorico` and
 `pkg/military` directly for those vocabularies and line helpers until they are
 wired into the root pipeline.
 
-**Prefer content form** (`Normalize`) when writing patient records; use
-`NormalizeWithOptions` when preparing addresses for match/exchange (see Options
-below).
+**Prefer content form** when writing patient records; `Normalize()` accepts
+`USAtNormalizeOption`s - `WithContentNormalization()` is effectively the
+default, but is useful for explicitly declaring your intent to use content
+normalization. `WithMatchingNormalization()` when preparing addresses for
+matching/exchange use cases (see Options below).
 
 ## Normalization of Input vs. Normalization for Comparison
 
@@ -48,8 +51,8 @@ through improved address quality." Note that this purpose is focused on how
 address data is standardized as it is collected and stored. This shows up in
 certain details of the specification (for instance, "Numeric street names, for
 example, 7TH ST or SEVENTH ST, MUST be conveyed exactly as it appears in the
-patient’s official identification (government issued or insurance card)," a
-task that is impossible during many patient matching operations.)
+patient’s official identification (government issued or insurance card)," a task
+that is impossible during many patient matching operations.)
 
 However, the specification also includes in its intended audience MPI and eMPI
 vendors, government agencies, data scientists, and others whose application of
@@ -77,17 +80,27 @@ abbreviations for these cases.)
 
 ### Options (content vs exchange)
 
-- **`Normalize`** — content form for storage: exact controlled vocabulary, preserves
-  diacritics, keeps secondary designators as standard abbreviations (`APT`, `STE`, …).
-- **`NormalizeWithOptions`** — same pipeline with exchange/matching knobs:
-  - `Fuzzy` — mild typos on region and street suffix via package `Fuzzy*` helpers
-  - `SecondaryAsHash` — rewrite secondary designators to `#` for comparison only
-    (not correct for content storage)
-  - `DiacriticMode` — `""` leave as-is; `"substitute"` / `"transliterate"` strip or
-    map diacritics on free-text fields (then uppercased again)
+**`Normalize(string, ...USAtNormalizeOption)`** is the primary interface this
+library exposes. It defaults to using "content form" normalization options that
+are appropriate for storage: an exact controlled vocabulary, diacritic
+preservation, and secondary designators as their standard abbreviations (`APT`,
+`STE`, …). The `WithContentNormalization()` option allows a caller to explicitly
+declare the intent to use these options and is strongly recommended for address
+intake and storage scenarios.
 
-Prefer content form when writing patient records; use options when preparing
-addresses for match/exchange.
+The **`WithMatchingNormalization()`** option allows `Normalize()` to be used for
+matching (aka exchange) scenarios. It allows:
+
+- `Fuzzy` — mild typos on region and street suffix via package `Fuzzy*` helpers
+- `SecondaryAsHash` — rewrite secondary designators to `#` for comparison only
+  (not correct for content storage)
+- `DiacriticMode` — `""` leave as-is; `"substitute"` / `"transliterate"` strip
+  or map diacritics on free-text fields (then uppercased again)
+
+The matching options provide a normalization that can match when the correct
+secondary designator was not known by one of the parties or minor text variation
+is detected. More sophisticated workflows allow these options and others to be
+set individually.
 
 ## Alternatives and related technologies
 
