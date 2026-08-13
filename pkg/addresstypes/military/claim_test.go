@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -52,11 +54,21 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
+			// The facility and its number are the street name; the box and its
+			// number are the primary address on it.
 			name: "facility designator opens the street line",
-			in:   "PSC",
+			in:   "PSC 3 BOX 4120",
 			want: []reading{
-				{"PSC", claim.PartStreetName, claim.ConfidenceExact, "PSC"},
+				{"PSC 3", claim.PartStreetName, claim.ConfidenceExact, "PSC 3"},
+				{"BOX 4120", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 4120"},
 			},
+		},
+		{
+			// A designator on its own is a fragment of a pattern that did not
+			// match, not weak evidence of a military address.
+			name: "facility designator alone is not claimed",
+			in:   "PSC",
+			want: []reading{},
 		},
 		{
 			name: "not military vocabulary",
@@ -82,15 +94,14 @@ func TestClaims(t *testing.T) {
 	}
 }
 
-// The standard's own example, claimed end to end. The numbers are not claimed:
-// 3 is an assigned number and 4120 a box number only because of the tokens in
-// front of them, which is positional knowledge this package does not have.
+// The standard's own example, claimed end to end.
 func TestClaimsFullMilitaryAddress(t *testing.T) {
 	tokens := token.Tokenize("PSC 3 BOX 4120\nAPO AE 09021-0002")
 	got := flatten(tokens, military.Claims(tokens))
 
 	want := []reading{
-		{"PSC", claim.PartStreetName, claim.ConfidenceExact, "PSC"},
+		{"PSC 3", claim.PartStreetName, claim.ConfidenceExact, "PSC 3"},
+		{"BOX 4120", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 4120"},
 		{"APO", claim.PartCity, claim.ConfidenceExact, "APO"},
 		{"AE", claim.PartRegion, claim.ConfidenceExact, "AE"},
 	}
@@ -105,27 +116,40 @@ func TestClaimsFullMilitaryAddress(t *testing.T) {
 	}
 }
 
-// BOX is deliberately unclaimed. Rural route addresses use the same word for
-// the same purpose, and it should not be owned by two packages at once.
-func TestClaimsDoesNotClaimBox(t *testing.T) {
-	tokens := token.Tokenize("BOX")
+// BOX is never claimed on its own. Here it opens the primary number, in a
+// rural route it does the same, and in a PO box it belongs to the designator.
+// The word means nothing without the pattern around it.
+func TestClaimsDoesNotClaimBoxAlone(t *testing.T) {
+	for _, in := range []string{"BOX", "BOX 4120"} {
+		t.Run(in, func(t *testing.T) {
+			tokens := token.Tokenize(in)
 
-	if claims := military.Claims(tokens); len(claims) != 0 {
-		t.Errorf("expected BOX to be left to a shared vocabulary, got %+v", claims)
+			if claims := military.Claims(tokens); len(claims) != 0 {
+				t.Errorf("expected nothing claimed without the facility in front, got %+v", claims)
+			}
+		})
 	}
 }
 
 // UNIT is a facility designator here and a secondary unit designator in
-// pkg/secondaryunit. Both readings are real; this package states its own
-// without hedging.
-func TestClaimsUnitDespiteSecondaryUnitAmbiguity(t *testing.T) {
-	tokens := token.Tokenize("UNIT")
+// pkg/secondaryunit. Requiring the whole pattern is what keeps the two apart:
+// a bare UNIT is left to pkg/secondaryunit, and only UNIT 2050 BOX 4190 is a
+// military street line.
+func TestClaimsUnitOnlyWithinTheFullPattern(t *testing.T) {
+	if claims := military.Claims(token.Tokenize("UNIT 4B")); len(claims) != 0 {
+		t.Errorf("a bare UNIT belongs to pkg/secondaryunit, got %+v", claims)
+	}
+
+	tokens := token.Tokenize("UNIT 2050 BOX 4190")
 	claims := military.Claims(tokens)
 
 	if len(claims) != 1 {
-		t.Fatalf("expected one claim, got %+v", claims)
+		t.Fatalf("expected one claim over the whole street line, got %+v", claims)
 	}
-	if claims[0].Part != claim.PartStreetName || claims[0].Confidence != claim.ConfidenceExact {
-		t.Errorf("got %+v, want the street name reading at exact confidence", claims[0])
+	if claims[0].Start() != 0 || claims[0].End() != 4 {
+		t.Errorf("claim covers [%d,%d), want [0,4)", claims[0].Start(), claims[0].End())
+	}
+	if len(claims[0].Parts) != 2 {
+		t.Errorf("expected a street name and a primary number, got %+v", claims[0].Parts)
 	}
 }
