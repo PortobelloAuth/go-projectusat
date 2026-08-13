@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -108,7 +110,7 @@ func TestClaimsAtEndOfAddress(t *testing.T) {
 	if len(claims) != 1 {
 		t.Fatalf("expected one country claim, got %+v", claims)
 	}
-	if got := token.Join(tokens[claims[0].Start:claims[0].End()]); got != "CANADA" {
+	if got := token.Join(tokens[claims[0].Start():claims[0].End()]); got != "CANADA" {
 		t.Errorf("claimed %q, want %q", got, "CANADA")
 	}
 }
