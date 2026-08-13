@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -105,7 +107,7 @@ func TestClaimsCanadianAcrossTwoTokens(t *testing.T) {
 	if len(claims) != 1 {
 		t.Fatalf("expected one claim over both tokens, got %+v", claims)
 	}
-	if claims[0].Length != 2 || claims[0].Value != "M5V 3L9" {
+	if claims[0].Length() != 2 || claims[0].Parts[0].Value != "M5V 3L9" {
 		t.Errorf("got %+v, want a length 2 claim valued M5V 3L9", claims[0])
 	}
 }
@@ -121,7 +123,7 @@ func TestClaimsOffersZIPInsideZIPPlusFour(t *testing.T) {
 	}
 
 	plusFour, bare := claims[0], claims[1]
-	if plusFour.Length != 2 || bare.Length != 1 {
+	if plusFour.Length() != 2 || bare.Length() != 1 {
 		t.Fatalf("expected a length 2 and a length 1 claim, got %+v", claims)
 	}
 	if !plusFour.Overlaps(bare) {
@@ -140,7 +142,7 @@ func TestClaimsAtEndOfAddress(t *testing.T) {
 	if len(claims) != 1 {
 		t.Fatalf("expected only the ZIP claimed, got %+v", claims)
 	}
-	if got := token.Join(tokens[claims[0].Start:claims[0].End()]); got != "84088" {
+	if got := token.Join(tokens[claims[0].Start():claims[0].End()]); got != "84088" {
 		t.Errorf("claimed %q, want %q", got, "84088")
 	}
 }
