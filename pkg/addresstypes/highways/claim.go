@@ -7,11 +7,17 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 )
 
-// maxSpan bounds how many tokens a highway name can cover. The longest forms
-// the standard gives are four words — CALIFORNIA COUNTY ROAD 555, HIGHWAY 66
-// FRONTAGE ROAD, HIGHWAY 3 BYPASS RD — and one more is allowed for a state
-// prefix in front of them.
-const maxSpan = 5
+// maxSpan bounds how many tokens a highway name can cover: four for the
+// longest form the standard gives — HIGHWAY 66 FRONTAGE ROAD, HIGHWAY 3
+// BYPASS RD — plus four for the longest region name that can prefix one,
+// FEDERATED STATES OF MICRONESIA.
+//
+// It is a constant rather than a derivation because the region half of it is
+// not reachable: pkg/region exports no way to enumerate its names or measure
+// its longest. Adding one is an API change and wants its own issue, so the
+// number is written down here with what it is made of, and this comment is the
+// only thing keeping the two in step.
+const maxSpan = 8
 
 // Claims returns every reading of tokens this package can support.
 //
@@ -49,11 +55,13 @@ func Claims(tokens []token.Token) []claim.Claim {
 			}
 
 			claims = append(claims, claim.Claim{
-				Start:      start,
-				Length:     length,
-				Part:       claim.PartStreetName,
 				Confidence: claim.ConfidenceStrong,
-				Value:      normalized,
+				Parts: []claim.ClaimPart{{
+					Start:  start,
+					Length: length,
+					Part:   claim.PartStreetName,
+					Value:  normalized,
+				}},
 			})
 		}
 	}
