@@ -8,8 +8,8 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
 )
 
-// reading is a Claim flattened to the token text it covers, so cases read as
-// "these words, claimed as this part, this strongly".
+// reading is a claim part flattened to the token text it covers, so cases read
+// as "these words, claimed as this part, this strongly".
 type reading struct {
 	text       string
 	part       claim.Part
@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -38,36 +40,80 @@ func TestClaims(t *testing.T) {
 		want []reading
 	}{
 		{
-			name: "standard designator",
+			name: "standard form",
+			in:   "RR 4 BOX 125",
+			want: []reading{
+				{"RR 4", claim.PartStreetName, claim.ConfidenceExact, "RR 4"},
+				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
+			},
+		},
+		{
+			// The standard's own examples of the spellings that normalize to RR.
+			name: "spelled out designator",
+			in:   "RURAL ROUTE 91 BOX A7",
+			want: []reading{
+				{"RURAL ROUTE 91", claim.PartStreetName, claim.ConfidenceExact, "RR 91"},
+				{"BOX A7", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX A7"},
+			},
+		},
+		{
+			name: "rfd designator",
+			in:   "RFD 82 BOX 12",
+			want: []reading{
+				{"RFD 82", claim.PartStreetName, claim.ConfidenceExact, "RR 82"},
+				{"BOX 12", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 12"},
+			},
+		},
+		{
+			// RD borrows a spelling that belongs to ROAD. Requiring the whole
+			// pattern is what makes it safe to claim at all: ROAD does not
+			// appear as "RD 51 # 25".
+			name: "rd designator with a number sign",
+			in:   "RD 51 # 25",
+			want: []reading{
+				{"RD 51", claim.PartStreetName, claim.ConfidenceExact, "RR 51"},
+				{"# 25", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 25"},
+			},
+		},
+		{
+			// The designator and the route number arrive as one token, so the
+			// street name part is one token wide and the value is not.
+			name: "glued designator and route number",
+			in:   "RR03 BOX 98D",
+			want: []reading{
+				{"RR03", claim.PartStreetName, claim.ConfidenceExact, "RR 3"},
+				{"BOX 98D", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 98D"},
+			},
+		},
+		{
+			// The box marker and its number arrive glued instead.
+			name: "glued box marker and number",
+			in:   "RFD ROUTE 4 #87A",
+			want: []reading{
+				{"RFD ROUTE 4", claim.PartStreetName, claim.ConfidenceExact, "RR 4"},
+				{"#87A", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 87A"},
+			},
+		},
+		{
+			// A designator alone is a fragment of a pattern that did not match.
+			name: "designator alone is not claimed",
 			in:   "RR",
-			want: []reading{
-				{"RR", claim.PartStreetName, claim.ConfidenceExact, "RR"},
-			},
+			want: []reading{},
 		},
 		{
-			name: "spelled out designator is a two token span",
-			in:   "RURAL ROUTE",
-			want: []reading{
-				{"RURAL ROUTE", claim.PartStreetName, claim.ConfidenceExact, "RR"},
-			},
-		},
-		{
-			name: "rural free delivery",
-			in:   "RFD",
-			want: []reading{
-				{"RFD", claim.PartStreetName, claim.ConfidenceExact, "RR"},
-			},
-		},
-		{
-			// RD is also the standard abbreviation for ROAD.
-			name: "borrowed spelling is rated lower",
+			// The case that made RD dangerous when designators were claimed on
+			// their own.
+			name: "road is not a rural route",
 			in:   "RD",
-			want: []reading{
-				{"RD", claim.PartStreetName, claim.ConfidenceLikely, "RR"},
-			},
+			want: []reading{},
 		},
 		{
-			name: "not a rural route designator",
+			name: "box alone is not claimed",
+			in:   "BOX 125",
+			want: []reading{},
+		},
+		{
+			name: "not a rural route",
 			in:   "MAIN STREET",
 			want: []reading{},
 		},
@@ -79,7 +125,7 @@ func TestClaims(t *testing.T) {
 			got := flatten(tokens, ruralroute.Claims(tokens))
 
 			if len(got) != len(tc.want) {
-				t.Fatalf("Claims(%q) returned %d claims, want %d: %+v", tc.in, len(got), len(tc.want), got)
+				t.Fatalf("Claims(%q) returned %d readings, want %d: %+v", tc.in, len(got), len(tc.want), got)
 			}
 			for i, w := range tc.want {
 				if got[i] != w {
@@ -90,35 +136,49 @@ func TestClaims(t *testing.T) {
 	}
 }
 
-// The standard's own example. Only the designator is claimed: the route number
-// and the box number depend on what precedes them, and BOX belongs to
-// pkg/secondaryunit.
-func TestClaimsFullRuralRoute(t *testing.T) {
-	tokens := token.Tokenize("RR 2 BOX 18")
+// Normalize drops whatever follows the pattern, so a claim built from the first
+// span that normalizes would swallow the street name after it. The standard's
+// own example is the one that shows it.
+func TestClaimsStopsAtTheEndOfThePattern(t *testing.T) {
+	tokens := token.Tokenize("RR 2 BOX 18 BRYAN DAIRY RD")
 	claims := ruralroute.Claims(tokens)
 
 	if len(claims) != 1 {
-		t.Fatalf("expected the designator alone, got %+v", claims)
+		t.Fatalf("expected one claim, got %+v", claims)
 	}
-	if claims[0].Start != 0 || claims[0].Length != 1 {
-		t.Errorf("claim %+v should cover only RR", claims[0])
+	if claims[0].Start() != 0 || claims[0].End() != 4 {
+		t.Errorf("claim covers [%d,%d), want [0,4) — the pattern and nothing after it",
+			claims[0].Start(), claims[0].End())
 	}
 }
 
-// Every recognized spelling normalizes to RR, which is the only form the
-// standard permits in a patient record.
-func TestClaimsAlwaysValueRR(t *testing.T) {
-	for _, in := range []string{"RR", "RFD", "RD", "RURAL ROUTE", "RFD ROUTE"} {
-		t.Run(in, func(t *testing.T) {
-			tokens := token.Tokenize(in)
-			claims := ruralroute.Claims(tokens)
+// The route and the box are one reading. A parser that kept the box without
+// the route would hold a reading this package never offered.
+func TestClaimIsIndivisible(t *testing.T) {
+	tokens := token.Tokenize("RR 4 BOX 125")
+	claims := ruralroute.Claims(tokens)
 
-			if len(claims) == 0 {
-				t.Fatalf("expected %q to be claimed", in)
-			}
-			if claims[0].Value != "RR" {
-				t.Errorf("Value = %q, want RR", claims[0].Value)
-			}
-		})
+	if len(claims) != 1 {
+		t.Fatalf("expected one claim, got %+v", claims)
+	}
+	if len(claims[0].Parts) != 2 {
+		t.Fatalf("expected a street name and a primary number, got %+v", claims[0].Parts)
+	}
+	if claims[0].Parts[0].Part != claim.PartStreetName ||
+		claims[0].Parts[1].Part != claim.PartPrimaryNumber {
+		t.Errorf("parts are %+v, want a street name then a primary number", claims[0].Parts)
+	}
+}
+
+// A rural route does not have to start the line.
+func TestClaimsWithinALongerLine(t *testing.T) {
+	tokens := token.Tokenize("ATTN SHIPPING RR 4 BOX 125")
+	claims := ruralroute.Claims(tokens)
+
+	if len(claims) != 1 {
+		t.Fatalf("expected one claim, got %+v", claims)
+	}
+	if claims[0].Start() != 2 {
+		t.Errorf("claim starts at %d, want 2", claims[0].Start())
 	}
 }
