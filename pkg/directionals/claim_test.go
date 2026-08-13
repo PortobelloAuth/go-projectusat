@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -64,14 +66,68 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
-			// Two word spellings are a documented scope limit.
-			name: "split compound is not claimed as one",
+			// The compound reading and the two separate readings are both
+			// offered. The compound ranks lower: the standard spells it as one
+			// word, so two tokens is the less expected form.
+			name: "compound spelled as two tokens",
 			in:   "NORTH EAST",
 			want: []reading{
+				{"NORTH EAST", claim.PartPredirectional, claim.ConfidenceLikely, "NE"},
+				{"NORTH EAST", claim.PartPostdirectional, claim.ConfidenceLikely, "NE"},
 				{"NORTH", claim.PartPredirectional, claim.ConfidenceStrong, "N"},
 				{"NORTH", claim.PartPostdirectional, claim.ConfidenceStrong, "N"},
 				{"EAST", claim.PartPredirectional, claim.ConfidenceStrong, "E"},
 				{"EAST", claim.PartPostdirectional, claim.ConfidenceStrong, "E"},
+			},
+		},
+		{
+			// The standard calls these out as invalid compounds, and the rule
+			// here reaches the same answer without listing them: EW is not a
+			// direction, so there is nothing to claim over the pair.
+			name: "opposed directions are not a compound",
+			in:   "EAST WEST",
+			want: []reading{
+				{"EAST", claim.PartPredirectional, claim.ConfidenceStrong, "E"},
+				{"EAST", claim.PartPostdirectional, claim.ConfidenceStrong, "E"},
+				{"WEST", claim.PartPredirectional, claim.ConfidenceStrong, "W"},
+				{"WEST", claim.PartPostdirectional, claim.ConfidenceStrong, "W"},
+			},
+		},
+		{
+			// NS is not a direction either.
+			name: "north south is not a compound",
+			in:   "NORTH SOUTH",
+			want: []reading{
+				{"NORTH", claim.PartPredirectional, claim.ConfidenceStrong, "N"},
+				{"NORTH", claim.PartPostdirectional, claim.ConfidenceStrong, "N"},
+				{"SOUTH", claim.PartPredirectional, claim.ConfidenceStrong, "S"},
+				{"SOUTH", claim.PartPostdirectional, claim.ConfidenceStrong, "S"},
+			},
+		},
+		{
+			// The pair is only a compound in the order the standard writes it.
+			// EN is not a direction; NE is.
+			name: "compound in the wrong order is not a compound",
+			in:   "EAST NORTH",
+			want: []reading{
+				{"EAST", claim.PartPredirectional, claim.ConfidenceStrong, "E"},
+				{"EAST", claim.PartPostdirectional, claim.ConfidenceStrong, "E"},
+				{"NORTH", claim.PartPredirectional, claim.ConfidenceStrong, "N"},
+				{"NORTH", claim.PartPostdirectional, claim.ConfidenceStrong, "N"},
+			},
+		},
+		{
+			// Abbreviations concatenate the same way, and the compound reading
+			// of two of them stays below a single-token abbreviation.
+			name: "compound spelled as two abbreviations",
+			in:   "N W",
+			want: []reading{
+				{"N W", claim.PartPredirectional, claim.ConfidenceStrong, "NW"},
+				{"N W", claim.PartPostdirectional, claim.ConfidenceStrong, "NW"},
+				{"N", claim.PartPredirectional, claim.ConfidenceExact, "N"},
+				{"N", claim.PartPostdirectional, claim.ConfidenceExact, "N"},
+				{"W", claim.PartPredirectional, claim.ConfidenceExact, "W"},
+				{"W", claim.PartPostdirectional, claim.ConfidenceExact, "W"},
 			},
 		},
 		{
@@ -111,7 +167,7 @@ func TestClaimsDoesNotResolveGridAddress(t *testing.T) {
 
 	for i := 0; i < len(claims); i += 2 {
 		pre, post := claims[i], claims[i+1]
-		if pre.Part != claim.PartPredirectional || post.Part != claim.PartPostdirectional {
+		if pre.Parts[0].Part != claim.PartPredirectional || post.Parts[0].Part != claim.PartPostdirectional {
 			t.Errorf("claims %d,%d are not a pre/post pair: %+v %+v", i, i+1, pre, post)
 		}
 		if !pre.Overlaps(post) {
@@ -133,7 +189,7 @@ func TestClaimsOffersTheWrongReadingWhenItCannotKnow(t *testing.T) {
 	if len(claims) != 2 {
 		t.Fatalf("expected the W claimed on both sides and nothing else, got %+v", claims)
 	}
-	if got := token.Join(tokens[claims[0].Start:claims[0].End()]); got != "W" {
+	if got := token.Join(tokens[claims[0].Start():claims[0].End()]); got != "W" {
 		t.Errorf("claimed %q, want %q", got, "W")
 	}
 }
