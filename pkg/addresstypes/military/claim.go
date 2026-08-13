@@ -18,18 +18,21 @@ import (
 //   - AE, AP, and AA stand where a region stands. They are not states, but the
 //     standard calls them the two-character state abbreviation and they are
 //     normalized as one.
-//   - CMR, OMC, PSC, UMR, and UNIT open the street line, in the position an
-//     ordinary address gives the street name.
+//   - CMR, PSC, UMR, and UNIT open the street line, and are claimed only as
+//     part of it.
 //
-// The assigned number and the box number that follow a facility designator are
-// not claimed. Like a secondary number after APT, they are what they are
-// because of the token in front of them, and that is positional knowledge this
-// package does not have. See pkg/secondaryunit for the same reasoning.
+// The street line is one claim over the whole pattern. PSC 3 BOX 4120 is a
+// facility and a box on it, so the facility and its number are the street name
+// and the box and its number are the primary address number — the same shape a
+// rural route has, and the reason both need a formatter of their own.
 //
-// BOX is likewise not claimed, though it appears in every military street
-// line. Rural route addresses use the same word for the same purpose, and two
-// packages emitting identical claims for one word would be two sources of
-// truth for it.
+// A facility designator is not claimed on its own. PSC standing by itself is
+// not weak evidence of a military address, it is a fragment of a pattern that
+// did not match, and UNIT alone is far more likely to be the secondary unit
+// designator that pkg/secondaryunit claims. BOX is likewise never claimed
+// alone: here it opens the primary number, in a rural route it does the same,
+// and in a PO box it belongs to the designator. The word means nothing without
+// the pattern around it.
 //
 // Nothing here decides that an address is a military address. That is a
 // judgment about the whole address rather than about a run of tokens, and it
@@ -39,43 +42,81 @@ func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for i, t := range tokens {
-		text := strings.ToUpper(t.Text)
-
-		part, ok := partFor(text)
-		if !ok {
-			continue
+		if part, ok := lastLinePart(strings.ToUpper(t.Text)); ok {
+			claims = append(claims, claim.Claim{
+				Confidence: claim.ConfidenceExact,
+				Parts: []claim.ClaimPart{{
+					Start:  i,
+					Length: 1,
+					Part:   part,
+					Value:  strings.ToUpper(t.Text),
+				}},
+			})
 		}
 
-		claims = append(claims, claim.Claim{
-			Start:      i,
-			Length:     1,
-			Part:       part,
-			Confidence: claim.ConfidenceExact,
-			Value:      text,
-		})
+		if c, ok := streetLineClaim(tokens, i); ok {
+			claims = append(claims, c)
+		}
 	}
 
 	return claims
 }
 
-// partFor reports which part of the address a military token occupies.
+// streetLineSpan is the length of a military street line in tokens, which the
+// standard fixes exactly: a facility designator, its assigned number, BOX, and
+// the box number.
+const streetLineSpan = 4
+
+// streetLineClaim reads a military street line starting at start.
 //
-// Every one of these is rated ConfidenceExact by Claims. They are fixed codes
+// NormalizeStreetLine is the recognizer rather than a formatter — unusually
+// for a Normalize function in this library, it returns an error for anything
+// that is not this pattern — so the rule for what counts lives in one place
+// and this function only has to say which tokens got which part.
+func streetLineClaim(tokens []token.Token, start int) (claim.Claim, bool) {
+	if start+streetLineSpan > len(tokens) {
+		return claim.Claim{}, false
+	}
+
+	normalized, err := NormalizeStreetLine(token.Join(tokens[start : start+streetLineSpan]))
+	if err != nil {
+		return claim.Claim{}, false
+	}
+
+	// NormalizeStreetLine emits exactly "TYPE ASSIGNED BOX BOXNUM".
+	fields := strings.Fields(normalized)
+
+	return claim.Claim{
+		Confidence: claim.ConfidenceExact,
+		Parts: []claim.ClaimPart{
+			{
+				Start:  start,
+				Length: 2,
+				Part:   claim.PartStreetName,
+				Value:  fields[0] + " " + fields[1],
+			},
+			{
+				Start:  start + 2,
+				Length: 2,
+				Part:   claim.PartPrimaryNumber,
+				Value:  fields[2] + " " + fields[3],
+			},
+		},
+	}, true
+}
+
+// lastLinePart reports which part of the last line a military token occupies.
+//
+// Both vocabularies are rated ConfidenceExact by Claims. They are fixed codes
 // that mean nothing else in this vocabulary, and unlike a spelled-out region
-// or suffix they are not ordinary words that turn up in place names. Where one
-// of them collides with another vocabulary — UNIT is also a secondary unit
-// designator — both packages are right, and the parser resolves it.
-func partFor(text string) (claim.Part, bool) {
+// or suffix they are not ordinary words that turn up in place names.
+func lastLinePart(text string) (claim.Part, bool) {
 	if validCities[text] {
 		return claim.PartCity, true
 	}
 
 	if validRegions[text] {
 		return claim.PartRegion, true
-	}
-
-	if _, ok := validAddressTypes[text]; ok {
-		return claim.PartStreetName, true
 	}
 
 	return "", false
