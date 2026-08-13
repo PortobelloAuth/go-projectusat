@@ -55,20 +55,24 @@ func Claims(tokens []token.Token) []claim.Claim {
 			}
 
 			claims = append(claims, claim.Claim{
-				Start:      start,
-				Length:     length,
-				Part:       claim.PartRegion,
 				Confidence: regionConfidence(candidate, length),
-				Value:      info.Short,
+				Parts: []claim.ClaimPart{{
+					Start:  start,
+					Length: length,
+					Part:   claim.PartRegion,
+					Value:  info.Short,
+				}},
 			})
 
 			if info.PossibleStreetName {
 				claims = append(claims, claim.Claim{
-					Start:      start,
-					Length:     length,
-					Part:       claim.PartStreetName,
 					Confidence: claim.ConfidenceLikely,
-					Value:      info.Primary,
+					Parts: []claim.ClaimPart{{
+						Start:  start,
+						Length: length,
+						Part:   claim.PartStreetName,
+						Value:  info.Primary,
+					}},
 				})
 			}
 		}
