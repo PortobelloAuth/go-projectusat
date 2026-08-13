@@ -8,8 +8,8 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 )
 
-// reading is a Claim flattened to the token text it covers, so cases read as
-// "these words, claimed as this part, this strongly".
+// reading is a claim part flattened to the token text it covers, so cases read
+// as "these words, claimed as this part, this strongly".
 type reading struct {
 	text       string
 	part       claim.Part
@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -38,50 +40,61 @@ func TestClaims(t *testing.T) {
 		want []reading
 	}{
 		{
-			name: "standard designator is a two token span",
-			in:   "PO BOX",
+			name: "standard designator",
+			in:   "PO BOX 11890",
 			want: []reading{
 				{"PO BOX", claim.PartStreetName, claim.ConfidenceExact, "PO BOX"},
+				{"11890", claim.PartPrimaryNumber, claim.ConfidenceExact, "11890"},
 			},
 		},
 		{
-			name: "spelled out designator is a three token span",
-			in:   "POST OFFICE BOX",
+			name: "spelled out designator",
+			in:   "POST OFFICE BOX 11890",
 			want: []reading{
 				{"POST OFFICE BOX", claim.PartStreetName, claim.ConfidenceExact, "PO BOX"},
+				{"11890", claim.PartPrimaryNumber, claim.ConfidenceExact, "11890"},
 			},
 		},
 		{
 			name: "single token abbreviation",
-			in:   "POB",
+			in:   "POB 11890",
 			want: []reading{
 				{"POB", claim.PartStreetName, claim.ConfidenceExact, "PO BOX"},
+				{"11890", claim.PartPrimaryNumber, claim.ConfidenceExact, "11890"},
 			},
 		},
 		{
 			// The standard tells developers to rewrite these, but they are
-			// ordinary words that mean other things in an address.
-			name: "synonym is real but contested",
-			in:   "DRAWER",
+			// ordinary words that mean other things in an address. With a box
+			// number after them the match is good; it is not exclusive.
+			name: "synonym is a good match but not an exclusive one",
+			in:   "DRAWER 214",
 			want: []reading{
 				{"DRAWER", claim.PartStreetName, claim.ConfidenceStrong, "PO BOX"},
+				{"214", claim.PartPrimaryNumber, claim.ConfidenceStrong, "214"},
 			},
 		},
 		{
-			// LOCKBOX contains BOX but is a synonym, not a reserved spelling.
+			// LOCKBOX is built from the same words as the reserved forms and is
+			// not one of them.
 			name: "lockbox is a synonym",
-			in:   "LOCKBOX",
+			in:   "LOCKBOX 214",
 			want: []reading{
 				{"LOCKBOX", claim.PartStreetName, claim.ConfidenceStrong, "PO BOX"},
+				{"214", claim.PartPrimaryNumber, claim.ConfidenceStrong, "214"},
 			},
 		},
 		{
-			name: "firm caller is a two token synonym",
-			in:   "FIRM CALLER",
-			want: []reading{
-				{"FIRM CALLER", claim.PartStreetName, claim.ConfidenceStrong, "PO BOX"},
-				{"CALLER", claim.PartStreetName, claim.ConfidenceStrong, "PO BOX"},
-			},
+			// A designator without a box number is not an address, so it is not
+			// a claim either.
+			name: "designator alone is not claimed",
+			in:   "PO BOX",
+			want: []reading{},
+		},
+		{
+			name: "synonym alone is not claimed",
+			in:   "DRAWER",
+			want: []reading{},
 		},
 		{
 			name: "not a post office box designator",
@@ -96,7 +109,7 @@ func TestClaims(t *testing.T) {
 			got := flatten(tokens, pobox.Claims(tokens))
 
 			if len(got) != len(tc.want) {
-				t.Fatalf("Claims(%q) returned %d claims, want %d: %+v", tc.in, len(got), len(tc.want), got)
+				t.Fatalf("Claims(%q) returned %d readings, want %d: %+v", tc.in, len(got), len(tc.want), got)
 			}
 			for i, w := range tc.want {
 				if got[i] != w {
@@ -107,50 +120,55 @@ func TestClaims(t *testing.T) {
 	}
 }
 
-// The standard's own example. The box number is not claimed: it means
-// something only because of the designator in front of it.
-func TestClaimsFullPOBox(t *testing.T) {
-	tokens := token.Tokenize("POST OFFICE BOX 11890")
+// FIRM CALLER contains CALLER, and both are recognized designators, so the
+// same tokens read two ways. Both are offered and they overlap; the parser
+// picks.
+func TestClaimsOffersNestedDesignator(t *testing.T) {
+	tokens := token.Tokenize("FIRM CALLER 214")
 	claims := pobox.Claims(tokens)
 
-	if len(claims) != 1 {
-		t.Fatalf("expected the designator alone, got %+v", claims)
+	if len(claims) != 2 {
+		t.Fatalf("expected the long and short designator readings, got %+v", claims)
 	}
-	if claims[0].Length != 3 || claims[0].End() != 3 {
-		t.Errorf("claim %+v should cover the designator and stop before the number", claims[0])
+	if claims[0].Start() != 0 || claims[1].Start() != 1 {
+		t.Errorf("expected readings starting at FIRM and at CALLER, got %+v", claims)
+	}
+	if !claims[0].Overlaps(claims[1]) {
+		t.Error("competing readings of the same tokens must overlap")
 	}
 }
 
-// This package claims the span PO BOX. pkg/secondaryunit separately claims the
-// BOX token inside it as a secondary designator, and both readings are real:
-// the same tokens could be a PO box or a street address with a box unit. This
-// package must claim the longer span and say nothing about the shorter one, or
-// the parser has nothing to weigh.
-func TestClaimsSpanNotTheInnerBoxToken(t *testing.T) {
+// The designator and the box number are one reading. A parser that kept the
+// number without the designator would hold a reading this package never
+// offered.
+func TestClaimIsIndivisible(t *testing.T) {
 	tokens := token.Tokenize("PO BOX 11890")
 	claims := pobox.Claims(tokens)
 
 	if len(claims) != 1 {
-		t.Fatalf("expected exactly one claim, got %+v", claims)
+		t.Fatalf("expected one claim, got %+v", claims)
 	}
-	if claims[0].Start != 0 || claims[0].Length != 2 {
-		t.Errorf("claim %+v should cover PO BOX, not BOX alone", claims[0])
+	if claims[0].Start() != 0 || claims[0].End() != 3 {
+		t.Errorf("claim covers [%d,%d), want [0,3)", claims[0].Start(), claims[0].End())
+	}
+	if len(claims[0].Parts) != 2 {
+		t.Fatalf("expected a street name and a primary number, got %+v", claims[0].Parts)
 	}
 }
 
 // Every recognized spelling normalizes to PO BOX, which the standard requires
 // developers to rewrite the synonyms to.
 func TestClaimsAlwaysValuePOBox(t *testing.T) {
-	for _, in := range []string{"PO BOX", "POST OFFICE BOX", "POB", "CALLER", "BIN", "LOCKBOX", "DRAWER"} {
-		t.Run(in, func(t *testing.T) {
-			tokens := token.Tokenize(in)
+	for _, designator := range []string{"PO BOX", "POST OFFICE BOX", "POB", "CALLER", "BIN", "LOCKBOX", "DRAWER"} {
+		t.Run(designator, func(t *testing.T) {
+			tokens := token.Tokenize(designator + " 214")
 			claims := pobox.Claims(tokens)
 
 			if len(claims) == 0 {
-				t.Fatalf("expected %q to be claimed", in)
+				t.Fatalf("expected %q to be claimed with a box number", designator)
 			}
-			if claims[0].Value != "PO BOX" {
-				t.Errorf("Value = %q, want PO BOX", claims[0].Value)
+			if got := claims[0].Parts[0].Value; got != "PO BOX" {
+				t.Errorf("street name value = %q, want PO BOX", got)
 			}
 		})
 	}
