@@ -3,6 +3,7 @@ package ruralroute_test
 import (
 	"testing"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
 )
 
@@ -43,5 +44,22 @@ func TestNotRuralRoute(t *testing.T) {
 	out, err := ruralroute.Normalize(notruralroute)
 	if err == nil {
 		t.Errorf("Expected error for non-rural route: %s got: %s", notruralroute, out)
+	}
+}
+
+// Directionals are deliberately absent: the standard's rural route order is
+// STREET PRIMARY SEC SECNUM, and additional designations do not apply.
+func TestFormatStreetLineOmitsDirectionals(t *testing.T) {
+	a := &address.Address{
+		Predirectional:      "N",
+		StreetName:          "RR 4",
+		PrimaryNumber:       "BOX 125",
+		Postdirectional:     "W",
+		SecondaryDesignator: "APT",
+		SecondaryNumber:     "2",
+	}
+
+	if got := (&ruralroute.RuralRouteAddress{}).FormatStreetLine(a); got != "RR 4 BOX 125 APT 2" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 4 BOX 125 APT 2")
 	}
 }

@@ -87,11 +87,11 @@ func NewRuralRoute(a *address.Address) (*address.Address, error) {
 type RuralRouteAddress struct{}
 
 func (rr *RuralRouteAddress) FormatStreetLine(a *address.Address) string {
+	// Rural Route Order: STREET PRIMARY SEC SECNUM.
+	// Other address parts are silently dropped.
 	return textutil.JoinNonEmpty(" ",
-		a.Predirectional,
 		a.StreetName,
 		a.PrimaryNumber,
-		a.Postdirectional,
 		a.SecondaryDesignator,
 		a.SecondaryNumber,
 	)
