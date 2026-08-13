@@ -21,6 +21,12 @@ import (
 // Designators the standard marks as unnumbered — BSMT, LBBY, REAR — are
 // claimed on their own, because standing alone is the whole of what they look
 // like.
+//
+// What can be a unit number is not restricted. Unit numbers are not reliably
+// numeric, and a landlord is free to name a unit anything at all, so refusing
+// a reading because the number does not look like one would drop real
+// addresses. The shape of the number sets the confidence instead: APT 4B is
+// exact, KEY WEST is a reading worth offering and losing.
 func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
@@ -46,12 +52,12 @@ func Claims(tokens []token.Token) []claim.Claim {
 			continue
 		}
 
-		if i+1 >= len(tokens) || !isUnitNumber(tokens[i+1].Text) {
+		if i+1 >= len(tokens) {
 			continue
 		}
 
 		claims = append(claims, claim.Claim{
-			Confidence: designatorConfidence(t.Text, info),
+			Confidence: numberedConfidence(t.Text, info, tokens[i+1].Text),
 			Parts: []claim.ClaimPart{
 				designator,
 				{
@@ -67,13 +73,28 @@ func Claims(tokens []token.Token) []claim.Claim {
 	return claims
 }
 
-// isUnitNumber reports whether a token can be the number of a secondary unit.
+// numberedConfidence rates a designator claimed together with its number.
 //
-// Unit numbers are not reliably numeric: UNIT A and APT 4B are both ordinary,
-// so the rule is a digit anywhere in the token, or a single alphanumeric
-// character. Without it any word following a designator would qualify, and
-// KEY WEST would read as unit WEST of a key.
-func isUnitNumber(text string) bool {
+// A number that looks like one leaves the rating to the designator. A number
+// that does not drops the whole reading to contested: KEY WEST is a city far
+// more often than it is unit WEST of a key, and the same is true of any
+// designator followed by an ordinary word. The reading is still offered —
+// someone will have named a unit KEY WEST — it just loses to anything else
+// competing for those tokens.
+func numberedConfidence(text string, info *SecondaryUnit, number string) claim.Confidence {
+	if !looksLikeUnitNumber(number) {
+		return claim.ConfidenceLikely
+	}
+
+	return designatorConfidence(text, info)
+}
+
+// looksLikeUnitNumber reports whether a token reads as a unit number: a digit
+// anywhere, or a single letter, which covers 4B, 200, and UNIT A alike.
+//
+// This is not a test of whether the token can be a unit number. Anything can.
+// It only separates the ordinary case from the one worth doubting.
+func looksLikeUnitNumber(text string) bool {
 	if strings.ContainsFunc(text, unicode.IsDigit) {
 		return true
 	}

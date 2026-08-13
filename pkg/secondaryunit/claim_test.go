@@ -92,11 +92,27 @@ func TestClaims(t *testing.T) {
 			want: []reading{},
 		},
 		{
-			// KEY is a numbered designator and WEST cannot be a unit number, so
-			// there is no pattern here to claim.
-			name: "designator followed by an ordinary word",
+			// Nothing rules out a unit named WEST, so the reading is offered.
+			// It is contested rather than refused: KEY WEST is a city far more
+			// often than it is unit WEST of a key.
+			name: "designator followed by an ordinary word is contested",
 			in:   "KEY WEST",
-			want: []reading{},
+			want: []reading{
+				{"KEY", claim.PartSecondaryDesignator, claim.ConfidenceLikely, "KEY"},
+				{"WEST", claim.PartSecondaryNumber, claim.ConfidenceLikely, "WEST"},
+			},
+		},
+		{
+			// A unit number may be several letters. PENTHOUSE is also an
+			// unnumbered designator in its own right, so the same token is
+			// claimed twice over and the parser is left both readings.
+			name: "multi letter unit number is contested",
+			in:   "APT PENTHOUSE",
+			want: []reading{
+				{"APT", claim.PartSecondaryDesignator, claim.ConfidenceLikely, "APT"},
+				{"PENTHOUSE", claim.PartSecondaryNumber, claim.ConfidenceLikely, "PENTHOUSE"},
+				{"PENTHOUSE", claim.PartSecondaryDesignator, claim.ConfidenceStrong, "PH"},
+			},
 		},
 		{
 			name: "not a designator",
