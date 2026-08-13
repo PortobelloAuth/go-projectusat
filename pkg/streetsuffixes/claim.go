@@ -28,11 +28,13 @@ func Claims(tokens []token.Token) []claim.Claim {
 		}
 
 		claims = append(claims, claim.Claim{
-			Start:      i,
-			Length:     1,
-			Part:       claim.PartStreetSuffix,
 			Confidence: suffixConfidence(t.Text, info),
-			Value:      info.Short,
+			Parts: []claim.ClaimPart{{
+				Start:  i,
+				Length: 1,
+				Part:   claim.PartStreetSuffix,
+				Value:  info.Short,
+			}},
 		})
 	}
 
