@@ -94,8 +94,12 @@ matching (aka exchange) scenarios. It allows:
 - `Fuzzy` — mild typos on region and street suffix via package `Fuzzy*` helpers
 - `SecondaryAsHash` — rewrite secondary designators to `#` for comparison only
   (not correct for content storage)
-- `DiacriticMode` — `""` leave as-is; `"substitute"` / `"transliterate"` strip
-  or map diacritics on free-text fields (then uppercased again)
+- `DiacriticMode` — an enumeration with 3 possible values:
+  - `diacritics.KeepDiacritics` does not change diacritics
+  - `diacritics.SubstituteDiacritics` substitutes diacritics acording to the
+  ProjectUS@ specification
+  - `diacritics.TransliterateDiacritics` transliterates diacritics, replacing
+  them with ASCII letter combinations that commonly represent them.
 
 The matching options provide a normalization that can match when the correct
 secondary designator was not known by one of the parties or minor text variation

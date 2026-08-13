@@ -106,7 +106,7 @@ func WithSingleLineFormatting() USAtNormalizeOption {
 	}
 }
 
-func WithDiacriticFormating(d diacritics.DiacriticMode) USAtNormalizeOption {
+func WithDiacriticFormatting(d diacritics.DiacriticMode) USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		fopts.DiacriticMode = d
 		return nil
