@@ -8,8 +8,8 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 )
 
-// reading is a Claim flattened to the token text it covers, so cases read as
-// "these words, claimed as this part, this strongly".
+// reading is a claim part flattened to the token text it covers, so cases read
+// as "these words, claimed as this part, this strongly".
 type reading struct {
 	text       string
 	part       claim.Part
@@ -17,15 +17,20 @@ type reading struct {
 	value      string
 }
 
+// flatten expands each claim into one reading per part. Every region claim
+// assigns exactly one part, so the two are one to one here; confidence is read
+// off the claim, which is where it lives.
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -128,8 +133,8 @@ func TestClaimsOffersCompetingReadings(t *testing.T) {
 		t.Errorf("region reading should outrank the street name reading in isolation: %d vs %d",
 			region0.Confidence, street0.Confidence)
 	}
-	if street0.Value != "WYOMING" {
-		t.Errorf("street name reading should spell the state out, got %q", street0.Value)
+	if got := street0.Parts[0].Value; got != "WYOMING" {
+		t.Errorf("street name reading should spell the state out, got %q", got)
 	}
 }
 
