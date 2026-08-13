@@ -37,11 +37,13 @@ func Claims(tokens []token.Token) []claim.Claim {
 			}
 
 			claims = append(claims, claim.Claim{
-				Start:      start,
-				Length:     length,
-				Part:       claim.PartPostal,
 				Confidence: confidence,
-				Value:      value,
+				Parts: []claim.ClaimPart{{
+					Start:  start,
+					Length: length,
+					Part:   claim.PartPostal,
+					Value:  value,
+				}},
 			})
 		}
 	}
