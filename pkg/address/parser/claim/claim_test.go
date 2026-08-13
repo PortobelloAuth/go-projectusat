@@ -141,17 +141,19 @@ func TestOverlaps(t *testing.T) {
 			want: false,
 		},
 		{
-			// PO BOX 11890 read as a post office box, against BOX read as a
-			// secondary designator. Different lengths, same tokens, and the
-			// reason a claim is a span rather than a per-token score.
-			name: "multi part claim against a claim inside it",
+			// PO BOX 11890 read as a post office box, against 11890 read as a
+			// ZIP on its shape alone. Both are real, they differ in length,
+			// and one of them has to lose — which is why a claim is a span
+			// rather than a per-token score.
+			name: "multi part claim against a shorter claim inside it",
 			a: claim.Claim{
+				Confidence: claim.ConfidenceExact,
 				Parts: []claim.ClaimPart{
-					{Start: 0, Length: 2, Part: claim.PartStreetName},
-					{Start: 2, Length: 1, Part: claim.PartPrimaryNumber},
+					{Start: 0, Length: 2, Part: claim.PartStreetName, Value: "PO BOX"},
+					{Start: 2, Length: 1, Part: claim.PartPrimaryNumber, Value: "11890"},
 				},
 			},
-			b:    span(1, 1),
+			b:    span(2, 1),
 			want: true,
 		},
 	}
