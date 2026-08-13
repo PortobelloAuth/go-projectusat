@@ -20,12 +20,14 @@ type reading struct {
 func flatten(tokens []token.Token, claims []claim.Claim) []reading {
 	out := make([]reading, 0, len(claims))
 	for _, c := range claims {
-		out = append(out, reading{
-			token.Join(tokens[c.Start:c.End()]),
-			c.Part,
-			c.Confidence,
-			c.Value,
-		})
+		for _, p := range c.Parts {
+			out = append(out, reading{
+				token.Join(tokens[p.Start:p.End()]),
+				p.Part,
+				c.Confidence,
+				p.Value,
+			})
+		}
 	}
 
 	return out
@@ -97,12 +99,12 @@ func TestClaimsSpansIncludeAndExcludeTheStatePrefix(t *testing.T) {
 	}
 
 	full := claims[0]
-	if full.Length != 4 || full.Value != "CA COUNTY ROAD 555" {
+	if full.Length() != 4 || full.Parts[0].Value != "CA COUNTY ROAD 555" {
 		t.Errorf("got %+v, want the full span abbreviated to CA COUNTY ROAD 555", full)
 	}
 
 	withoutState := claims[1]
-	if withoutState.Value != "COUNTY ROAD 555" {
+	if withoutState.Parts[0].Value != "COUNTY ROAD 555" {
 		t.Errorf("got %+v, want COUNTY ROAD 555", withoutState)
 	}
 	if !full.Overlaps(withoutState) {
@@ -119,11 +121,11 @@ func TestClaimsAreOrderedLongestFirst(t *testing.T) {
 	if len(claims) != 2 {
 		t.Fatalf("expected two readings, got %+v", claims)
 	}
-	if claims[0].Length <= claims[1].Length {
-		t.Errorf("expected longest first, got lengths %d then %d", claims[0].Length, claims[1].Length)
+	if claims[0].Length() <= claims[1].Length() {
+		t.Errorf("expected longest first, got lengths %d then %d", claims[0].Length(), claims[1].Length())
 	}
-	if claims[0].Value != "HIGHWAY 11 BYP" {
-		t.Errorf("got %q, want the bypass abbreviated as a suffix", claims[0].Value)
+	if claims[0].Parts[0].Value != "HIGHWAY 11 BYP" {
+		t.Errorf("got %q, want the bypass abbreviated as a suffix", claims[0].Parts[0].Value)
 	}
 }
 
@@ -136,7 +138,25 @@ func TestClaimsWithinAFullStreetLine(t *testing.T) {
 	if len(claims) != 1 {
 		t.Fatalf("expected only the highway claimed, got %+v", claims)
 	}
-	if claims[0].Start != 1 {
+	if claims[0].Start() != 1 {
 		t.Errorf("claim %+v should start after the primary number", claims[0])
+	}
+}
+
+// The longest reachable highway name: the longest region name the standard
+// lists, prefixed to the longest highway form it gives. This is what maxSpan
+// is sized for, and it is the case that showed 5 was too small.
+func TestClaimsLongestPrefixedForm(t *testing.T) {
+	tokens := token.Tokenize("FEDERATED STATES OF MICRONESIA HIGHWAY 3 BYPASS RD")
+	claims := highways.Claims(tokens)
+
+	if len(claims) == 0 {
+		t.Fatal("expected the full span to be claimed")
+	}
+	if got := claims[0].Length(); got != len(tokens) {
+		t.Errorf("longest claim covers %d tokens, want all %d", got, len(tokens))
+	}
+	if got := claims[0].Parts[0].Value; got != "FM HIGHWAY 3 BYPASS RD" {
+		t.Errorf("got %q, want the region abbreviated in front of the highway", got)
 	}
 }
