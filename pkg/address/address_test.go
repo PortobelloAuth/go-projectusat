@@ -234,3 +234,88 @@ func TestFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestEqualsIgnoresWhichInstanceOfATypeIsPresent(t *testing.T) {
+	a := address.Address{
+		Type:          &ruralroute.RuralRouteAddress{},
+		PrimaryNumber: "BOX 125",
+		StreetName:    "RR 4",
+	}
+	b := address.Address{
+		Type:          &ruralroute.RuralRouteAddress{},
+		PrimaryNumber: "BOX 125",
+		StreetName:    "RR 4",
+	}
+
+	if !a.Equals(&b) {
+		t.Fatal("addresses with separate instances of the same type are not equal")
+	}
+}
+
+func TestEqualsDistinguishesTypedFromUntyped(t *testing.T) {
+	typed := address.Address{
+		Type:          &ruralroute.RuralRouteAddress{},
+		PrimaryNumber: "BOX 125",
+		StreetName:    "RR 4",
+	}
+	untyped := address.Address{
+		PrimaryNumber: "BOX 125",
+		StreetName:    "RR 4",
+	}
+
+	if typed.Equals(&untyped) {
+		t.Fatal("a rural route address is equal to an address with no type")
+	}
+}
+
+func TestEqualsComparesEveryField(t *testing.T) {
+	// One mutator per field, so a field added to Address without being added to
+	// Equals fails here rather than silently going uncompared.
+	cases := []struct {
+		name   string
+		change func(*address.Address)
+	}{
+		{"business name", func(a *address.Address) { a.BusinessName = "ACME" }},
+		{"primary number", func(a *address.Address) { a.PrimaryNumber = "123" }},
+		{"predirectional", func(a *address.Address) { a.Predirectional = "N" }},
+		{"street name", func(a *address.Address) { a.StreetName = "MAIN" }},
+		{"street suffix", func(a *address.Address) { a.StreetSuffix = "ST" }},
+		{"postdirectional", func(a *address.Address) { a.Postdirectional = "SW" }},
+		{"secondary designator", func(a *address.Address) { a.SecondaryDesignator = "APT" }},
+		{"secondary number", func(a *address.Address) { a.SecondaryNumber = "4" }},
+		{"city", func(a *address.Address) { a.City = "DENVER" }},
+		{"region", func(a *address.Address) { a.Region = "CO" }},
+		{"postal", func(a *address.Address) { a.Postal = "80202" }},
+		{"country", func(a *address.Address) { a.Country = "US" }},
+		{"type", func(a *address.Address) { a.Type = &ruralroute.RuralRouteAddress{} }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var base, changed address.Address
+			tc.change(&changed)
+
+			if base.Equals(&changed) {
+				t.Fatalf("addresses differing only in %s are equal", tc.name)
+			}
+			if changed.Equals(&base) {
+				t.Fatalf("addresses differing only in %s are equal, reversed", tc.name)
+			}
+		})
+	}
+}
+
+func TestEqualsOnNil(t *testing.T) {
+	var nilAddress *address.Address
+	present := &address.Address{StreetName: "MAIN"}
+
+	if !nilAddress.Equals(nil) {
+		t.Error("a nil address is not equal to nil")
+	}
+	if nilAddress.Equals(present) {
+		t.Error("a nil address is equal to an address")
+	}
+	if present.Equals(nil) {
+		t.Error("an address is equal to nil")
+	}
+}

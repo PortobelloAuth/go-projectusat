@@ -1,16 +1,26 @@
 package address
 
 import (
+	"reflect"
+
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
+// AddressType is the special format an address follows, if it follows one.
+//
+// Implementations describe a shape rather than an address, so they carry no
+// per-address state: RuralRouteAddress is an empty struct, and one value of it
+// serves every rural route address. Equals relies on that — it compares which
+// implementation is present, not which instance of it.
 type AddressType interface {
 	FormatStreetLine(a *Address) string
 }
 
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
+//
+// Compare addresses with Equals rather than ==. See that method for why.
 type Address struct {
 	// Type indicates that this address is a special format, such as ruralroute,
 	// military, pobox, puertorico, or streetsuffixfirst
@@ -32,6 +42,44 @@ type Address struct {
 	Postal string // ZIP, ZIP+4, or Canadian postal code
 
 	Country string // optional; often blank for domestic
+}
+
+// Equals reports whether two addresses say the same thing. A nil address
+// equals only another nil address.
+//
+// This exists because Address must not be compared with ==. The Type field is
+// an interface, so == compares the dynamic value behind it, and that is wrong
+// in two ways at once. A parsed address carries a Type while the expected
+// value it is compared against usually does not, so the comparison fails on a
+// field the caller never meant to assert and prints two addresses that look
+// identical. And == on an interface panics at run time when the dynamic type
+// is not comparable, which makes "an AddressType must never hold a slice, map,
+// or func" an invariant the compiler cannot check.
+//
+// Type is compared by which implementation is present rather than by value.
+// What separates a rural route address from a PO box is the shape it follows,
+// and implementations hold no state to compare beyond that.
+func (a *Address) Equals(other *Address) bool {
+	if a == nil || other == nil {
+		return a == other
+	}
+
+	if reflect.TypeOf(a.Type) != reflect.TypeOf(other.Type) {
+		return false
+	}
+
+	return a.BusinessName == other.BusinessName &&
+		a.PrimaryNumber == other.PrimaryNumber &&
+		a.Predirectional == other.Predirectional &&
+		a.StreetName == other.StreetName &&
+		a.StreetSuffix == other.StreetSuffix &&
+		a.Postdirectional == other.Postdirectional &&
+		a.SecondaryDesignator == other.SecondaryDesignator &&
+		a.SecondaryNumber == other.SecondaryNumber &&
+		a.City == other.City &&
+		a.Region == other.Region &&
+		a.Postal == other.Postal &&
+		a.Country == other.Country
 }
 
 type FormatOptions struct {
