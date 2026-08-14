@@ -56,7 +56,7 @@ func TestParse(t *testing.T) {
 			t.Fatalf("Error parsing '%s': %s", tc.In, err)
 		}
 
-		if *got != tc.Want {
+		if !got.Equals(&tc.Want) {
 			t.Errorf("Unexpected result parsing '%s': %s expected: %s", tc.In, *got, tc.Want)
 		}
 	}
