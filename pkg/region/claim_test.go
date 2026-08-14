@@ -138,6 +138,16 @@ func TestClaimsOffersCompetingReadings(t *testing.T) {
 	}
 }
 
+// An ordinal street name must produce no region claim at all. 500 W 2ND AVE is
+// an ordinary address, and a region claim on 2ND puts North Dakota in the middle
+// of the street address line, where the parser has to argue it back out.
+func TestClaimsIgnoresOrdinalStreetNames(t *testing.T) {
+	tokens := token.Tokenize("500 W 2ND AVE")
+	if claims := region.Claims(tokens); len(claims) != 0 {
+		t.Fatalf("expected no region claims in %q, got %+v", "500 W 2ND AVE", claims)
+	}
+}
+
 // A region name that runs past the end of the token slice must not be read as
 // a shorter match by accident, and must not panic.
 func TestClaimsNearEndOfInput(t *testing.T) {

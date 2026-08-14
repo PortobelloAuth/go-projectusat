@@ -391,7 +391,11 @@ var regionMap = maps.Collect(func(yield func(string, RegionInfo) bool) {
 })
 
 var regionKeys = slices.Collect(maps.Keys(regionMap))
-var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
+
+// punctuation matches everything a region name is not made of. Region names in
+// this table are letters and spaces, so a digit surviving the strip is what
+// makes a lookup of 2ND fail instead of finding North Dakota.
+var punctuation = regexp.MustCompile("[^a-zA-Z0-9 ]+")
 
 func normalizeRegion(r string, fuzzy bool) (string, error) {
 	info, err := Info(r, fuzzy)
@@ -404,7 +408,7 @@ func normalizeRegion(r string, fuzzy bool) (string, error) {
 
 func Info(r string, fuzzy bool) (*RegionInfo, error) {
 	// clean out any punctuation
-	clean := alphaspace.ReplaceAllString(r, "")
+	clean := punctuation.ReplaceAllString(r, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 	// if requested, fuzzy match keys
