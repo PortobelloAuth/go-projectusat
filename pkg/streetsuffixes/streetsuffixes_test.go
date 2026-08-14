@@ -111,6 +111,38 @@ func TestNormalizeStreetSuffixUnknown(t *testing.T) {
 	}
 }
 
+// Cleaning removes punctuation, not digits. An ordinal is a street name, and
+// it stops being read as a suffix only if the digit survives long enough to
+// make the lookup fail.
+func TestNormalizeStreetSuffixKeepsDigits(t *testing.T) {
+	for _, in := range []string{"1ST", "3RD", "21ST", "23RD", "1AVE"} {
+		t.Run(in, func(t *testing.T) {
+			got, err := streetsuffixes.NormalizeStreetSuffix(in)
+			if err == nil {
+				t.Fatalf("NormalizeStreetSuffix(%q) = %q, want an error", in, got)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeStreetSuffix(%q) = %q, want empty string on error", in, got)
+			}
+		})
+	}
+}
+
+// Punctuation must still be cleaned, which is what the pattern is for.
+func TestNormalizeStreetSuffixStripsPunctuation(t *testing.T) {
+	for _, in := range []string{"AVE.", "AVE,", "(AVE)"} {
+		t.Run(in, func(t *testing.T) {
+			got, err := streetsuffixes.NormalizeStreetSuffix(in)
+			if err != nil {
+				t.Fatalf("NormalizeStreetSuffix(%q) unexpected error: %v", in, err)
+			}
+			if got != "AVENUE" {
+				t.Fatalf("NormalizeStreetSuffix(%q) = %q, want AVENUE", in, got)
+			}
+		})
+	}
+}
+
 func TestFuzzyNormalizeStreetSuffix(t *testing.T) {
 	// Real typo (not a listed alt form — "AVENU" is an alt; "Aveneu" is not).
 	const typo = "Aveneu"

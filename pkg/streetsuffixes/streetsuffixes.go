@@ -1518,7 +1518,10 @@ var streetSuffixShortMap = maps.Collect(func(yield func(string, string) bool) {
 })
 var streetSuffixKeys = slices.Collect(maps.Keys(streetSuffixPrimaryMap))
 
-var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
+// punctuation matches everything a street suffix is not made of. Suffix keys in
+// this table are letters and spaces, so a digit surviving the strip is what
+// makes a lookup of 1ST fail instead of finding STREET.
+var punctuation = regexp.MustCompile("[^a-zA-Z0-9 ]+")
 
 func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error) {
 	info, err := Info(src, fuzzy)
@@ -1535,7 +1538,7 @@ func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error)
 
 func Info(src string, fuzzy bool) (*StreetSuffix, error) {
 	// clean out any punctuation
-	clean := alphaspace.ReplaceAllString(src, "")
+	clean := punctuation.ReplaceAllString(src, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 	// if requested, fuzzy match keys
