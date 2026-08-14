@@ -116,6 +116,31 @@ score and compare interpretations over designs that assume a fixed layout, and
 where the input is genuinely ambiguous, prefer surfacing possible
 interpretations to silently choosing one.
 
+#### 1.6 An error from a `Normalize*` function means "not mine"
+
+A `Normalize*` function over a closed vocabulary returns an error for input it
+does not recognize. A `Normalize*` function that formats input the standard
+gives no basis for validating never errors, and says so in its doc comment.
+
+Most of the vocabulary packages own a closed set — regions, directionals,
+street suffixes, secondary designators — and for those the error is not a
+failure, it is the answer to a question. It is what lets a `Claims` function
+use `Normalize*` as its recognizer rather than reimplementing the lookup, and
+it is why `region.NormalizeRegion("MAIN")` erroring is correct behavior rather
+than an inconvenience.
+
+The exceptions are real and deliberate. `country.NormalizeCountry` and
+`postalcode.Normalize` format anything they are handed, because the standard
+gives no basis for validating an international country name or a non-US,
+non-Canadian postal code, and refusing input the library cannot judge would be
+worse than passing it through.
+
+What makes the exceptions safe is saying so. The difference between the two
+kinds is invisible at the call site — both return `(string, error)` — so a
+permissive function must state in its doc comment that a nil error is not
+recognition. A caller that guesses wrong here does not get a compile error; it
+gets a claim it should never have made.
+
 ### 2. Documentation and intent
 
 Documentation is how intent survives the person who had it. Working code

@@ -1,8 +1,6 @@
 package highways
 
 import (
-	"strings"
-
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 )
@@ -25,11 +23,9 @@ const maxSpan = 8
 // the standard's rule is that county, state, and local highways are used as
 // street names and so are not abbreviated.
 //
-// Note that NormalizeStreetName is not the recognizer here. It returns an
-// error only for empty input and passes anything else through uppercased, so
-// it cannot distinguish a highway from an ordinary street name — asking it
-// about MAIN would yield MAIN. The evidence is whether a highway rule actually
-// matched, which is what normalizeTokens reports.
+// NormalizeStreetName is the recognizer. It returns an error for a name that
+// matches no highway rule, so an error is the evidence that a span is not a
+// highway, and a value is the evidence that it is.
 //
 // Shorter spans inside a longer match are claimed too. CA COUNTY ROAD 150
 // contains COUNTY ROAD 150, and both are real highway names; the parser
@@ -49,8 +45,8 @@ func Claims(tokens []token.Token) []claim.Claim {
 		for length := span; length >= 1; length-- {
 			text := token.Join(tokens[start : start+length])
 
-			normalized, ok := normalizeTokens(strings.Fields(expandGluedInterstate(strings.ToUpper(text))))
-			if !ok {
+			normalized, err := NormalizeStreetName(text)
+			if err != nil {
 				continue
 			}
 

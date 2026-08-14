@@ -24,6 +24,13 @@ var caPostalCompact = regexp.MustCompile(`^[A-Z]\d[A-Z]\d[A-Z]\d$`)
 
 // Normalize formats US ZIP / ZIP+4 and leaves Canadian (and other) patterns
 // as uppercase alphanumerics with collapsed spacing.
+//
+// This is one of the two exceptions to the rule that a Normalize function over
+// a closed vocabulary errors on input it does not recognize. It does not error
+// on an unrecognized pattern, because the standard gives no basis for
+// validating a non-US, non-Canadian postal code and refusing input the library
+// cannot judge would be worse than passing it through. Callers must not read a
+// nil error here as recognition.
 func Normalize(s string) (string, error) {
 	s = textutil.Upper(textutil.CollapseSpace(s))
 	if s == "" {
