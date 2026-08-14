@@ -96,7 +96,7 @@ matching (aka exchange) scenarios. It allows:
   (not correct for content storage)
 - `DiacriticMode` — an enumeration with 3 possible values:
   - `diacritics.KeepDiacritics` does not change diacritics
-  - `diacritics.SubstituteDiacritics` substitutes diacritics acording to the
+  - `diacritics.SubstituteDiacritics` substitutes diacritics according to the
   ProjectUS@ specification
   - `diacritics.TransliterateDiacritics` transliterates diacritics, replacing
   them with ASCII letter combinations that commonly represent them.
