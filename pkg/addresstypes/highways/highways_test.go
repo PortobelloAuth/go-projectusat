@@ -64,18 +64,6 @@ func TestNormalizeStreetName(t *testing.T) {
 		// Whitespace / case normalization
 		{"  county   hwy  60e  ", "COUNTY HIGHWAY 60E"},
 		{"farm to market 1200", "FM 1200"},
-
-		// State name/code as street name portion only — not bare highway routes
-		// (letter-only residual after peeling state must not become "… HIGHWAY …")
-		{"OKLAHOMA AVE", "OKLAHOMA AVE"},
-		{"WASHINGTON BLVD", "WASHINGTON BLVD"},
-		{"CA MAIN", "CA MAIN"},
-
-		// Letter-only tokens after US / I are street names, not route IDs
-		// (digit-bearing routes only for US / I / IH / bare HWY / RD / RT / EXPRESSWAY;
-		// letter-only remains for SR MM only)
-		{"US GRANT", "US GRANT"},
-		{"I STREET", "I STREET"},
 	}
 
 	for _, tc := range cases {
@@ -103,13 +91,37 @@ func TestNormalizeStreetNameEmpty(t *testing.T) {
 	}
 }
 
-func TestNormalizeStreetNamePassthrough(t *testing.T) {
-	// Ordinary free-text that matches no highway rule is uppercased and returned.
-	got, err := highways.NormalizeStreetName("Main Street")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestNormalizeStreetNameRejectsOrdinaryNames(t *testing.T) {
+	// A closed vocabulary reports what it does not recognize, so that a caller
+	// can tell "this is a highway" from "this is a street name I uppercased".
+	cases := []string{
+		"Main Street",
+		"Bryan Dairy Rd",
+		"Elm",
+
+		// State name/code as street name portion only — not bare highway routes.
+		// The letter-only residual after peeling the state must not become
+		// "… HIGHWAY …".
+		"OKLAHOMA AVE",
+		"WASHINGTON BLVD",
+		"CA MAIN",
+
+		// Letter-only tokens after US / I are street names, not route IDs.
+		// Digit-bearing routes only for US / I / IH / bare HWY / RD / RT /
+		// EXPRESSWAY; a letter-only route remains for SR MM only.
+		"US GRANT",
+		"I STREET",
 	}
-	if got != "MAIN STREET" {
-		t.Fatalf("got %q, want %q", got, "MAIN STREET")
+
+	for _, in := range cases {
+		t.Run(in, func(t *testing.T) {
+			got, err := highways.NormalizeStreetName(in)
+			if err == nil {
+				t.Fatalf("NormalizeStreetName(%q) = %q, want an error", in, got)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeStreetName(%q) = %q, want empty on error", in, got)
+			}
+		})
 	}
 }

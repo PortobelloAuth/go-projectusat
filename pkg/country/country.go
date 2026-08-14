@@ -28,6 +28,16 @@ var andpunctuation = regexp.MustCompile(`\+|\&`)
 var whitespace = regexp.MustCompile(`\s+`)
 var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
 
+// NormalizeCountry formats a country name. Domestic spellings are blanked and
+// the recognized neighbours are canonicalized; anything else is returned
+// cleaned and uppercased.
+//
+// This is one of the two exceptions to the rule that a Normalize function over
+// a closed vocabulary errors on input it does not recognize. It never returns
+// a non-nil error, including for empty input. The standard gives no basis for
+// validating an international country name, so refusing input the library
+// cannot judge would be worse than passing it through. Callers must not read
+// a nil error here as recognition.
 func NormalizeCountry(r string) (string, error) {
 	// Replace "+" or "&" with "AND" in country names
 	andfixed := andpunctuation.ReplaceAllString(r, " AND ")

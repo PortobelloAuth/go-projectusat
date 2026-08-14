@@ -172,10 +172,15 @@ var usStateAbbrevs = map[string]bool{
 	"WA": true, "WV": true, "WI": true, "WY": true,
 }
 
-// NormalizeStreetName normalizes highway-style primary street names per Project US@.
-// Input is the street name portion only (not full address). Returns uppercase.
-// Names that match no highway rule are returned uppercased with collapsed whitespace.
-// An error is returned only when the input is empty after trim.
+// NormalizeStreetName normalizes highway-style primary street names per Project
+// US@. Input is the street name portion only, not a full address. Returns
+// uppercase.
+//
+// An error is returned for a name that matches no highway rule. Highways is a
+// closed vocabulary, so an error means "not a highway" and is the answer to a
+// question rather than a failure. Callers that want the name either way should
+// keep their own uppercased copy; MAIN STREET is not a highway and this
+// function will not pretend otherwise.
 func NormalizeStreetName(name string) (string, error) {
 	s := collapseSpace(strings.ToUpper(strings.TrimSpace(name)))
 	if s == "" {
@@ -185,12 +190,12 @@ func NormalizeStreetName(name string) (string, error) {
 	// Split glued interstate forms (I10, IH280) into separate tokens before field split.
 	tokens := strings.Fields(expandGluedInterstate(s))
 
-	if out, ok := normalizeTokens(tokens); ok {
-		return out, nil
+	out, ok := normalizeTokens(tokens)
+	if !ok {
+		return "", fmt.Errorf("not a highway name: %q", s)
 	}
 
-	// No highway rule matched: pass through uppercased / collapsed form.
-	return s, nil
+	return out, nil
 }
 
 func collapseSpace(s string) string {
