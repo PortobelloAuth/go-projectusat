@@ -76,6 +76,38 @@ func TestNormalizeRegionUnknown(t *testing.T) {
 	}
 }
 
+// Cleaning removes punctuation, not digits. An ordinal street name is not a
+// region, and it stops being one only if the digit survives long enough to make
+// the lookup fail.
+func TestNormalizeRegionKeepsDigits(t *testing.T) {
+	for _, in := range []string{"2ND", "22ND", "42ND", "2CO", "1UT"} {
+		t.Run(in, func(t *testing.T) {
+			got, err := region.NormalizeRegion(in)
+			if err == nil {
+				t.Fatalf("NormalizeRegion(%q) = %q, want an error", in, got)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeRegion(%q) = %q, want empty string on error", in, got)
+			}
+		})
+	}
+}
+
+// Punctuation must still be cleaned, which is what the pattern is for.
+func TestNormalizeRegionStripsPunctuation(t *testing.T) {
+	for _, in := range []string{"U.T.", "UT.", "(UT)"} {
+		t.Run(in, func(t *testing.T) {
+			got, err := region.NormalizeRegion(in)
+			if err != nil {
+				t.Fatalf("NormalizeRegion(%q) unexpected error: %v", in, err)
+			}
+			if got != "UT" {
+				t.Fatalf("NormalizeRegion(%q) = %q, want UT", in, got)
+			}
+		})
+	}
+}
+
 func TestFuzzyNormalizeRegion(t *testing.T) {
 	// Mild typo in a long region name should still resolve when fuzzy is enabled.
 	got, err := region.FuzzyNormalizeRegion("Californa")
