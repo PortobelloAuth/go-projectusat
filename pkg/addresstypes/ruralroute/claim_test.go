@@ -136,19 +136,87 @@ func TestClaims(t *testing.T) {
 	}
 }
 
-// Normalize drops whatever follows the pattern, so a claim built from the first
-// span that normalizes would swallow the street name after it. The standard's
-// own example is the one that shows it.
-func TestClaimsStopsAtTheEndOfThePattern(t *testing.T) {
+// The standard says a rural route line "SHOULD NOT allow additional
+// designations, such as town or street names", so the trailing text in its own
+// example is text that does not belong on the line rather than a street name.
+// Both readings are offered: the pattern alone, and the whole line with the
+// extra tokens absorbed into the primary number.
+func TestClaimsOfferTheWholeStreetLine(t *testing.T) {
 	tokens := token.Tokenize("RR 2 BOX 18 BRYAN DAIRY RD")
+	claims := ruralroute.Claims(tokens)
+
+	if len(claims) != 2 {
+		t.Fatalf("expected the pattern and the whole line, got %+v", claims)
+	}
+
+	pattern, line := claims[0], claims[1]
+
+	if pattern.Start() != 0 || pattern.End() != 4 {
+		t.Errorf("pattern claim covers [%d,%d), want [0,4)", pattern.Start(), pattern.End())
+	}
+	if pattern.Confidence != claim.ConfidenceExact {
+		t.Errorf("pattern claim confidence is %d, want %d", pattern.Confidence, claim.ConfidenceExact)
+	}
+
+	if line.Start() != 0 || line.End() != 7 {
+		t.Errorf("street line claim covers [%d,%d), want [0,7)", line.Start(), line.End())
+	}
+	if line.Confidence != claim.ConfidenceLikely {
+		t.Errorf("street line claim confidence is %d, want %d — where the line ends is the uncertain part",
+			line.Confidence, claim.ConfidenceLikely)
+	}
+}
+
+// Absorbing the trailing tokens does not change what the part says. The value
+// is what Normalize produced for the pattern, in both readings.
+func TestAbsorbedTokensDoNotChangeTheValue(t *testing.T) {
+	tokens := token.Tokenize("RR 2 BOX 18 BRYAN DAIRY RD")
+	claims := ruralroute.Claims(tokens)
+
+	if len(claims) != 2 {
+		t.Fatalf("expected the pattern and the whole line, got %+v", claims)
+	}
+
+	for i, c := range claims {
+		if len(c.Parts) != 2 {
+			t.Fatalf("claims[%d] has parts %+v, want a street name and a primary number", i, c.Parts)
+		}
+		if c.Parts[0].Value != "RR 2" || c.Parts[1].Value != "BOX 18" {
+			t.Errorf("claims[%d] values are %q and %q, want \"RR 2\" and \"BOX 18\"",
+				i, c.Parts[0].Value, c.Parts[1].Value)
+		}
+	}
+
+	absorbed := claims[1].Parts[1]
+	if token.Join(tokens[absorbed.Start:absorbed.End()]) != "BOX 18 BRYAN DAIRY RD" {
+		t.Errorf("absorbing part covers %q, want the box and everything after it",
+			token.Join(tokens[absorbed.Start:absorbed.End()]))
+	}
+}
+
+// The street line has to end somewhere, and a token slice only knows which
+// line each token is on. A city and region on the next line are not absorbed.
+func TestAbsorptionStopsAtTheEndOfTheLine(t *testing.T) {
+	tokens := token.Tokenize("RR 2 BOX 18 BRYAN DAIRY RD\nSALT LAKE CITY UT")
+	claims := ruralroute.Claims(tokens)
+
+	if len(claims) != 2 {
+		t.Fatalf("expected the pattern and the whole line, got %+v", claims)
+	}
+	if claims[1].End() != 7 {
+		t.Errorf("street line claim ends at %d, want 7 — the last token of the first line",
+			claims[1].End())
+	}
+}
+
+// Where the pattern already is the whole line there is nothing to absorb, and
+// offering a second identical claim would invent a competing reading.
+func TestNoStreetLineClaimWhenThePatternFillsTheLine(t *testing.T) {
+	tokens := token.Tokenize("RR 4 BOX 125")
 	claims := ruralroute.Claims(tokens)
 
 	if len(claims) != 1 {
 		t.Fatalf("expected one claim, got %+v", claims)
-	}
-	if claims[0].Start() != 0 || claims[0].End() != 4 {
-		t.Errorf("claim covers [%d,%d), want [0,4) — the pattern and nothing after it",
-			claims[0].Start(), claims[0].End())
 	}
 }
 
