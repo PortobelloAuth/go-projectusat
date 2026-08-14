@@ -22,14 +22,24 @@ import (
 // street line. Requiring the whole form is what keeps those apart without any
 // package needing to know about the others.
 //
+// Where the pattern does not reach the end of its line, two readings are
+// offered. See streetLineClaim for why, and for what the second one does with
+// the tokens the standard says should not be there.
+//
 // Nothing here decides that an address is a rural route address. That is a
 // judgment about the whole address and belongs with AddressType selection.
 func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for start := range tokens {
-		if c, ok := routeClaim(tokens, start); ok {
-			claims = append(claims, c)
+		c, ok := routeClaim(tokens, start)
+		if !ok {
+			continue
+		}
+
+		claims = append(claims, c)
+		if extended, ok := streetLineClaim(tokens, c); ok {
+			claims = append(claims, extended)
 		}
 	}
 
@@ -46,14 +56,15 @@ const maxSpan = 7
 // same alternatives have to be recognized here to know where the split falls.
 var boxMarker = regexp.MustCompile(`^(BOX|#|NUMBER|NUM|NO)`)
 
-// routeClaim reads a rural route beginning at start.
+// routeClaim reads the rural route pattern beginning at start, and nothing
+// beyond it.
 //
 // Normalize is the recognizer, not a formatter: it returns an error for
 // anything that is not this pattern, so the rule for what counts stays in one
 // place. It also drops whatever follows the pattern — the standard's own
-// example turns "RR 2 BOX 18 Bryan Dairy Rd" into "RR 2 BOX 18" — which is why
-// the shortest span that normalizes is the one taken. A longer span would
-// normalize just as happily and claim tokens the pattern never covered.
+// example turns "RR 2 BOX 18 Bryan Dairy Rd" into "RR 2 BOX 18" — so a longer
+// span normalizes just as happily as the pattern alone. The shortest span that
+// normalizes is therefore the one that says how far the pattern itself runs.
 func routeClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 	limit := min(maxSpan, len(tokens)-start)
 
@@ -93,6 +104,50 @@ func routeClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 	}
 
 	return claim.Claim{}, false
+}
+
+// streetLineClaim extends a route claim over the rest of its line, and reports
+// false when the pattern already reached the end of it.
+//
+// The standard says a rural route line "SHOULD NOT allow additional
+// designations, such as town or street names", so text after the pattern is
+// not a street name the parser should keep — it is text that does not belong
+// on the line. Normalize agrees: it discards the remainder. Claiming only the
+// pattern would leave those tokens free for another vocabulary to read as a
+// street, which is the reading the standard rules out.
+//
+// The claim absorbs them into the primary number part, whose value stays what
+// Normalize produced. See claim.ClaimPart.Value: a part's tokens are what it
+// covers, not what it says. That is already the ordinary case here, where
+// "RFD ROUTE 4" is three tokens valued "RR 4".
+//
+// It is the weaker reading of the two, because where the street line ends is
+// the uncertain part. A token slice carries no notion of a line ending, only
+// of which line each token is on, so the extent is bounded by that and cannot
+// run into a city or region that follows on its own line.
+func streetLineClaim(tokens []token.Token, pattern claim.Claim) (claim.Claim, bool) {
+	end := lineEnd(tokens, pattern.Start())
+	if end <= pattern.End() {
+		return claim.Claim{}, false
+	}
+
+	parts := make([]claim.ClaimPart, len(pattern.Parts))
+	copy(parts, pattern.Parts)
+
+	last := &parts[len(parts)-1]
+	last.Length = end - last.Start
+
+	return claim.Claim{Confidence: claim.ConfidenceLikely, Parts: parts}, true
+}
+
+// lineEnd reports the index one past the last token on start's line.
+func lineEnd(tokens []token.Token, start int) int {
+	end := start
+	for end < len(tokens) && tokens[end].Line == tokens[start].Line {
+		end++
+	}
+
+	return end
 }
 
 // boxTokenIndex reports where the box half of the pattern starts, as an offset

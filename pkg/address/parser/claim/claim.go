@@ -80,6 +80,27 @@ type ClaimPart struct {
 
 	// Value is the normalized text this part would put in the component, so a
 	// caller that accepts the claim does not have to repeat the lookup.
+	//
+	// Value is what the part says; the tokens are what it covers. These are
+	// not the same thing and a caller must not reconstruct one from the other.
+	// Usually they differ only in spelling — "RFD ROUTE 4" is three tokens
+	// valued "RR 4" — but a part may also cover tokens that contribute nothing
+	// to its value at all.
+	//
+	// That happens where the standard says text should not be on a line and a
+	// vocabulary owns the whole line: a rural route claims "RR 2 BOX 18 BRYAN
+	// DAIRY RD" with a primary number valued "BOX 18" covering all of "BOX 18
+	// BRYAN DAIRY RD". The trailing tokens are absorbed deliberately. Leaving
+	// them unclaimed would offer them to another vocabulary as a street name,
+	// which is the reading the standard rules out, and the contract has no way
+	// to say "covered, and contributing nothing" — every covered token belongs
+	// to some part.
+	//
+	// So absorption is how a claim says those tokens are spoken for. A parser
+	// that accepts such a claim writes Value into the component and discards
+	// the extra tokens; it must not treat them as unassigned. Where the extent
+	// is uncertain the vocabulary offers both readings, and the absorbing one
+	// is the weaker of the two.
 	Value string
 }
 
