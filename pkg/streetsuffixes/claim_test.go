@@ -124,6 +124,21 @@ func TestClaimsOffersEverySuffixInTheInput(t *testing.T) {
 	}
 }
 
+// An ordinal street name must produce no suffix claim. Before this was fixed,
+// 500 1ST AVE offered two claims that the parser could not tell apart: both
+// single tokens, both ConfidenceExact, and the wrong one first.
+func TestClaimsIgnoresOrdinalStreetNames(t *testing.T) {
+	tokens := token.Tokenize("500 1ST AVE")
+	claims := streetsuffixes.Claims(tokens)
+
+	if len(claims) != 1 {
+		t.Fatalf("expected only AVE claimed, got %+v", claims)
+	}
+	if claims[0].Parts[0].Start != 2 {
+		t.Errorf("expected the claim on AVE at index 2, got %+v", claims[0])
+	}
+}
+
 // ST is STREET here and SAINT elsewhere. Both readings are real; this package
 // owns only one of them and states it without hedging.
 func TestClaimsStreetAbbreviationDespiteSaintAmbiguity(t *testing.T) {

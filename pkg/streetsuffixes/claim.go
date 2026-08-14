@@ -47,7 +47,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 // in street names in its own right: PARK, COMMON, KEY, and PLAZA are all real
 // suffixes and all real street names.
 func suffixConfidence(text string, info *StreetSuffix) claim.Confidence {
-	if strings.ToUpper(alphaspace.ReplaceAllString(text, "")) == info.Short {
+	if strings.ToUpper(punctuation.ReplaceAllString(text, "")) == info.Short {
 		return claim.ConfidenceExact
 	}
 
