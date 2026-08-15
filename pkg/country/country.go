@@ -26,7 +26,14 @@ var countryNameMap = map[string]string{
 
 var andpunctuation = regexp.MustCompile(`\+|\&`)
 var whitespace = regexp.MustCompile(`\s+`)
-var alphaspace = regexp.MustCompile("[^a-zA-Z ]+")
+
+// punctuation matches what Project US@ treats as punctuation in a country
+// name. Digits survive it. This package formats rather than validates, so it
+// has no basis for judging a digit unreadable — and stripping one turns input
+// it did not recognize into a country it did: M5X is a Toronto postal code and
+// became MEXICO, and 2US became the empty string, which this package uses to
+// mean "domestic US address".
+var punctuation = regexp.MustCompile("[^a-zA-Z0-9 ]+")
 
 // NormalizeCountry formats a country name. Domestic spellings are blanked and
 // the recognized neighbours are canonicalized; anything else is returned
@@ -44,7 +51,7 @@ func NormalizeCountry(r string) (string, error) {
 	// condense consecutive whitespace characters to a single space
 	spaced := whitespace.ReplaceAllString(andfixed, " ")
 	// clean out any punctuation
-	clean := alphaspace.ReplaceAllString(spaced, "")
+	clean := punctuation.ReplaceAllString(spaced, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 
