@@ -16,6 +16,13 @@ type StreetSuffix struct {
 	Alt     []string
 }
 
+// streetSuffixes is Publication 28 Appendix C1. Alt is the only lookup key:
+// the maps below are built from it alone, so an entry is findable by its own
+// Primary or Short only when that spelling is repeated into Alt. That is an
+// invariant of this table rather than a property of the type, and it is
+// enforced by TestTablePrimaryAndShortAreLookupKeys instead of by the lookup,
+// because indexing Primary directly would silently resolve a name two entries
+// both claim rather than reporting it.
 var streetSuffixes = []StreetSuffix{
 	{
 		Primary: "ALLEY",
@@ -343,7 +350,7 @@ var streetSuffixes = []StreetSuffix{
 		Primary: "DAM",
 		Short:   "DM",
 		Alt: []string{
-			"DM", "DALE",
+			"DM", "DAM",
 		},
 	},
 	{
@@ -484,20 +491,6 @@ var streetSuffixes = []StreetSuffix{
 		Short:   "FRGS",
 		Alt: []string{
 			"FRGS", "FORGES",
-		},
-	},
-	{
-		Primary: "FORK",
-		Short:   "FRK",
-		Alt: []string{
-			"FRK", "FORK",
-		},
-	},
-	{
-		Primary: "FORKS",
-		Short:   "FRKS",
-		Alt: []string{
-			"FRKS", "FORKS",
 		},
 	},
 	{
@@ -917,7 +910,7 @@ var streetSuffixes = []StreetSuffix{
 		Primary: "OVERPASS",
 		Short:   "OPAS",
 		Alt: []string{
-			"OPAS", "OVERPAS",
+			"OPAS", "OVERPASS", "OVERPAS",
 		},
 	},
 	{
@@ -1047,10 +1040,10 @@ var streetSuffixes = []StreetSuffix{
 		},
 	},
 	{
-		Primary: "PRAIRE",
+		Primary: "PRAIRIE",
 		Short:   "PR",
 		Alt: []string{
-			"PR", "PRR", "PRAIRE",
+			"PR", "PRR", "PRAIRIE", "PRAIRE",
 		},
 	},
 	{
@@ -1135,13 +1128,6 @@ var streetSuffixes = []StreetSuffix{
 		Short:   "RTE",
 		Alt: []string{
 			"RTE", "ROUTE",
-		},
-	},
-	{
-		Primary: "NECK",
-		Short:   "NCK",
-		Alt: []string{
-			"NCK", "NECK",
 		},
 	},
 	{
@@ -1373,13 +1359,6 @@ var streetSuffixes = []StreetSuffix{
 		Short:   "UNS",
 		Alt: []string{
 			"UNS", "UNIONS",
-		},
-	},
-	{
-		Primary: "SQUARE",
-		Short:   "SQ",
-		Alt: []string{
-			"SQ", "SQR", "SQRE", "SQU", "SQUARE",
 		},
 	},
 	{

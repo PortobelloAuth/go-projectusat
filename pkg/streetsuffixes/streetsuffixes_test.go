@@ -157,3 +157,61 @@ func TestFuzzyNormalizeStreetSuffix(t *testing.T) {
 		t.Fatalf("FuzzyNormalizeStreetSuffix(%q) = %q, want AVENUE", typo, got)
 	}
 }
+
+// DAM, OVERPASS, and PRAIRIE are the three Publication 28 primary names the
+// table did not index under their own spelling. The first two were missing
+// from their Alt lists; the third was spelled PRAIRE throughout, so the
+// correctly spelled word was absent from the table entirely.
+func TestNormalizeStreetSuffixAcceptsPub28PrimaryNames(t *testing.T) {
+	cases := []struct {
+		in    string
+		want  string
+		short string
+	}{
+		{"DAM", "DAM", "DM"},
+		{"OVERPASS", "OVERPASS", "OPAS"},
+		{"PRAIRIE", "PRAIRIE", "PR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			got, err := streetsuffixes.NormalizeStreetSuffix(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeStreetSuffix(%q) unexpected error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Fatalf("NormalizeStreetSuffix(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+
+			abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeStreetSuffixAbreviation(%q) unexpected error: %v", tc.in, err)
+			}
+			if abbr != tc.short {
+				t.Fatalf("NormalizeStreetSuffixAbreviation(%q) = %q, want %q", tc.in, abbr, tc.short)
+			}
+		})
+	}
+}
+
+// DALE was listed in DAM's Alt as well as its own, and the table is iterated in
+// order when the lookup maps are built, so DAM won and DALE normalized to it.
+// This is the case worth a test of its own: the other two failed loudly with an
+// error, this one returned a confident wrong answer.
+func TestNormalizeStreetSuffixDaleIsNotDam(t *testing.T) {
+	got, err := streetsuffixes.NormalizeStreetSuffix("DALE")
+	if err != nil {
+		t.Fatalf("NormalizeStreetSuffix(\"DALE\") unexpected error: %v", err)
+	}
+	if got != "DALE" {
+		t.Fatalf("NormalizeStreetSuffix(\"DALE\") = %q, want DALE", got)
+	}
+
+	abbr, err := streetsuffixes.NormalizeStreetSuffixAbreviation("DALE")
+	if err != nil {
+		t.Fatalf("NormalizeStreetSuffixAbreviation(\"DALE\") unexpected error: %v", err)
+	}
+	if abbr != "DL" {
+		t.Fatalf("NormalizeStreetSuffixAbreviation(\"DALE\") = %q, want DL", abbr)
+	}
+}
