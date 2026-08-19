@@ -29,7 +29,7 @@ func read(source string) ([]token.Token, []lastline.LineClaim) {
 	claims = append(claims, highways.Claims(tokens)...)
 	claims = append(claims, streetsuffixes.Claims(tokens)...)
 
-	lines := lastline.Claims(tokens, claims)
+	lines := lastline.LineClaims(tokens, claims)
 	slices.SortFunc(lines, func(a, b lastline.LineClaim) int {
 		if a.Claim.Confidence != b.Claim.Confidence {
 			return int(b.Claim.Confidence) - int(a.Claim.Confidence)
@@ -373,5 +373,37 @@ func TestEveryReadingIsWellFormed(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A country on its own line was hiding the city: anchoring to the final line
+// looked for a city after the region rather than ahead of it, and the complete
+// pattern was never offered. pkg/region carries the Canadian provinces, so this
+// address has a region claim on ON and there is no excuse for missing it.
+func TestACountryOnItsOwnLineDoesNotHideTheCity(t *testing.T) {
+	_, lines := read("123 MAIN ST\nTORONTO ON M5V 3A8\nCANADA")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	if best.Claim.Confidence != claim.ConfidenceExact {
+		t.Errorf("best reading is %d, want ConfidenceExact", best.Claim.Confidence)
+	}
+
+	for part, want := range map[claim.Part]string{
+		claim.PartCity:    "TORONTO",
+		claim.PartRegion:  "ON",
+		claim.PartPostal:  "M5V 3A8",
+		claim.PartCountry: "CANADA",
+	} {
+		got, ok := valueOf(best, part)
+		if !ok {
+			t.Errorf("best reading assigns no %s", part)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s = %q, want %q", part, got, want)
+		}
 	}
 }
