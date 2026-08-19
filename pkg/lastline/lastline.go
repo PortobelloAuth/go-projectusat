@@ -86,7 +86,12 @@ type LineClaim struct {
 	Leftover []Span
 }
 
-// Claims returns every reading of the last line that the given claims support.
+// LineClaims returns every reading of the last line that the given claims
+// support.
+//
+// The name is deliberately not Claims. A vocabulary's Claims says what tokens
+// mean; this says which reading of a line makes the most sense of them, and the
+// two are not interchangeable even where the signatures rhyme.
 //
 // Readings are not ranked against each other here beyond the confidence each
 // carries; sorting them is claim.Claim.Compare's job, and choosing among them
@@ -96,12 +101,11 @@ type LineClaim struct {
 // tokens is needed for structure rather than for vocabulary. Line, Position and
 // FollowsComma decide where a line begins and whether a city boundary is marked
 // or guessed at, and none of that is recoverable from the claims.
-func Claims(tokens []token.Token, claims []claim.Claim) []LineClaim {
+func LineClaims(tokens []token.Token, claims []claim.Claim) []LineClaim {
 	if len(tokens) == 0 {
 		return nil
 	}
 
-	lineStart := startOfLastLine(tokens)
 	end := len(tokens)
 
 	var lines []LineClaim
@@ -115,6 +119,15 @@ func Claims(tokens []token.Token, claims []claim.Claim) []LineClaim {
 		if country.ok {
 			innerEnd = claims[country.index].Start()
 		}
+		if innerEnd == 0 {
+			continue
+		}
+
+		// The line the pattern sits on is the one the country does not. A
+		// country written on a line of its own makes the last line two
+		// physical lines, and anchoring to the final line would look for the
+		// city after the region rather than ahead of it.
+		lineStart := startOfLineContaining(tokens, innerEnd-1)
 
 		// {City}, {Region} {Postal Code}
 		for _, postal := range byPartEndingAt(claims, claim.PartPostal, innerEnd) {
@@ -366,14 +379,12 @@ func demote(confidence claim.Confidence) claim.Confidence {
 	}
 }
 
-// startOfLastLine finds the first token of the final line. A single line
-// address has one line, and the whole of it is a candidate.
-func startOfLastLine(tokens []token.Token) int {
-	last := tokens[len(tokens)-1].Line
-
-	for i := len(tokens) - 1; i >= 0; i-- {
-		if tokens[i].Line != last {
-			return i + 1
+// startOfLineContaining finds the first token of the line the given token is
+// on. A single line address has one line, and the whole of it is a candidate.
+func startOfLineContaining(tokens []token.Token, at int) int {
+	for i := at; i > 0; i-- {
+		if tokens[i-1].Line != tokens[at].Line {
+			return i
 		}
 	}
 
