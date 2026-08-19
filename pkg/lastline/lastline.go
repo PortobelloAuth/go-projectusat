@@ -63,17 +63,10 @@ import (
 // offering as one. Four tokens covers the longest city names in ordinary use.
 const maxCitySpan = 4
 
-// Span is a run of tokens, in the same index space as the []token.Token the
-// claims were made against.
-type Span struct {
-	Start  int
-	Length int
-}
-
-// End returns the index one past the last token in the span.
-func (s Span) End() int {
-	return s.Start + s.Length
-}
+// Span is a run of tokens. It is claim.Span, aliased so that a LineClaim and a
+// CandidateAddress name their leftovers with the same type rather than with two
+// identical ones.
+type Span = claim.Span
 
 // LineClaim is one reading of the last line.
 //
@@ -248,9 +241,9 @@ func assemble(claims []claim.Claim, start, end int, confidence claim.Confidence,
 	if len(parts) > 0 {
 		start = min(start, parts[0].Start)
 	}
-	span := Span{start, end - start}
+	span := Span{Start: start, Length: end - start}
 
-	leftover := gaps(span, parts)
+	leftover := span.Gaps(parts)
 	for range leftover {
 		confidence = demote(confidence)
 	}
@@ -271,27 +264,6 @@ func assemble(claims []claim.Claim, start, end int, confidence claim.Confidence,
 		Rejected: rejected,
 		Leftover: leftover,
 	}
-}
-
-// gaps returns the runs of tokens in span that no part covers. parts must be in
-// token order and must not overlap, which is what the Claim contract requires
-// of them anyway.
-func gaps(span Span, parts []claim.ClaimPart) []Span {
-	var leftover []Span
-	at := span.Start
-
-	for _, p := range parts {
-		if p.Start > at {
-			leftover = append(leftover, Span{at, p.Start - at})
-		}
-		at = max(at, p.End())
-	}
-
-	if at < span.End() {
-		leftover = append(leftover, Span{at, span.End() - at})
-	}
-
-	return leftover
 }
 
 // cityStarts offers the places the city could begin, between lineStart and the
