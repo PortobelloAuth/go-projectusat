@@ -1,6 +1,7 @@
 package claim_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
@@ -207,5 +208,91 @@ func TestExtentIsDerivedFromParts(t *testing.T) {
 	}
 	if c.Overlaps(span(6, 1)) {
 		t.Error("claim should not reach the token after its last part")
+	}
+}
+
+// confident builds a claim covering length tokens from start, held at the
+// given confidence, for the cases that are about ordering rather than about
+// what is assigned.
+func confident(start, length int, confidence claim.Confidence) claim.Claim {
+	c := span(start, length)
+	c.Confidence = confidence
+	return c
+}
+
+func TestCompareOrdersByConfidenceFirst(t *testing.T) {
+	strong := confident(0, 1, claim.ConfidenceStrong)
+	weak := confident(0, 4, claim.ConfidenceWeak)
+
+	if got := strong.Compare(weak); got >= 0 {
+		t.Errorf("Compare(strong, weak) = %d, want negative: confidence decides before extent", got)
+	}
+	if got := weak.Compare(strong); got <= 0 {
+		t.Errorf("Compare(weak, strong) = %d, want positive", got)
+	}
+}
+
+// The military street line case from #37: UNIT 2050 and UNIT 2050 BOX 4190 are
+// both exact readings, and the complete one is the reading meant.
+func TestCompareBreaksConfidenceTiesByLength(t *testing.T) {
+	whole := confident(0, 4, claim.ConfidenceExact)
+	partial := confident(0, 2, claim.ConfidenceExact)
+
+	if got := whole.Compare(partial); got >= 0 {
+		t.Errorf("Compare(whole, partial) = %d, want negative: the longer exact reading wins", got)
+	}
+	if got := partial.Compare(whole); got <= 0 {
+		t.Errorf("Compare(partial, whole) = %d, want positive", got)
+	}
+}
+
+// Length must not rescue a greedier reading from a lower confidence, which is
+// what keeps Compare consistent with the absorption rule on ClaimPart.Value:
+// a vocabulary offering a plain reading and a longer absorbing one rates the
+// absorbing one lower, and confidence has to settle that before extent is
+// consulted.
+func TestCompareDoesNotLetLengthOverrideAbsorption(t *testing.T) {
+	exact := confident(0, 4, claim.ConfidenceExact)
+	absorbing := confident(0, 7, claim.ConfidenceLikely)
+
+	if got := exact.Compare(absorbing); got >= 0 {
+		t.Errorf("Compare(exact, absorbing) = %d, want negative: the absorbing reading is the weaker one", got)
+	}
+}
+
+func TestCompareReportsTies(t *testing.T) {
+	a := confident(0, 2, claim.ConfidenceExact)
+	b := confident(4, 2, claim.ConfidenceExact)
+
+	if got := a.Compare(b); got != 0 {
+		t.Errorf("Compare = %d, want 0 for equal confidence and equal extent", got)
+	}
+}
+
+func TestCompareSortsBestFirst(t *testing.T) {
+	claims := []claim.Claim{
+		confident(0, 1, claim.ConfidenceWeak),
+		confident(0, 2, claim.ConfidenceExact),
+		confident(0, 3, claim.ConfidenceStrong),
+		confident(0, 5, claim.ConfidenceExact),
+	}
+
+	slices.SortFunc(claims, claim.Claim.Compare)
+
+	want := []struct {
+		confidence claim.Confidence
+		length     int
+	}{
+		{claim.ConfidenceExact, 5},
+		{claim.ConfidenceExact, 2},
+		{claim.ConfidenceStrong, 3},
+		{claim.ConfidenceWeak, 1},
+	}
+
+	for i, w := range want {
+		if claims[i].Confidence != w.confidence || claims[i].Length() != w.length {
+			t.Errorf("claims[%d] = confidence %d length %d, want confidence %d length %d",
+				i, claims[i].Confidence, claims[i].Length(), w.confidence, w.length)
+		}
 	}
 }

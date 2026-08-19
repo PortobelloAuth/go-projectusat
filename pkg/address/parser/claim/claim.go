@@ -7,6 +7,8 @@
 // coordinate system a claim is expressed in; this package supplies the meaning.
 package claim
 
+import "cmp"
+
 // Part names an address component a claim can be made against. The values
 // mirror the fields of address.Address; they live here rather than in that
 // package so vocabulary packages can make claims without importing it.
@@ -207,4 +209,43 @@ func (c Claim) Overlaps(other Claim) bool {
 	}
 
 	return c.Start() < other.End() && other.Start() < c.End()
+}
+
+// Compare orders two competing readings of the same tokens, best first.
+//
+// Confidence decides it. Where two readings are held equally strongly, the
+// longer one wins: "UNIT 2050" and "UNIT 2050 BOX 4190" are both military
+// street lines and both exact, and the complete one is the reading meant. A
+// vocabulary that matched more of the address on the same evidence has
+// explained more of it.
+//
+// Length only ever breaks a tie, which is what keeps it from overriding the
+// absorption rule documented on ClaimPart.Value. Where a vocabulary offers
+// both a plain reading and a longer one that swallows trailing tokens, the
+// contract requires the absorbing reading to be the weaker of the two —
+// ruralroute offers the four token pattern as ConfidenceExact and the whole
+// line as ConfidenceLikely — so confidence separates them before extent is
+// consulted, and the greedier reading does not win by being greedy.
+//
+// Compare does not check Overlaps. Ordering claims that do not compete is
+// harmless and useful, but only overlapping claims are alternatives, and
+// deciding which of them to accept is still the parser's job.
+//
+// The result is negative if c is the better reading, positive if other is, and
+// zero if neither is preferred. Zero means genuinely tied rather than
+// identical: two vocabularies can reach the same confidence over the same
+// extent and still disagree about what the tokens mean, and a parser must not
+// read a tie as agreement.
+//
+// The signature is the one slices.SortFunc wants, so
+//
+//	slices.SortFunc(claims, Claim.Compare)
+//
+// sorts a set of readings best first.
+func (c Claim) Compare(other Claim) int {
+	if result := cmp.Compare(other.Confidence, c.Confidence); result != 0 {
+		return result
+	}
+
+	return cmp.Compare(other.Length(), c.Length())
 }
