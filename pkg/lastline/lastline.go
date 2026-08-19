@@ -1,10 +1,31 @@
 // Package lastline recognizes the Project US@ Last Line.
 //
-// The standard gives four shapes for it, each optionally followed by a country:
+// The shapes it accepts on input, each optionally followed by a country:
 //
 //	{City}, {Region} {Postal Code}
 //	{City}, {Region}
 //	{Postal Code}
+//	{City} {Postal Code}
+//
+// Where those come from matters, because it is not one citation. The first
+// three are amadsen's statement of the pattern on #37; neither Project US@ nor
+// Publication 28 writes them out as a list of accepted input forms. What both
+// standards do state is the preferred form for *output*, which is
+// {City} {Region} {Postal Code} with no comma, and Project US@ strips
+// punctuation. So the standards constrain what this library should emit, and
+// the input grammar here is a reading of the last line rather than a quotation
+// of a rule.
+//
+// The fourth is neither: see confidenceFor. It is offered because a city in a
+// reasonable position ahead of a postal code is a city, and it is rated below
+// every other shape precisely because nothing but that argument supports it.
+//
+// The practical consequence of the punctuation point is that a comma is a
+// bonus and not a premise. On normalized input there will not be one, and the
+// complete pattern is then rated ConfidenceStrong rather than exact — it still
+// matches, on a boundary this package inferred rather than one the address
+// stated. Distinguishing an unmarked last line by other means, such as the end
+// of a street suffix or secondary unit claim, is open work.
 //
 // This package is not a vocabulary and does not compete with one. It consumes
 // the claims that region, postalcode and country already make and reports where
