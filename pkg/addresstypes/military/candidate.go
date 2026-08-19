@@ -5,6 +5,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 // MilitaryAddress is the AddressType for an overseas APO, FPO or DPO address.
@@ -18,7 +19,7 @@ type MilitaryAddress struct{}
 
 // FormatStreetLine renders "PSC 3 BOX 4120".
 func (m *MilitaryAddress) FormatStreetLine(a *address.Address) string {
-	return joinNonEmpty(a.StreetName, a.PrimaryNumber)
+	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber)
 }
 
 // Candidates returns this package's readings of the address under the given
@@ -50,7 +51,7 @@ func (m *MilitaryAddress) FormatStreetLine(a *address.Address) string {
 // address out of the other one's claim. Re-reading the tokens with this
 // package's own recognizer is what tells the two apart.
 func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) []*address.CandidateAddress {
-	if !isOverseasLastLine(line) {
+	if !isOverseasLastLine(tokens, line) {
 		return nil
 	}
 
@@ -73,23 +74,46 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	return candidates
 }
 
-// isOverseasLastLine reports whether a last line reading names an APO, FPO or
-// DPO and one of the three military regions. Both are required: AE is a region
-// this package claims and APO is a city it claims, but either alone is a
-// fragment, and the standard pairs them.
-func isOverseasLastLine(line lastline.LineClaim) bool {
-	var city, region bool
-
-	for _, p := range line.Claim.Parts {
-		switch p.Part {
-		case claim.PartCity:
-			city = validCities[p.Value]
-		case claim.PartRegion:
-			region = validRegions[p.Value]
-		}
+// isOverseasLastLine reports whether a last line reading is a military one.
+//
+// Two things have to hold, and the recognizer settles both. NormalizeLastLine
+// says whether the tokens are the pattern — the standard fixes the order and
+// the adjacency as well as the vocabularies, so a reading that found AE ahead
+// of APO, or anything at all between them, is not this however military both
+// words look. Then the reading has to agree with what the recognizer found,
+// because the same tokens support other readings: lastline will offer "APO AE"
+// as a city with no region at all, which normalizes perfectly well and would
+// still build an address with an empty region.
+//
+// Deferring to NormalizeLastLine also holds this package to one statement of
+// what a military last line is, rather than to a second one here that could
+// drift from it.
+func isOverseasLastLine(tokens []token.Token, line lastline.LineClaim) bool {
+	if line.Span.Start < 0 || line.Span.End() > len(tokens) {
+		return false
 	}
 
-	return city && region
+	city, region, postal, err := NormalizeLastLine(
+		token.Join(tokens[line.Span.Start:line.Span.End()]))
+	if err != nil {
+		return false
+	}
+
+	want := map[claim.Part]string{
+		claim.PartCity:   city,
+		claim.PartRegion: region,
+		claim.PartPostal: postal,
+	}
+
+	for _, p := range line.Claim.Parts {
+		if want[p.Part] != p.Value {
+			return false
+		}
+
+		delete(want, p.Part)
+	}
+
+	return len(want) == 0
 }
 
 // isStreetLine reports whether a claim is the street line this package makes.
@@ -106,19 +130,4 @@ func isStreetLine(tokens []token.Token, c claim.Claim) bool {
 	_, err := NormalizeStreetLine(token.Join(tokens[c.Start():c.End()]))
 
 	return err == nil
-}
-
-func joinNonEmpty(parts ...string) string {
-	var out string
-	for _, p := range parts {
-		if p == "" {
-			continue
-		}
-		if out != "" {
-			out += " "
-		}
-		out += p
-	}
-
-	return out
 }

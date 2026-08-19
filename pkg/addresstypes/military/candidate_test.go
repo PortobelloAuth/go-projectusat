@@ -157,6 +157,34 @@ func TestHalfAMilitaryLastLineIsNotAMilitaryLastLine(t *testing.T) {
 	}
 }
 
+func TestTheDesignationAndRegionMustBeInOrderAndAdjacent(t *testing.T) {
+	cases := []struct{ name, source string }{
+		{
+			name:   "region ahead of the designation",
+			source: "PSC 3 BOX 4120\nAE APO 09021-0002",
+		},
+		{
+			name:   "something between them",
+			source: "PSC 3 BOX 4120\nAPO BERLIN AE 09021-0002",
+		},
+		{
+			name:   "a country name the standard forbids",
+			source: "PSC 3 BOX 4120\nAPO AE 09021-0002 GERMANY",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Both words are military vocabulary in every one of these, so a
+			// check that only asked which parts were assigned would accept
+			// them. The standard fixes the order and the adjacency too.
+			if found := candidates(tc.source); len(found) != 0 {
+				t.Errorf("got %d candidates, want none", len(found))
+			}
+		})
+	}
+}
+
 func TestNoCandidateAssignsATokenTwice(t *testing.T) {
 	// Written on one line, the address gives lastline readings whose city runs
 	// back over the street line — "PSC 3 BOX 4120 APO" — and they are rated as
