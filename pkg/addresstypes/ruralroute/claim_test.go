@@ -250,3 +250,27 @@ func TestClaimsWithinALongerLine(t *testing.T) {
 		t.Errorf("claim starts at %d, want 2", claims[0].Start())
 	}
 }
+
+// The route and its box are one delivery address line. Join flattens the span
+// with spaces, so without a bound "RR 2\nBOX 18 BRYAN OH 43506" reaches
+// Normalize as "RR 2 BOX 18 ..." and matches across the break. Absorption was
+// already bounded to the line; this is the other end of the same rule.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"RR 2\nBOX 18 BRYAN OH 43506",
+		"RFD ROUTE 4\nBOX 125 BRYAN OH 43506",
+		"RR\n2 BOX 18",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range ruralroute.Claims(tokens) {
+				for i := c.Start(); i < c.End(); i++ {
+					if tokens[i].Line != tokens[c.Start()].Line {
+						t.Errorf("claim over [%d,%d) spans a line break", c.Start(), c.End())
+						break
+					}
+				}
+			}
+		})
+	}
+}

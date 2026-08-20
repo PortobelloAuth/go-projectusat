@@ -66,7 +66,9 @@ var boxMarker = regexp.MustCompile(`^(BOX|#|NUMBER|NUM|NO)`)
 // span normalizes just as happily as the pattern alone. The shortest span that
 // normalizes is therefore the one that says how far the pattern itself runs.
 func routeClaim(tokens []token.Token, start int) (claim.Claim, bool) {
-	limit := min(maxSpan, len(tokens)-start)
+	// The pattern is a delivery address line and cannot run past the end of
+	// one. See token.LineEnd.
+	limit := min(maxSpan, token.LineEnd(tokens, start)-start)
 
 	for length := 1; length <= limit; length++ {
 		normalized, err := Normalize(token.Join(tokens[start : start+length]))
@@ -126,7 +128,7 @@ func routeClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 // of which line each token is on, so the extent is bounded by that and cannot
 // run into a city or region that follows on its own line.
 func streetLineClaim(tokens []token.Token, pattern claim.Claim) (claim.Claim, bool) {
-	end := lineEnd(tokens, pattern.Start())
+	end := token.LineEnd(tokens, pattern.Start())
 	if end <= pattern.End() {
 		return claim.Claim{}, false
 	}
@@ -138,16 +140,6 @@ func streetLineClaim(tokens []token.Token, pattern claim.Claim) (claim.Claim, bo
 	last.Length = end - last.Start
 
 	return claim.Claim{Confidence: claim.ConfidenceLikely, Parts: parts}, true
-}
-
-// lineEnd reports the index one past the last token on start's line.
-func lineEnd(tokens []token.Token, start int) int {
-	end := start
-	for end < len(tokens) && tokens[end].Line == tokens[start].Line {
-		end++
-	}
-
-	return end
 }
 
 // boxTokenIndex reports where the box half of the pattern starts, as an offset
