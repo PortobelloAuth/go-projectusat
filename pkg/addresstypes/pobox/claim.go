@@ -47,7 +47,9 @@ const maxSpan = 4
 // place. It anchors at both ends, so unlike a rural route there is no trailing
 // text to guard against: the span either is the whole pattern or is rejected.
 func boxClaim(tokens []token.Token, start int) (claim.Claim, bool) {
-	limit := min(maxSpan, len(tokens)-start)
+	// The pattern is a delivery address line and cannot run past the end of
+	// one. See token.LineEnd.
+	limit := min(maxSpan, token.LineEnd(tokens, start)-start)
 
 	// The box number is the final token, so a designator alone cannot match.
 	for length := 2; length <= limit; length++ {

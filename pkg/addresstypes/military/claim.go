@@ -74,7 +74,9 @@ const streetLineSpan = 4
 // that is not this pattern — so the rule for what counts lives in one place
 // and this function only has to say which tokens got which part.
 func streetLineClaim(tokens []token.Token, start int) (claim.Claim, bool) {
-	if start+streetLineSpan > len(tokens) {
+	// The pattern is a delivery address line and cannot run past the end of
+	// one. See token.LineEnd.
+	if start+streetLineSpan > token.LineEnd(tokens, start) {
 		return claim.Claim{}, false
 	}
 

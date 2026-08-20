@@ -173,3 +173,29 @@ func TestClaimsAlwaysValuePOBox(t *testing.T) {
 		})
 	}
 }
+
+// A post office box is a delivery address line, so the designator and the box
+// number are on one line by definition. Nothing in Normalize can tell: Join
+// flattens the span with spaces, so "PO BOX\nDENVER CO 80201" reaches it as
+// "PO BOX DENVER" and matches. Left unbounded the city becomes the box number,
+// at the highest confidence this package can give anything.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"PO BOX\nDENVER CO 80201",
+		"POB\nSPRINGFIELD IL 62701",
+		"POST OFFICE BOX\nDENVER CO 80201",
+		"DRAWER\nDENVER CO 80201",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range pobox.Claims(tokens) {
+				for i := c.Start(); i < c.End(); i++ {
+					if tokens[i].Line != tokens[c.Start()].Line {
+						t.Errorf("claim %v spans a line break", flatten(tokens, []claim.Claim{c}))
+						break
+					}
+				}
+			}
+		})
+	}
+}

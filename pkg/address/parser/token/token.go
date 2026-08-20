@@ -62,3 +62,26 @@ func Join(tokens []Token) string {
 
 	return strings.Join(texts, " ")
 }
+
+// LineEnd reports the index one past the last token on start's line.
+//
+// A delivery address line is a line. The patterns that occupy one whole — a
+// post office box, a rural route, a military street line — are recognized by
+// handing a span to a Normalize function, and Join flattens that span with
+// spaces, so a line break inside it is invisible to the recognizer. Without
+// this bound "PO BOX\nDENVER CO 80201" matches the post office box pattern and
+// takes the city for a box number.
+//
+// A start outside the tokens has no line, and the answer is the end of them.
+func LineEnd(tokens []Token, start int) int {
+	if start < 0 || start >= len(tokens) {
+		return len(tokens)
+	}
+
+	end := start
+	for end < len(tokens) && tokens[end].Line == tokens[start].Line {
+		end++
+	}
+
+	return end
+}

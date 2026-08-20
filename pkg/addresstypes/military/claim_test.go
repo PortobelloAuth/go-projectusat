@@ -153,3 +153,28 @@ func TestClaimsUnitOnlyWithinTheFullPattern(t *testing.T) {
 		t.Errorf("expected a street name and a primary number, got %+v", claims[0].Parts)
 	}
 }
+
+// The facility and its box are one delivery address line. Join flattens the
+// span with spaces, so without a bound "PSC 3\nBOX 4120 APO AE 09021" reaches
+// NormalizeStreetLine as "PSC 3 BOX 4120" and matches across the break. The
+// single token city and region claims are unaffected; those are one token each
+// and cannot span anything.
+func TestNoStreetLineClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"PSC 3\nBOX 4120 APO AE 09021",
+		"UNIT 2050\nBOX 4190 APO AP 96278",
+		"CMR\n1234 BOX 5678",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range military.Claims(tokens) {
+				for i := c.Start(); i < c.End(); i++ {
+					if tokens[i].Line != tokens[c.Start()].Line {
+						t.Errorf("claim over [%d,%d) spans a line break", c.Start(), c.End())
+						break
+					}
+				}
+			}
+		})
+	}
+}
