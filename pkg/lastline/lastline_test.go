@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/highways"
@@ -405,5 +406,52 @@ func TestACountryOnItsOwnLineDoesNotHideTheCity(t *testing.T) {
 		if got != want {
 			t.Errorf("%s = %q, want %q", part, got, want)
 		}
+	}
+}
+
+// Candidate assigns each claim part to the field of the same name, so a part
+// added to claim.Part without a case in assign fails here rather than being
+// silently dropped from every address that carries it. See assign: claim.Part
+// mirrors the fields of address.Address by construction, and this is the test
+// that keeps the construction honest.
+func TestEveryClaimPartReachesItsField(t *testing.T) {
+	cases := []struct {
+		part  claim.Part
+		field func(*address.Address) string
+	}{
+		{claim.PartBusinessName, func(a *address.Address) string { return a.BusinessName }},
+		{claim.PartArea, func(a *address.Address) string { return a.Area }},
+		{claim.PartPrimaryNumber, func(a *address.Address) string { return a.PrimaryNumber }},
+		{claim.PartPredirectional, func(a *address.Address) string { return a.Predirectional }},
+		{claim.PartStreetName, func(a *address.Address) string { return a.StreetName }},
+		{claim.PartStreetSuffix, func(a *address.Address) string { return a.StreetSuffix }},
+		{claim.PartPostdirectional, func(a *address.Address) string { return a.Postdirectional }},
+		{claim.PartSecondaryDesignator, func(a *address.Address) string { return a.SecondaryDesignator }},
+		{claim.PartSecondaryNumber, func(a *address.Address) string { return a.SecondaryNumber }},
+		{claim.PartDetail, func(a *address.Address) string { return a.Detail }},
+		{claim.PartCity, func(a *address.Address) string { return a.City }},
+		{claim.PartRegion, func(a *address.Address) string { return a.Region }},
+		{claim.PartPostal, func(a *address.Address) string { return a.Postal }},
+		{claim.PartCountry, func(a *address.Address) string { return a.Country }},
+	}
+
+	for _, tc := range cases {
+		t.Run(string(tc.part), func(t *testing.T) {
+			line := lastline.LineClaim{
+				Span:  lastline.Span{Start: 1, Length: 0},
+				Claim: claim.Claim{Confidence: claim.ConfidenceExact},
+			}
+			street := claim.Claim{
+				Confidence: claim.ConfidenceExact,
+				Parts: []claim.ClaimPart{
+					{Start: 0, Length: 1, Part: tc.part, Value: "ASSIGNED"},
+				},
+			}
+
+			got := line.Candidate(nil, 1, []claim.Claim{street})
+			if value := tc.field(got.Address); value != "ASSIGNED" {
+				t.Errorf("a %s part left its field %q; assign has no case for it", tc.part, value)
+			}
+		})
 	}
 }
