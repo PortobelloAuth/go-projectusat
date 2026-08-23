@@ -27,6 +27,22 @@ type Address struct {
 	Type         AddressType
 	BusinessName string // firm / business line (optional)
 
+	// Area is the urbanization or similar neighborhood-like construct that
+	// precedes the street line. USPS Publication 28 describes an urbanization
+	// as "an area, sector, or development within a geographic area", which is
+	// why the field is named for what it is rather than for where it sits.
+	//
+	// Project US@ requires it on Puerto Rican addresses, where it is the first
+	// line of the street address block:
+	//
+	//	URB HIGHLAND GDNS
+	//	COND LAS AMAPOLAS APT 103
+	//	123 CALLE MAIN
+	//
+	// It is not exclusive to Puerto Rico by definition, but that is the only
+	// dialect the standard requires it for today.
+	Area string
+
 	// Street line elements
 	PrimaryNumber       string
 	Predirectional      string
@@ -35,6 +51,16 @@ type Address struct {
 	Postdirectional     string
 	SecondaryDesignator string // APT, STE, ...
 	SecondaryNumber     string
+
+	// Detail is a further address number qualifying the secondary one, such as
+	// the "PMB 456" of a private mailbox at a street address that already has
+	// a suite. It is effectively a tertiary number, and is named for its role
+	// rather than by that word because "tertiary" says its depth and not its
+	// purpose.
+	//
+	// It is deliberately not a catchall. Anything that is not a number
+	// qualifying the secondary designator belongs in the field that names it.
+	Detail string
 
 	// Last line
 	City   string
@@ -69,6 +95,7 @@ func (a *Address) Equals(other *Address) bool {
 	}
 
 	return a.BusinessName == other.BusinessName &&
+		a.Area == other.Area &&
 		a.PrimaryNumber == other.PrimaryNumber &&
 		a.Predirectional == other.Predirectional &&
 		a.StreetName == other.StreetName &&
@@ -76,6 +103,7 @@ func (a *Address) Equals(other *Address) bool {
 		a.Postdirectional == other.Postdirectional &&
 		a.SecondaryDesignator == other.SecondaryDesignator &&
 		a.SecondaryNumber == other.SecondaryNumber &&
+		a.Detail == other.Detail &&
 		a.City == other.City &&
 		a.Region == other.Region &&
 		a.Postal == other.Postal &&
@@ -98,7 +126,7 @@ func (a *Address) Format(opts ...FormatOptions) string {
 	if o.SingleLine {
 		sep = " "
 	}
-	return textutil.JoinNonEmpty(sep, a.BusinessName, a.FormatStreetLine(), a.FormatLastLine())
+	return textutil.JoinNonEmpty(sep, a.BusinessName, a.Area, a.FormatStreetLine(), a.FormatLastLine())
 }
 
 func (a *Address) FormatSingleLine(opts ...FormatOptions) string {
@@ -119,8 +147,12 @@ func variadicOptions(opts []FormatOptions) FormatOptions {
 }
 
 // FormatStreetLine joins street elements with single spaces; omits blanks.
-// Normal Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM.
+// Normal Order: PRIMARY PREDIR STREET SUFFIX POSTDIR SEC SECNUM DETAIL.
 // Rural Route Order: STREET PRIMARY SEC SECNUM.
+//
+// Detail qualifies the secondary number, so it follows it. Area is not a
+// street line element at all — it is its own line above one — and is rendered
+// by Format rather than here.
 func (a *Address) FormatStreetLine() string {
 	if a.Type != nil {
 		return a.Type.FormatStreetLine(a)
@@ -133,6 +165,7 @@ func (a *Address) FormatStreetLine() string {
 		a.Postdirectional,
 		a.SecondaryDesignator,
 		a.SecondaryNumber,
+		a.Detail,
 	)
 }
 

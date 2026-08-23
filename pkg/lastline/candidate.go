@@ -82,6 +82,10 @@ func assign(a *address.Address, p claim.ClaimPart) {
 		a.SecondaryDesignator = p.Value
 	case claim.PartSecondaryNumber:
 		a.SecondaryNumber = p.Value
+	case claim.PartDetail:
+		a.Detail = p.Value
+	case claim.PartArea:
+		a.Area = p.Value
 	case claim.PartCity:
 		a.City = p.Value
 	case claim.PartRegion:

@@ -46,6 +46,30 @@ func TestFormatStreetLine(t *testing.T) {
 			want: "50 ELM RD 2B",
 		},
 		{
+			// A private mailbox at a street address that already has a suite.
+			// The detail qualifies the secondary number, so it follows it.
+			name: "detail follows the secondary number",
+			in: address.Address{
+				PrimaryNumber:       "123",
+				StreetName:          "MAIN",
+				StreetSuffix:        "ST",
+				SecondaryDesignator: "STE",
+				SecondaryNumber:     "300",
+				Detail:              "PMB 456",
+			},
+			want: "123 MAIN ST STE 300 PMB 456",
+		},
+		{
+			// Area is a line of its own above the street line, not part of it.
+			name: "area is not a street line element",
+			in: address.Address{
+				Area:          "URB HIGHLAND GDNS",
+				PrimaryNumber: "123",
+				StreetName:    "CALLE MAIN",
+			},
+			want: "123 CALLE MAIN",
+		},
+		{
 			name: "empty address",
 			in:   address.Address{},
 			want: "",
@@ -184,6 +208,35 @@ func TestFormat(t *testing.T) {
 			want: "50 ELM RD",
 		},
 		{
+			// Publication 28's Puerto Rico example, which puts the urbanization
+			// on its own line above the street line.
+			name: "area sits between the business line and the street line",
+			in: address.Address{
+				BusinessName:        "ACME CORP",
+				Area:                "URB HIGHLAND GDNS",
+				PrimaryNumber:       "123",
+				StreetName:          "CALLE MAIN",
+				SecondaryDesignator: "APT",
+				SecondaryNumber:     "103",
+				City:                "SAN JUAN",
+				Region:              "PR",
+				Postal:              "00926",
+			},
+			want: "ACME CORP\nURB HIGHLAND GDNS\n123 CALLE MAIN APT 103\nSAN JUAN PR 00926",
+		},
+		{
+			name: "area with no business line",
+			in: address.Address{
+				Area:          "URB LAS GLADIOLAS",
+				PrimaryNumber: "150",
+				StreetName:    "CALLE A",
+				City:          "SAN JUAN",
+				Region:        "PR",
+				Postal:        "00926",
+			},
+			want: "URB LAS GLADIOLAS\n150 CALLE A\nSAN JUAN PR 00926",
+		},
+		{
 			name: "last line only",
 			in: address.Address{
 				City:   "SPRINGFIELD",
@@ -283,6 +336,8 @@ func TestEqualsComparesEveryField(t *testing.T) {
 		{"postdirectional", func(a *address.Address) { a.Postdirectional = "SW" }},
 		{"secondary designator", func(a *address.Address) { a.SecondaryDesignator = "APT" }},
 		{"secondary number", func(a *address.Address) { a.SecondaryNumber = "4" }},
+		{"detail", func(a *address.Address) { a.Detail = "PMB 456" }},
+		{"area", func(a *address.Address) { a.Area = "URB HIGHLAND GDNS" }},
 		{"city", func(a *address.Address) { a.City = "DENVER" }},
 		{"region", func(a *address.Address) { a.Region = "CO" }},
 		{"postal", func(a *address.Address) { a.Postal = "80202" }},

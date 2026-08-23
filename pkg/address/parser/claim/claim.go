@@ -23,6 +23,8 @@ const (
 	PartPostdirectional     Part = "postdirectional"
 	PartSecondaryDesignator Part = "secondary designator"
 	PartSecondaryNumber     Part = "secondary number"
+	PartDetail              Part = "detail"
+	PartArea                Part = "area"
 	PartCity                Part = "city"
 	PartRegion              Part = "region"
 	PartPostal              Part = "postal"
