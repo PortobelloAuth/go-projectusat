@@ -171,11 +171,8 @@ func TestNormalizeSecondary(t *testing.T) {
 		{"SEC", "SEC"},
 		{"Terraza", "TERR"},
 		{"TERR", "TERR"},
-		{"Urbanization", "URB"},
-		{"URB", "URB"},
 		{"Villa", "VIL"},
 		{"VIL", "VIL"},
-		{" urb ", "URB"},
 	}
 
 	for _, tc := range cases {
@@ -254,6 +251,59 @@ func TestUsePRDialect(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := puertorico.UsePRDialect(tc.region, tc.postal); got != tc.want {
 				t.Fatalf("UsePRDialect(%q, %q) = %v, want %v", tc.region, tc.postal, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeUrbanization(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"URB", "URB"},
+		{"urb", "URB"},
+		{" urb ", "URB"},
+		{"Urbanization", "URB"},
+		{"URBANIZACION", "URB"},
+		{"Urbanización", "URB"},
+		{"URBANIZACIÓN", "URB"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			got, err := puertorico.NormalizeUrbanization(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeUrbanization(%q) unexpected error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Fatalf("NormalizeUrbanization(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// The designator is a closed vocabulary, so an error is the answer to a
+// question rather than a failure. See CONTRIBUTING §1.6.
+func TestNormalizeUrbanizationUnknown(t *testing.T) {
+	for _, in := range []string{"URBAN", "URBANO", "COND", "SECTOR", "Fake", ""} {
+		t.Run(in, func(t *testing.T) {
+			got, err := puertorico.NormalizeUrbanization(in)
+			if err == nil {
+				t.Fatalf("NormalizeUrbanization(%q) expected error", in)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeUrbanization(%q) = %q, want empty", in, got)
+			}
+		})
+	}
+}
+
+// The urbanization is carried in Address.Area, not as a secondary designator,
+// so it must not be readable as one. Two spellings of URB would be two sources
+// of truth for what URB means.
+func TestTheUrbanizationIsNotASecondaryDesignator(t *testing.T) {
+	for _, in := range []string{"URB", "URBANIZACION", "Urbanization"} {
+		t.Run(in, func(t *testing.T) {
+			if _, err := puertorico.NormalizeSecondary(in); err == nil {
+				t.Errorf("NormalizeSecondary(%q) succeeded; the urbanization is an Area", in)
 			}
 		})
 	}

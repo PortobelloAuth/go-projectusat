@@ -90,6 +90,12 @@ var streetTypeShortMap = maps.Collect(func(yield func(string, string) bool) {
 
 // secondaryMap maps Spanish/English primary secondary designator -> abbreviation.
 // Per Project US@ secondary designators, Normalize returns the uppercase short form.
+//
+// The urbanization is deliberately absent. The standard puts it on a line of
+// its own above the secondary address identifier, and this library carries it
+// in Address.Area rather than as a secondary designator, so it has its own
+// vocabulary in urbanization.go. Listing it in both places would make URB two
+// things at once.
 var secondaryMap = map[string]string{
 	"APARTAMENTO":     "APT",
 	"BARRIADA":        "BDA",
@@ -115,8 +121,6 @@ var secondaryMap = map[string]string{
 	"RESIDENCIAL":     "RES",
 	"SECTOR":          "SEC",
 	"TERRAZA":         "TERR",
-	"URBANIZATION":    "URB",
-	"URBANIZACION":    "URB",
 	"VILLA":           "VIL",
 }
 
