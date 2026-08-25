@@ -20,9 +20,28 @@ import (
 // address type.
 type POBoxAddress struct{}
 
-// FormatStreetLine renders "PO BOX 11890".
+// FormatStreetLine renders "PO BOX 11890", or "PO BOX 159753 PMB 3571" where
+// the box carries a private mailbox number.
+//
+// The standard's CMRA section says:
+//
+//	The words POST OFFICE BOX or PO BOX and the private mailbox number MUST
+//	NOT be used on the Street Address Line. The Street Address Line is the
+//	standardized address of the private company.
+//
+// Read literally that forbids the second form, and one of the section's own
+// examples is "PO BOX 159753 PMB 3571". The reading consistent with the
+// examples is that PO BOX must not be used *instead of* PMB — the two name
+// different things and one cannot stand in for the other. Documented here per
+// CONTRIBUTING §2, since resolving an ambiguity in the standard is a decision
+// and not an implementation detail.
+//
+// Detail follows the box number, the same place it follows the secondary
+// number in the ordinary street line. The section also shows PMB on a line of
+// its own above the street line; this library emits only the trailing form,
+// because one output form per address is what makes two addresses comparable.
 func (p *POBoxAddress) FormatStreetLine(a *address.Address) string {
-	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber)
+	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber, a.Detail)
 }
 
 // Candidates returns this package's readings of the address under the given

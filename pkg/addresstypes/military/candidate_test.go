@@ -233,3 +233,20 @@ func TestFormatStreetLine(t *testing.T) {
 		t.Errorf("FormatStreetLine() = %q, want %q", got, "PSC 3 BOX 4120")
 	}
 }
+
+// Detail is the one field an overseas military street line does not render.
+// A private mailbox is rented from a commercial mail receiving agency, and an
+// overseas military address is delivered through a military post office, so a
+// value here could only have arrived by mistake. See FormatStreetLine.
+func TestFormatStreetLineOmitsTheDetail(t *testing.T) {
+	a := &address.Address{
+		StreetName:    "PSC 3",
+		PrimaryNumber: "BOX 4120",
+		Detail:        "PMB 234",
+	}
+
+	want := "PSC 3 BOX 4120"
+	if got := (&military.MilitaryAddress{}).FormatStreetLine(a); got != want {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, want)
+	}
+}
