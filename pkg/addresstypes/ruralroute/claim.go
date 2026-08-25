@@ -10,8 +10,9 @@ import (
 
 // Claims returns every reading of tokens this package can support.
 //
-// A rural route is claimed as a whole pattern or not at all. The standard
-// standardizes it as "RR ___ BOX ___", and both halves carry meaning: the
+// A route is claimed as a whole pattern or not at all. The standard
+// standardizes it as "RR ___ BOX ___" — or "HC ___ BOX ___" for a highway
+// contract route, see ruralroute.go — and both halves carry meaning: the
 // route is a numbered street that runs a long way, and the boxes on it are
 // primary addresses. So RR 4 BOX 125 is one claim assigning a street name of
 // RR 4 and a primary address number of BOX 125.
@@ -46,18 +47,18 @@ func Claims(tokens []token.Token) []claim.Claim {
 	return claims
 }
 
-// maxSpan is the longest rural route the vocabulary accepts, in tokens: a two
-// word designator, an optional number marker, the route number, BOX, another
-// optional marker, and the box number.
-const maxSpan = 7
+// maxSpan is the longest route the vocabulary accepts, in tokens: a three word
+// designator (HIGHWAY CONTRACT ROUTE), an optional number marker, the route
+// number, BOX, another optional marker, and the box number.
+const maxSpan = 8
 
 // boxMarker matches the token that opens the box half of the pattern. Normalize
 // accepts a number sign or a spelled-out number word in place of BOX, so the
 // same alternatives have to be recognized here to know where the split falls.
 var boxMarker = regexp.MustCompile(`^(BOX|#|NUMBER|NUM|NO)`)
 
-// routeClaim reads the rural route pattern beginning at start, and nothing
-// beyond it.
+// routeClaim reads the route pattern beginning at start, and nothing beyond
+// it.
 //
 // Normalize is the recognizer, not a formatter: it returns an error for
 // anything that is not this pattern, so the rule for what counts stays in one
@@ -83,7 +84,7 @@ func routeClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 			return claim.Claim{}, false
 		}
 
-		// Normalize emits exactly "RR ROUTE BOX BOXNUM".
+		// Normalize emits exactly "DESIGNATOR ROUTE BOX BOXNUM".
 		fields := strings.Fields(normalized)
 
 		return claim.Claim{

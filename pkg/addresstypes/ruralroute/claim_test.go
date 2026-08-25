@@ -274,3 +274,88 @@ func TestNoClaimSpansALineBreak(t *testing.T) {
 		})
 	}
 }
+
+// A highway contract route is claimed exactly as a rural route is: the whole
+// pattern, split into the route as a street name and the box as a primary
+// address number. Nothing in claim.go names a designator, so this is the test
+// that the split is driven by what Normalize emitted and not by the letters RR.
+func TestAHighwayContractRouteIsClaimedLikeARuralRoute(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want []reading
+	}{
+		{
+			name: "standard form",
+			in:   "HC 4 BOX 125",
+			want: []reading{
+				{"HC 4", claim.PartStreetName, claim.ConfidenceExact, "HC 4"},
+				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
+			},
+		},
+		{
+			// The longest designator the vocabulary accepts. It is three
+			// tokens, which is what maxSpan had to grow to reach.
+			name: "spelled out designator",
+			in:   "HIGHWAY CONTRACT ROUTE 4 BOX 125",
+			want: []reading{
+				{"HIGHWAY CONTRACT ROUTE 4", claim.PartStreetName, claim.ConfidenceExact, "HC 4"},
+				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
+			},
+		},
+		{
+			name: "hcr designator",
+			in:   "HCR 4 BOX 125",
+			want: []reading{
+				{"HCR 4", claim.PartStreetName, claim.ConfidenceExact, "HC 4"},
+				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tokens := token.Tokenize(tc.in)
+			got := flatten(tokens, ruralroute.Claims(tokens))
+
+			if len(got) != len(tc.want) {
+				t.Fatalf("Claims(%q) = %+v, want %+v", tc.in, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("reading %d = %+v, want %+v", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// The longest span the vocabulary accepts: a three word designator and a number
+// marker on each half, eight tokens in all. maxSpan had to grow from seven to
+// reach it, and this is what would fail if it shrank back.
+//
+// Only the extent and the values are asserted. Where the claim divides into its
+// street name and primary number parts is wrong here — the marker on the route
+// half is mistaken for the box boundary — but that is true of "RR NO 2 BOX 18"
+// just as much, so it is a bug of its own and not this vocabulary's. See #73.
+func TestTheLongestHighwayContractRouteIsClaimedWhole(t *testing.T) {
+	tokens := token.Tokenize("HIGHWAY CONTRACT ROUTE NO 4 BOX NO 125")
+	claims := ruralroute.Claims(tokens)
+
+	if len(claims) != 1 {
+		t.Fatalf("expected one claim, got %+v", claims)
+	}
+	if claims[0].Start() != 0 || claims[0].End() != 8 {
+		t.Errorf("claim covers [%d,%d), want [0,8)", claims[0].Start(), claims[0].End())
+	}
+
+	want := map[claim.Part]string{
+		claim.PartStreetName:    "HC 4",
+		claim.PartPrimaryNumber: "BOX 125",
+	}
+	for _, p := range claims[0].Parts {
+		if p.Value != want[p.Part] {
+			t.Errorf("%s = %q, want %q", p.Part, p.Value, want[p.Part])
+		}
+	}
+}
