@@ -3,7 +3,7 @@ package highways_test
 import (
 	"testing"
 
-	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 )
 
 func TestNormalizeStreetName(t *testing.T) {
