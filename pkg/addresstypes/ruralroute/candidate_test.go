@@ -177,3 +177,26 @@ func TestEveryCandidateIsWellFormed(t *testing.T) {
 		}
 	}
 }
+
+// A highway contract route builds the same candidate a rural route does. It
+// shares this package's address type, so nothing downstream has to know which
+// designator it was.
+func TestAHighwayContractRouteIsRecognizedWhole(t *testing.T) {
+	top, ok := best(candidates("HC 4 BOX 125\nBRYAN OH 43506"))
+	if !ok {
+		t.Fatal("no candidate for a highway contract route")
+	}
+
+	if top.Address.StreetName != "HC 4" {
+		t.Errorf("StreetName = %q, want %q", top.Address.StreetName, "HC 4")
+	}
+	if top.Address.PrimaryNumber != "BOX 125" {
+		t.Errorf("PrimaryNumber = %q, want %q", top.Address.PrimaryNumber, "BOX 125")
+	}
+	if top.Address.City != "BRYAN" {
+		t.Errorf("City = %q, want %q", top.Address.City, "BRYAN")
+	}
+	if _, isRoute := top.Address.Type.(*ruralroute.RuralRouteAddress); !isRoute {
+		t.Errorf("Type = %T, want *ruralroute.RuralRouteAddress", top.Address.Type)
+	}
+}
