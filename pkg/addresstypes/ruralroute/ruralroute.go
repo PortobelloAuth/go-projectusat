@@ -167,13 +167,23 @@ func NewRuralRoute(a *address.Address) (*address.Address, error) {
 
 type RuralRouteAddress struct{}
 
+// FormatStreetLine renders "RR 4 BOX 125", with a secondary unit and a private
+// mailbox number where the address carries them.
+//
+// Detail qualifies the secondary number and so follows it, exactly as in the
+// ordinary street line. The standard's CMRA section shows a private mailbox
+// over a rural route — "PMB 234" above "RR 1 BOX 12" — which is why this shape
+// renders it at all. That example puts it on its own line; this library emits
+// only the trailing form, because one output form per address is what makes
+// two addresses comparable.
 func (rr *RuralRouteAddress) FormatStreetLine(a *address.Address) string {
-	// Rural Route Order: STREET PRIMARY SEC SECNUM.
+	// Rural Route Order: STREET PRIMARY SEC SECNUM DETAIL.
 	// Other address parts are silently dropped.
 	return textutil.JoinNonEmpty(" ",
 		a.StreetName,
 		a.PrimaryNumber,
 		a.SecondaryDesignator,
 		a.SecondaryNumber,
+		a.Detail,
 	)
 }

@@ -232,3 +232,20 @@ func TestFormatStreetLine(t *testing.T) {
 		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 11890")
 	}
 }
+
+// The standard's CMRA section shows "PO BOX 159753 PMB 3571" as a valid street
+// line, so a private mailbox number renders after the box number. See
+// FormatStreetLine for why that does not contradict the sentence forbidding
+// PO BOX on the street line.
+func TestFormatStreetLineRendersTheDetail(t *testing.T) {
+	a := &address.Address{
+		StreetName:    "PO BOX",
+		PrimaryNumber: "159753",
+		Detail:        "PMB 3571",
+	}
+
+	want := "PO BOX 159753 PMB 3571"
+	if got := (&pobox.POBoxAddress{}).FormatStreetLine(a); got != want {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, want)
+	}
+}

@@ -131,3 +131,32 @@ func TestFormatStreetLineFormatsAHighwayContractRoute(t *testing.T) {
 		t.Errorf("FormatStreetLine() = %q, want %q", got, "HC 4 BOX 125 APT 2")
 	}
 }
+
+// The standard's CMRA section shows "PMB 234" over "RR 1 BOX 12", so a rural
+// route carries a private mailbox number. Detail qualifies the secondary
+// number and follows it, as it does in the ordinary street line.
+func TestFormatStreetLineRendersTheDetail(t *testing.T) {
+	a := &address.Address{
+		StreetName:    "RR 1",
+		PrimaryNumber: "BOX 12",
+		Detail:        "PMB 234",
+	}
+
+	want := "RR 1 BOX 12 PMB 234"
+	if got := (&ruralroute.RuralRouteAddress{}).FormatStreetLine(a); got != want {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, want)
+	}
+
+	withUnit := &address.Address{
+		StreetName:          "RR 1",
+		PrimaryNumber:       "BOX 12",
+		SecondaryDesignator: "APT",
+		SecondaryNumber:     "2",
+		Detail:              "PMB 234",
+	}
+
+	want = "RR 1 BOX 12 APT 2 PMB 234"
+	if got := (&ruralroute.RuralRouteAddress{}).FormatStreetLine(withUnit); got != want {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, want)
+	}
+}

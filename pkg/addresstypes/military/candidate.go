@@ -18,6 +18,12 @@ import (
 type MilitaryAddress struct{}
 
 // FormatStreetLine renders "PSC 3 BOX 4120".
+//
+// Detail is deliberately absent, where every other address type renders it. It
+// holds a private mailbox number, and a private mailbox is a box rented from a
+// commercial mail receiving agency. An overseas military address is delivered
+// through a military post office, so the case cannot arise, and rendering a
+// value that could only have arrived by mistake would hide the mistake.
 func (m *MilitaryAddress) FormatStreetLine(a *address.Address) string {
 	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber)
 }
