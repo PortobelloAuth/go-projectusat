@@ -5,7 +5,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
-	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/highways"
+	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 )
 
 // reading is a Claim flattened to the token text it covers, so cases read as
