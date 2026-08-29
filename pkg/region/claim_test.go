@@ -158,3 +158,41 @@ func TestClaimsNearEndOfInput(t *testing.T) {
 		}
 	}
 }
+
+// A region name hard wrapped across two lines is not a region name. Join
+// flattens a span with spaces, so without a bound "NEW\nYORK" reaches the
+// lookup as "NEW YORK" and a street name on one line and a city on the next
+// become a state. See token.LineEnd.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"123 MAIN ST NEW\nYORK NY 10001",
+		"123 NEW\nYORK ST DENVER CO 80201",
+		"123 MAIN ST NORTH\nCAROLINA 27601",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range region.Claims(tokens) {
+				if tokens[c.End()-1].Line != tokens[c.Start()].Line {
+					t.Errorf("claim over %q spans a line break",
+						token.Join(tokens[c.Start():c.End()]))
+				}
+			}
+		})
+	}
+}
+
+// The bound must not cost the reading it was added to protect: the same phrase
+// on one line is still a region.
+func TestAPhraseOnOneLineIsStillClaimed(t *testing.T) {
+	tokens := token.Tokenize("123 MAIN ST\nNEW YORK NY 10001")
+
+	var found bool
+	for _, c := range region.Claims(tokens) {
+		if token.Join(tokens[c.Start():c.End()]) == "NEW YORK" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected NEW YORK on its own line to still be claimed")
+	}
+}

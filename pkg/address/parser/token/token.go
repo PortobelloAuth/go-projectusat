@@ -72,6 +72,14 @@ func Join(tokens []Token) string {
 // this bound "PO BOX\nDENVER CO 80201" matches the post office box pattern and
 // takes the city for a box number.
 //
+// The same bound applies to a vocabulary phrase, for a different reason. There
+// the pattern is not a line, so the question is whether a phrase hard-wrapped
+// across two — "NORTH\nCAROLINA" — is input this library should still read as
+// one. It is not: an address whose lines were wrapped by a fixed-width form
+// rather than by address structure is expected to be cleaned up before it
+// arrives here, so a break is a structural signal and not whitespace. The rule
+// is that a claim never spans a line break, whatever kind of claim it is.
+//
 // A start outside the tokens has no line, and the answer is the end of them.
 func LineEnd(tokens []Token, start int) int {
 	if start < 0 || start >= len(tokens) {

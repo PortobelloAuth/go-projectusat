@@ -125,3 +125,33 @@ func TestClaimsNearEndOfInput(t *testing.T) {
 		}
 	}
 }
+
+// A country name hard wrapped across two lines is not a country name. Join
+// flattens a span with spaces, so without a bound "UNITED\nSTATES" reaches the
+// lookup as "UNITED STATES". See token.LineEnd.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	tokens := token.Tokenize("123 MAIN ST\nUNITED\nSTATES")
+	for _, c := range country.Claims(tokens) {
+		if tokens[c.End()-1].Line != tokens[c.Start()].Line {
+			t.Errorf("claim over %q spans a line break",
+				token.Join(tokens[c.Start():c.End()]))
+		}
+	}
+}
+
+// The bound must not cost the reading it was added to protect: the same phrase
+// on one line is still a country. It normalizes to the empty string, which is
+// what a domestic country claim says, so the span is what identifies it.
+func TestAPhraseOnOneLineIsStillClaimed(t *testing.T) {
+	tokens := token.Tokenize("123 MAIN ST\nDENVER CO 80201\nUNITED STATES")
+
+	var found bool
+	for _, c := range country.Claims(tokens) {
+		if token.Join(tokens[c.Start():c.End()]) == "UNITED STATES" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected UNITED STATES on its own line to still be claimed")
+	}
+}

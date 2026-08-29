@@ -160,3 +160,41 @@ func TestClaimsLongestPrefixedForm(t *testing.T) {
 		t.Errorf("got %q, want the region abbreviated in front of the highway", got)
 	}
 }
+
+// A highway name hard wrapped across two lines is not a highway name. This was
+// the worst of the three sites: "STATE\nROUTE 9" produced four readings, the
+// longest of which swallowed the whole last line into a street name at
+// ConfidenceStrong — a candidate covering every token with no leftover, which
+// is the shape a chooser is built to prefer. See token.LineEnd.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"123 STATE\nROUTE 9 ALBANY NY 12084",
+		"123 MAIN ST DENVER CO\n80201",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range highways.Claims(tokens) {
+				if tokens[c.End()-1].Line != tokens[c.Start()].Line {
+					t.Errorf("claim over %q spans a line break",
+						token.Join(tokens[c.Start():c.End()]))
+				}
+			}
+		})
+	}
+}
+
+// The bound must not cost the reading it was added to protect: the same name
+// on one line is still a highway.
+func TestAHighwayOnOneLineIsStillClaimed(t *testing.T) {
+	tokens := token.Tokenize("123 STATE ROUTE 9\nALBANY NY 12084")
+
+	var found bool
+	for _, c := range highways.Claims(tokens) {
+		if token.Join(tokens[c.Start():c.End()]) == "STATE ROUTE 9" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected STATE ROUTE 9 on its own line to still be claimed")
+	}
+}
