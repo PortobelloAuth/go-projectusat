@@ -144,14 +144,66 @@ func streetLineClaim(tokens []token.Token, pattern claim.Claim) (claim.Claim, bo
 }
 
 // boxTokenIndex reports where the box half of the pattern starts, as an offset
-// into the span. The route designator occupies at least one token, so a marker
-// at offset zero is not a boundary.
+// into the span.
+//
+// The scan begins after the route number rather than at offset one, because a
+// number marker may sit on either half: "RR NO 2 BOX 18" carries one on the
+// route and "RR 2 BOX NO 18" on the box. Both are noise that Normalize strips,
+// and neither is the boundary — the boundary is the marker that opens the box
+// half, which is the first one after the route number. Scanning from the front
+// stops on whichever comes first, which puts the route number inside the
+// primary number part and leaves the street name part covering the designator
+// alone.
 func boxTokenIndex(span []token.Token) (int, bool) {
-	for i, t := range span {
-		if i > 0 && boxMarker.MatchString(strings.ToUpper(t.Text)) {
+	for i := routeNumberIndex(span) + 1; i < len(span); i++ {
+		if boxMarker.MatchString(strings.ToUpper(span[i].Text)) {
 			return i, true
 		}
 	}
 
 	return 0, false
+}
+
+// routeNumberIndex reports the offset of the route number within the span.
+//
+// The number follows the designator, with an optional marker between them, and
+// may be glued to a one token designator instead of standing on its own —
+// "RR03". A glued number is at the designator's own offset, which is why
+// designatorLength reports zero for that shape rather than one.
+func routeNumberIndex(span []token.Token) int {
+	i := designatorLength(span)
+	for i < len(span) && boxMarker.MatchString(strings.ToUpper(span[i].Text)) {
+		i++
+	}
+
+	return i
+}
+
+// designatorLength reports how many tokens the route designator occupies, or
+// zero where the route number is glued to it.
+//
+// recognizedDesignators is the authoritative table and is ordered longest
+// first within each family, so the first spelling that matches is the longest
+// one that could — the same property routeReplacer depends on. See
+// ruralroute.go.
+func designatorLength(span []token.Token) int {
+	for _, d := range recognizedDesignators {
+		n := len(strings.Fields(d.Spelling))
+		if n > len(span) {
+			continue
+		}
+
+		lead := strings.ToUpper(token.Join(span[:n]))
+		if lead == d.Spelling {
+			return n
+		}
+		// Only a one token designator can have the number glued to it: the
+		// spellings that run longer end in a word, and a number stuck to
+		// ROUTE or CONTRACT is not a spelling this package accepts.
+		if n == 1 && strings.HasPrefix(lead, d.Spelling) {
+			return 0
+		}
+	}
+
+	return 0
 }

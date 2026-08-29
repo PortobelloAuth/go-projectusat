@@ -95,6 +95,55 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
+			// The standard says a number marker SHOULD NOT be used, so both
+			// halves may carry one and neither is the boundary between them.
+			// The boundary is the marker that opens the box, which is the one
+			// after the route number.
+			name: "number marker on the route half",
+			in:   "RR NO 2 BOX 18",
+			want: []reading{
+				{"RR NO 2", claim.PartStreetName, claim.ConfidenceExact, "RR 2"},
+				{"BOX 18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
+			name: "number marker on the box half",
+			in:   "RR 2 BOX NO 18",
+			want: []reading{
+				{"RR 2", claim.PartStreetName, claim.ConfidenceExact, "RR 2"},
+				{"BOX NO 18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
+			name: "number marker on both halves",
+			in:   "RURAL ROUTE NO 91 BOX NO A7",
+			want: []reading{
+				{"RURAL ROUTE NO 91", claim.PartStreetName, claim.ConfidenceExact, "RR 91"},
+				{"BOX NO A7", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX A7"},
+			},
+		},
+		{
+			// A number sign carries the same meaning as NO, and glues to what
+			// follows it more readily.
+			name: "number sign on the route half",
+			in:   "RD # 51 BOX 25",
+			want: []reading{
+				{"RD # 51", claim.PartStreetName, claim.ConfidenceExact, "RR 51"},
+				{"BOX 25", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 25"},
+			},
+		},
+		{
+			// Nothing separates the two halves here: the designator and the
+			// route number are one token and the marker opens the box, so the
+			// boundary is the first token after the glued one.
+			name: "glued designator with a marked box",
+			in:   "RR03 NO 98D",
+			want: []reading{
+				{"RR03", claim.PartStreetName, claim.ConfidenceExact, "RR 3"},
+				{"NO 98D", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 98D"},
+			},
+		},
+		{
 			// A designator alone is a fragment of a pattern that did not match.
 			name: "designator alone is not claimed",
 			in:   "RR",
@@ -333,11 +382,6 @@ func TestAHighwayContractRouteIsClaimedLikeARuralRoute(t *testing.T) {
 // The longest span the vocabulary accepts: a three word designator and a number
 // marker on each half, eight tokens in all. maxSpan had to grow from seven to
 // reach it, and this is what would fail if it shrank back.
-//
-// Only the extent and the values are asserted. Where the claim divides into its
-// street name and primary number parts is wrong here — the marker on the route
-// half is mistaken for the box boundary — but that is true of "RR NO 2 BOX 18"
-// just as much, so it is a bug of its own and not this vocabulary's. See #73.
 func TestTheLongestHighwayContractRouteIsClaimedWhole(t *testing.T) {
 	tokens := token.Tokenize("HIGHWAY CONTRACT ROUTE NO 4 BOX NO 125")
 	claims := ruralroute.Claims(tokens)
@@ -349,13 +393,17 @@ func TestTheLongestHighwayContractRouteIsClaimedWhole(t *testing.T) {
 		t.Errorf("claim covers [%d,%d), want [0,8)", claims[0].Start(), claims[0].End())
 	}
 
-	want := map[claim.Part]string{
-		claim.PartStreetName:    "HC 4",
-		claim.PartPrimaryNumber: "BOX 125",
+	want := []reading{
+		{"HIGHWAY CONTRACT ROUTE NO 4", claim.PartStreetName, claim.ConfidenceExact, "HC 4"},
+		{"BOX NO 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
 	}
-	for _, p := range claims[0].Parts {
-		if p.Value != want[p.Part] {
-			t.Errorf("%s = %q, want %q", p.Part, p.Value, want[p.Part])
+	got := flatten(tokens, claims)
+	if len(got) != len(want) {
+		t.Fatalf("readings are %+v, want %+v", got, want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("reading %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
 }
