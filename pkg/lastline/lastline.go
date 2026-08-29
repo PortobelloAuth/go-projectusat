@@ -6,6 +6,7 @@
 //	{City}, {Region}
 //	{Postal Code}
 //	{City} {Postal Code}
+//	{Region} {Postal Code}
 //
 // Where those come from matters, because it is not one citation. The first
 // three are amadsen's statement of the pattern on #37; neither Project US@ nor
@@ -19,6 +20,13 @@
 // The fourth is neither: see confidenceFor. It is offered because a city in a
 // reasonable position ahead of a postal code is a city, and it is rated below
 // every other shape precisely because nothing but that argument supports it.
+//
+// The fifth is the complete pattern with the city absent, which is ordinary in
+// patient data where the city field is empty. It is offered on amadsen's
+// ruling on #54: "the mere possibility of a looking up a city from the zip code
+// indicates that {region} {postal code} is a useful pattern." Without it every
+// reading that keeps a region has to invent a city for it, so a bare CO 80201
+// could only be read as dropping the region or as a city named CO.
 //
 // The practical consequence of the punctuation point is that a comma is a
 // bonus and not a premise. On normalized input there will not be one, and the
@@ -148,8 +156,19 @@ func LineClaims(tokens []token.Token, claims []claim.Claim) []LineClaim {
 			postalStart := claims[postal.index].Start()
 
 			for _, region := range byPartEndingAt(claims, claim.PartRegion, postalStart) {
+				regionStart := claims[region.index].Start()
+
 				lines = append(lines, cityReadings(tokens, claims, patternCityRegionPostal,
-					lineStart, claims[region.index].Start(), []indexedClaim{region, postal, country})...)
+					lineStart, regionStart, []indexedClaim{region, postal, country})...)
+
+				// {Region} {Postal Code}, with no city at all. The tokens ahead
+				// of the region are not leftovers here: this reading says the
+				// last line begins at the region, so what precedes it belongs
+				// to the street address, exactly as it does for a city reading
+				// that starts partway along the line.
+				lines = append(lines, assemble(claims, regionStart, end,
+					confidenceFor(patternRegionPostal, marked(tokens, lineStart, regionStart)),
+					nil, []indexedClaim{region, postal, country}))
 			}
 
 			// {Postal Code}, with whatever precedes it on the line left over.
@@ -282,8 +301,8 @@ func cityStarts(tokens []token.Token, lineStart, cityEnd int) []int {
 	return starts
 }
 
-// marked reports whether the start of the city is stated by the address rather
-// than inferred by this package.
+// marked reports whether the start of the reading is stated by the address
+// rather than inferred by this package.
 //
 // The start of the final line only counts when there is a line ahead of it. On
 // a single line address the first token is where the address begins, not where
@@ -298,8 +317,8 @@ func marked(tokens []token.Token, lineStart, start int) bool {
 }
 
 // pattern names the shape a reading matched. Project US@ documents the first
-// two and the fourth; patternCityPostal is not one of them and is offered
-// anyway, for the reason given on confidenceFor.
+// two and the fourth; patternCityPostal and patternRegionPostal are not among
+// them and are offered anyway, for the reasons given on confidenceFor.
 type pattern int
 
 const (
@@ -307,6 +326,7 @@ const (
 	patternCityRegion
 	patternCityPostal
 	patternPostal
+	patternRegionPostal
 )
 
 // confidenceFor rates a shape before leftovers are charged for.
@@ -328,8 +348,19 @@ const (
 // says the line does not account for it when plainly it does. Both readings are
 // returned; this one only wins where nothing better applies.
 //
-// marked is whether the address states where the city begins — a comma, or a
+// patternRegionPostal — a region and a postal code with no city — is the other
+// undocumented shape, and it is rated differently from patternCityPostal
+// because it is short of a component rather than short of evidence. Both of its
+// members were recognized by a vocabulary, in the order the complete pattern
+// puts them in; what is missing is a field the input did not supply. So it is
+// rated as {City} {Region} is: two placed components, one of them certain,
+// which never reaches the complete pattern and never sinks to a shape held up
+// by position alone.
+//
+// marked is whether the address states where the reading begins — a comma, or a
 // line break with a line ahead of it — rather than this package inferring it.
+// For the city shapes that is where the city starts; for patternRegionPostal,
+// where the region does.
 func confidenceFor(shape pattern, marked bool) claim.Confidence {
 	switch shape {
 	case patternCityRegionPostal:
@@ -352,6 +383,13 @@ func confidenceFor(shape pattern, marked bool) claim.Confidence {
 		}
 
 		return claim.ConfidenceWeak
+
+	case patternRegionPostal:
+		if marked {
+			return claim.ConfidenceStrong
+		}
+
+		return claim.ConfidenceLikely
 
 	default:
 		return claim.ConfidenceStrong

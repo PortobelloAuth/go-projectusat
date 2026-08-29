@@ -455,3 +455,120 @@ func TestEveryClaimPartReachesItsField(t *testing.T) {
 		})
 	}
 }
+
+// The case from #54: a last line with a region and no city at all, which is
+// ordinary in patient data where the city field is empty. Before the shape
+// existed the only readings available either dropped the region — losing a
+// region recognized at ConfidenceExact — or assigned it to the city, and the
+// two tied so nothing could separate them.
+func TestARegionWithNoCityIsRead(t *testing.T) {
+	_, lines := read("123 MAIN ST\nCO 80201")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+
+	if got, ok := valueOf(best, claim.PartRegion); !ok || got != "CO" {
+		t.Fatalf("best reading assigns region %q (present: %t), want CO", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartPostal); !ok || got != "80201" {
+		t.Errorf("best reading assigns postal %q (present: %t), want 80201", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartCity); ok {
+		t.Errorf("best reading assigns city %q, want none: the address supplies no city", got)
+	}
+	if len(best.Leftover) != 0 {
+		t.Errorf("best reading strands %+v, want nothing: the line is entirely accounted for",
+			best.Leftover)
+	}
+}
+
+// The region is still offered as a city, because the tokens allow it and this
+// package does not choose. What it must not do is tie: the reading that puts CO
+// where the address put it has to win.
+func TestTheRegionOutranksReadingItAsTheCity(t *testing.T) {
+	_, lines := read("123 MAIN ST\nCO 80201")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	for _, line := range lines {
+		if _, hasRegion := valueOf(line, claim.PartRegion); hasRegion {
+			continue
+		}
+		if line.Claim.Confidence >= best.Claim.Confidence {
+			t.Errorf("a regionless reading rated %d against the region and postal reading at %d",
+				line.Claim.Confidence, best.Claim.Confidence)
+		}
+	}
+}
+
+// The other undocumented shape, held to the same rule: where the address does
+// supply a city, the complete pattern wins and the cityless reading sits below
+// it.
+func TestTheRegionAndPostalShapeNeverOutranksTheCompletePattern(t *testing.T) {
+	_, lines := read("123 MAIN ST\nDENVER, CO 80201")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	if _, ok := valueOf(best, claim.PartCity); !ok {
+		t.Fatalf("best reading assigns no city, confidence %d", best.Claim.Confidence)
+	}
+
+	for _, line := range lines {
+		if _, hasCity := valueOf(line, claim.PartCity); hasCity {
+			continue
+		}
+		if line.Claim.Confidence >= best.Claim.Confidence {
+			t.Errorf("the cityless reading rated %d against the complete pattern at %d",
+				line.Claim.Confidence, best.Claim.Confidence)
+		}
+	}
+}
+
+// Aaron's caveat on #54 is that this shape could enlarge the set of last line
+// readings. It adds exactly one reading per region and postal code pairing that
+// was already being read, and none where there is no region — so a line with
+// one region gains one reading, not one per city boundary the way the city
+// shapes do.
+func TestTheShapeAddsOneReadingPerRegion(t *testing.T) {
+	_, lines := read("123 MAIN ST\nDENVER CO 80201")
+
+	var cityless int
+	for _, line := range lines {
+		_, hasCity := valueOf(line, claim.PartCity)
+		_, hasRegion := valueOf(line, claim.PartRegion)
+		if hasRegion && !hasCity {
+			cityless++
+		}
+	}
+
+	if cityless != 1 {
+		t.Errorf("got %d region and postal readings, want exactly 1", cityless)
+	}
+}
+
+// The shape is offered with a country like every other, and the country may sit
+// on a line of its own.
+func TestARegionWithNoCityIsReadBeneathACountry(t *testing.T) {
+	tokens, lines := read("123 MAIN ST\nON M5V 3L9\nCANADA")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	if got, ok := valueOf(best, claim.PartRegion); !ok || got != "ON" {
+		t.Fatalf("best reading assigns region %q (present: %t), want ON", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartCountry); !ok || got != "CANADA" {
+		t.Errorf("best reading assigns country %q (present: %t), want CANADA", got, ok)
+	}
+	if best.Span.End() != len(tokens) {
+		t.Errorf("span ends at %d, want %d: the last line runs to the end of the address",
+			best.Span.End(), len(tokens))
+	}
+}
