@@ -29,7 +29,9 @@ func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for start := range tokens {
-		span := min(maxSpan, len(tokens)-start)
+		// A code hard wrapped across two lines is not one code. See
+		// token.LineEnd.
+		span := min(maxSpan, token.LineEnd(tokens, start)-start)
 		for length := span; length >= 1; length-- {
 			value, confidence, ok := classify(token.Join(tokens[start : start+length]))
 			if !ok {

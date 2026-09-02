@@ -28,7 +28,9 @@ func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for i := range tokens {
-		span := min(maxSpan, len(tokens)-i)
+		// A compound hard wrapped across two lines is not one compound. See
+		// token.LineEnd.
+		span := min(maxSpan, token.LineEnd(tokens, i)-i)
 		for length := span; length >= 1; length-- {
 			abbreviation, ok := abbreviateSpan(tokens[i : i+length])
 			if !ok {

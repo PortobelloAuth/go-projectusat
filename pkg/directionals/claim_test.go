@@ -193,3 +193,42 @@ func TestClaimsOffersTheWrongReadingWhenItCannotKnow(t *testing.T) {
 		t.Errorf("claimed %q, want %q", got, "W")
 	}
 }
+
+// A compound directional hard wrapped across two lines is not one compound.
+// abbreviateSpan reads a span without regard to where the lines fall, so
+// without a bound the last token of the delivery address line and the first of
+// the last line combine: "123 FAKE ST NORTH\nEAST ORANGE NJ 07017" claims
+// NORTH EAST as NE and takes the first word of the city with it. See
+// token.LineEnd.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"123 FAKE ST NORTH\nEAST ORANGE NJ 07017",
+		"123 NORTH\nWEST ST DENVER CO 80201",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range directionals.Claims(tokens) {
+				if tokens[c.End()-1].Line != tokens[c.Start()].Line {
+					t.Errorf("claim over %q spans a line break",
+						token.Join(tokens[c.Start():c.End()]))
+				}
+			}
+		})
+	}
+}
+
+// The bound must not cost the reading it was added to protect: the same
+// compound on one line is still claimed as one directional.
+func TestACompoundOnOneLineIsStillClaimed(t *testing.T) {
+	tokens := token.Tokenize("123 NORTH EAST ST\nDENVER CO 80201")
+
+	var found bool
+	for _, c := range directionals.Claims(tokens) {
+		if token.Join(tokens[c.Start():c.End()]) == "NORTH EAST" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected NORTH EAST on one line to still be claimed as a compound")
+	}
+}
