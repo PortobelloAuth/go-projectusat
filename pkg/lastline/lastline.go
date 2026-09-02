@@ -167,7 +167,7 @@ func LineClaims(tokens []token.Token, claims []claim.Claim) []LineClaim {
 				// to the street address, exactly as it does for a city reading
 				// that starts partway along the line.
 				lines = append(lines, assemble(claims, regionStart, end,
-					confidenceFor(patternRegionPostal, marked(tokens, lineStart, regionStart)),
+					regionPostalConfidence(claims[region.index], marked(tokens, lineStart, regionStart)),
 					nil, []indexedClaim{region, postal, country}))
 			}
 
@@ -355,7 +355,8 @@ const (
 // puts them in; what is missing is a field the input did not supply. So it is
 // rated as {City} {Region} is: two placed components, one of them certain,
 // which never reaches the complete pattern and never sinks to a shape held up
-// by position alone.
+// by position alone. That rating assumes the region is certain, and
+// regionPostalConfidence is where the case that it is not gets charged for.
 //
 // marked is whether the address states where the reading begins — a comma, or a
 // line break with a line ahead of it — rather than this package inferring it.
@@ -394,6 +395,32 @@ func confidenceFor(shape pattern, marked bool) claim.Confidence {
 	default:
 		return claim.ConfidenceStrong
 	}
+}
+
+// regionPostalConfidence rates a {Region} {Postal Code} reading, which is
+// confidenceFor's rating for the shape with a region the address spelled out
+// charged one step against it.
+//
+// pkg/region draws the same distinction for the same reason: a two letter code
+// is a fixed token that carries no other meaning, while a spelled out state
+// name is a word that can be doing another job. On this shape the other job is
+// exactly the one the reading rules out. NEW YORK 10001 is a city and a ZIP as
+// readily as it is a state and a ZIP, and reading it as the region must not
+// outrank reading it as the city — the tokens say nothing that would settle it,
+// and this package does not choose what the tokens leave open.
+//
+// CO 80201 is not ambiguous in that way. Nothing but the region writes CO, so
+// the reading that puts CO where the address put it keeps the full rating and
+// wins outright over a city named CO. That is the whole of the difference
+// between the two cases, and it is the region claim's own confidence that
+// states it.
+func regionPostalConfidence(region claim.Claim, marked bool) claim.Confidence {
+	confidence := confidenceFor(patternRegionPostal, marked)
+	if region.Confidence == claim.ConfidenceExact {
+		return confidence
+	}
+
+	return demote(confidence)
 }
 
 // demote lowers a confidence by one step on the shared scale. It is how a

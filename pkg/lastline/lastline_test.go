@@ -487,6 +487,10 @@ func TestARegionWithNoCityIsRead(t *testing.T) {
 // The region is still offered as a city, because the tokens allow it and this
 // package does not choose. What it must not do is tie: the reading that puts CO
 // where the address put it has to win.
+//
+// Every other reading is held below the best one, not just the regionless ones.
+// Checking only those would pass on a line where four readings tie at the top
+// so long as each of them kept a region, which is not what "has to win" says.
 func TestTheRegionOutranksReadingItAsTheCity(t *testing.T) {
 	_, lines := read("123 MAIN ST\nCO 80201")
 	if len(lines) == 0 {
@@ -494,14 +498,69 @@ func TestTheRegionOutranksReadingItAsTheCity(t *testing.T) {
 	}
 
 	best := lines[0]
-	for _, line := range lines {
-		if _, hasRegion := valueOf(line, claim.PartRegion); hasRegion {
-			continue
-		}
+	if _, ok := valueOf(best, claim.PartCity); ok {
+		t.Errorf("the best reading assigns a city, confidence %d", best.Claim.Confidence)
+	}
+	if got, _ := valueOf(best, claim.PartRegion); got != "CO" {
+		t.Errorf("the best reading assigns region %q, want CO", got)
+	}
+
+	for _, line := range lines[1:] {
 		if line.Claim.Confidence >= best.Claim.Confidence {
-			t.Errorf("a regionless reading rated %d against the region and postal reading at %d",
+			t.Errorf("a second reading rated %d against the region and postal reading at %d",
 				line.Claim.Confidence, best.Claim.Confidence)
 		}
+	}
+}
+
+// A region the address spelled out is the case the rule above does not reach.
+// NEW YORK is a state and a city, INDIANA is a state and a borough, WASHINGTON
+// is both several times over, and nothing in the tokens says which one the
+// address meant. So the cityless reading is offered and must not win: where the
+// only evidence is the words themselves, reading them as the region cannot
+// outrank reading them as the city.
+//
+// The readings are allowed to tie. That is the honest answer to a line that
+// genuinely does not say, and it is the whole difference between this case and
+// CO 80201, where nothing but the region writes CO. See regionPostalConfidence.
+func TestASpelledRegionDoesNotOutrankReadingItAsTheCity(t *testing.T) {
+	cases := []struct {
+		source, city string
+	}{
+		{source: "123 MAIN ST\nNEW YORK 10001", city: "NEW YORK"},
+		{source: "123 MAIN ST\nWASHINGTON 20500", city: "WASHINGTON"},
+		{source: "123 MAIN ST\nINDIANA 15701", city: "INDIANA"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.city, func(t *testing.T) {
+			_, lines := read(c.source)
+
+			var cityless, asCity *lastline.LineClaim
+			for i, line := range lines {
+				city, hasCity := valueOf(line, claim.PartCity)
+				_, hasRegion := valueOf(line, claim.PartRegion)
+
+				switch {
+				case hasRegion && !hasCity && cityless == nil:
+					cityless = &lines[i]
+				case city == c.city && asCity == nil:
+					asCity = &lines[i]
+				}
+			}
+
+			if cityless == nil {
+				t.Fatal("the region and postal reading was not offered")
+			}
+			if asCity == nil {
+				t.Fatalf("no reading takes %q as the city", c.city)
+			}
+
+			if cityless.Claim.Confidence > asCity.Claim.Confidence {
+				t.Errorf("the region reading rated %d against reading %q as the city at %d",
+					cityless.Claim.Confidence, c.city, asCity.Claim.Confidence)
+			}
+		})
 	}
 }
 
