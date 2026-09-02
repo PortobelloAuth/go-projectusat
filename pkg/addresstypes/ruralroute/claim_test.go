@@ -144,6 +144,56 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
+			// A marker glued to the route number is the number's own token,
+			// not a token standing between the designator and it. Stepping
+			// over it would carry the scan past BOX as well and leave no
+			// boundary at all, which drops the claim rather than misplacing
+			// it.
+			name: "number sign glued to the route number",
+			in:   "RR #2 BOX 18",
+			want: []reading{
+				{"RR #2", claim.PartStreetName, claim.ConfidenceExact, "RR 2"},
+				{"BOX 18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
+			name: "abbreviated number word glued to the route number",
+			in:   "RR NO.2 BOX 18",
+			want: []reading{
+				{"RR NO.2", claim.PartStreetName, claim.ConfidenceExact, "RR 2"},
+				{"BOX 18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
+			name: "marker glued to the route number of a spelled designator",
+			in:   "RURAL ROUTE #91 BOX A7",
+			want: []reading{
+				{"RURAL ROUTE #91", claim.PartStreetName, claim.ConfidenceExact, "RR 91"},
+				{"BOX A7", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX A7"},
+			},
+		},
+		{
+			// Both markers glued, so neither half offers a bare one and the
+			// boundary is the second glued token.
+			name: "both markers glued",
+			in:   "RR #2 #18",
+			want: []reading{
+				{"RR #2", claim.PartStreetName, claim.ConfidenceExact, "RR 2"},
+				{"#18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
+			// A number glues to a spelled designator's last word as readily
+			// as to a one token one, so designatorLength has to report the
+			// whole tokens rather than assume the glue is only ever on RR.
+			name: "route number glued to a spelled designator",
+			in:   "RURAL ROUTE03 BOX 18",
+			want: []reading{
+				{"RURAL ROUTE03", claim.PartStreetName, claim.ConfidenceExact, "RR 3"},
+				{"BOX 18", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 18"},
+			},
+		},
+		{
 			// A designator alone is a fragment of a pattern that did not match.
 			name: "designator alone is not claimed",
 			in:   "RR",

@@ -57,6 +57,15 @@ const maxSpan = 8
 // same alternatives have to be recognized here to know where the split falls.
 var boxMarker = regexp.MustCompile(`^(BOX|#|NUMBER|NUM|NO)`)
 
+// bareMarker matches a token that is a number marker and nothing else. It is
+// boxMarker anchored at both ends, with the abbreviating period a marker may
+// carry, so the two can never disagree about what a marker is.
+//
+// The distinction matters between the designator and the route number, where a
+// marker standing on its own — "RR NO 2" — is a token to step over, and a
+// marker glued to the number — "RR #2", "RR NO.2" — is the number itself.
+var bareMarker = regexp.MustCompile(boxMarker.String() + `\.?$`)
+
 // routeClaim reads the route pattern beginning at start, and nothing beyond
 // it.
 //
@@ -166,26 +175,35 @@ func boxTokenIndex(span []token.Token) (int, bool) {
 
 // routeNumberIndex reports the offset of the route number within the span.
 //
-// The number follows the designator, with an optional marker between them, and
-// may be glued to a one token designator instead of standing on its own —
-// "RR03". A glued number is at the designator's own offset, which is why
-// designatorLength reports zero for that shape rather than one.
+// The number follows the designator, with at most one marker between them. The
+// marker has to be a bare one: boxMarker matches a prefix, so "#2" and "NO.2"
+// are markers by that test, but the number is at those tokens rather than
+// after them. Stepping over them would carry the offset past the box marker
+// too, and boxTokenIndex would report no boundary at all — which drops a claim
+// that Normalize accepted, rather than merely splitting it in the wrong place.
 func routeNumberIndex(span []token.Token) int {
 	i := designatorLength(span)
-	for i < len(span) && boxMarker.MatchString(strings.ToUpper(span[i].Text)) {
+	if i < len(span) && bareMarker.MatchString(strings.ToUpper(span[i].Text)) {
 		i++
 	}
 
 	return i
 }
 
-// designatorLength reports how many tokens the route designator occupies, or
-// zero where the route number is glued to it.
+// designatorLength reports how many whole tokens the route designator
+// occupies, which is the offset the route number stands at.
 //
 // recognizedDesignators is the authoritative table and is ordered longest
 // first within each family, so the first spelling that matches is the longest
 // one that could — the same property routeReplacer depends on. See
 // ruralroute.go.
+//
+// A number may be glued to the designator's last word rather than standing on
+// its own, and not only where that word is the whole designator: "RURAL
+// ROUTE03" normalizes to RR 3 just as "RR03" does. Since a spelling and a lead
+// are both words joined by single spaces, a lead that merely begins with a
+// spelling matches it up to its last word and glues the rest — so the
+// designator occupies n-1 whole tokens and the number is at the nth.
 func designatorLength(span []token.Token) int {
 	for _, d := range recognizedDesignators {
 		n := len(strings.Fields(d.Spelling))
@@ -197,11 +215,8 @@ func designatorLength(span []token.Token) int {
 		if lead == d.Spelling {
 			return n
 		}
-		// Only a one token designator can have the number glued to it: the
-		// spellings that run longer end in a word, and a number stuck to
-		// ROUTE or CONTRACT is not a spelling this package accepts.
-		if n == 1 && strings.HasPrefix(lead, d.Spelling) {
-			return 0
+		if strings.HasPrefix(lead, d.Spelling) {
+			return n - 1
 		}
 	}
 
