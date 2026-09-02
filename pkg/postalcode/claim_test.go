@@ -146,3 +146,41 @@ func TestClaimsAtEndOfAddress(t *testing.T) {
 		t.Errorf("claimed %q, want %q", got, "84088")
 	}
 }
+
+// A postal code hard wrapped across two lines is not one code. Join flattens a
+// span with spaces, so without a bound a ZIP at the end of one line and a
+// number at the start of the next reach classify as a split ZIP+4 — and that
+// reading is rated ConfidenceStrong, above the ConfidenceWeak the bare ZIP
+// gets on its own. See token.LineEnd.
+func TestNoClaimSpansALineBreak(t *testing.T) {
+	for _, source := range []string{
+		"123 FAKE ST\nDENVER CO 80201\n1234",
+		"PO BOX 80201\n1234 FAKE ST",
+	} {
+		t.Run(source, func(t *testing.T) {
+			tokens := token.Tokenize(source)
+			for _, c := range postalcode.Claims(tokens) {
+				if tokens[c.End()-1].Line != tokens[c.Start()].Line {
+					t.Errorf("claim over %q spans a line break",
+						token.Join(tokens[c.Start():c.End()]))
+				}
+			}
+		})
+	}
+}
+
+// The bound must not cost the reading it was added to protect: a ZIP+4 written
+// as two tokens on one line is still one code.
+func TestASplitZipPlusFourOnOneLineIsStillClaimed(t *testing.T) {
+	tokens := token.Tokenize("123 FAKE ST\nDENVER CO 80201 1234")
+
+	var found bool
+	for _, c := range postalcode.Claims(tokens) {
+		if c.Parts[0].Value == "80201-1234" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected 80201 1234 on one line to still be claimed as a ZIP+4")
+	}
+}
