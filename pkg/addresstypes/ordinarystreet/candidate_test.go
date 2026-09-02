@@ -142,6 +142,33 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// PARK is a Pub 28 suffix sitting in the middle of the name. The
+			// reading that places DR as the suffix cannot also place PARK
+			// there, so it is not a reading that declined to place anything —
+			// charging it demoted all four readings of this address to the same
+			// confidence and left no best one at all.
+			name:   "a suffix word inside the name is not a declined slot",
+			source: "123 W FOX PARK DR\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", pre: "W", name: "FOX PARK", suffix: "DR",
+				formatted: "123 W FOX PARK DR",
+			},
+		},
+		{
+			// The delivery address written across two lines. Reading the unit
+			// line as the street line discarded 123 MAIN ST and reported a
+			// street named APT 4.
+			name:   "a secondary unit on its own line under the street",
+			source: "123 MAIN ST\nAPT 4\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "MAIN", suffix: "ST",
+				designator: "APT", secondary: "4",
+				formatted: "123 MAIN ST APT 4",
+			},
+		},
+		{
 			// Wisconsin grid numbers are alphanumeric. #55 settled that these
 			// must be supported, so the primary number is any leading token
 			// carrying a digit and not a run of digits.
