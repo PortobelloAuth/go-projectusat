@@ -22,11 +22,23 @@ import (
 // reading, and all of them are returned. Choosing between them is the parser's
 // job, exactly as it is one level down.
 //
-// The street line is the last line of tokens ahead of the last line proper.
-// Anything above it — a business name, an urbanization — is not this package's
-// business and falls out as leftover, which costs the candidate a step of
-// confidence. That is the honest rating: this reading really has not accounted
-// for those tokens.
+// The street line is the last line of tokens ahead of the last line proper,
+// except where that line is nothing but a secondary unit. A unit standing alone
+// under the street is a delivery address written across two lines, not a street
+// line of its own, and taking it for one discards the street: "123 MAIN ST /
+// APT 4 / DENVER CO 80201" read a street named APT 4 and dropped 123 MAIN ST
+// entirely. The span reaches back over the line above so the unit is read where
+// it always is, at the end of the delivery address.
+//
+// A unit on the line above the street is the other half of that shape and is
+// not read yet. Pub 28 puts it there when it does not fit on the street line,
+// and reading it takes a leading element this package does not offer. It falls
+// out as leftover, which is at least rated as what it is.
+//
+// Anything else above the street line — a business name, an urbanization — is
+// not this package's business and falls out as leftover, which costs the
+// candidate a step of confidence. That is the honest rating: this reading
+// really has not accounted for those tokens.
 //
 // Only the pool is consulted, never a recognizer, because there is nothing to
 // recognize. That is also why this package cannot be confused with another the
@@ -39,6 +51,9 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	}
 
 	start := lineStart(tokens, end-1)
+	if start > 0 && isSecondaryUnitLine(claims, start, end) {
+		start = lineStart(tokens, start-1)
+	}
 
 	var candidates []*address.CandidateAddress
 	for _, t := range tails(claims, start, end) {
@@ -47,7 +62,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 				accepted := make([]claim.Claim, 0, len(h.claims)+len(t.claims)+1)
 				accepted = append(accepted, h.claims...)
 				accepted = append(accepted, t.claims...)
-				accepted = append(accepted, streetClaim(claims, h, name))
+				accepted = append(accepted, streetClaim(claims, h, t, name))
 
 				candidates = append(candidates,
 					line.Candidate(&OrdinaryStreetAddress{}, len(tokens), accepted))
@@ -56,6 +71,20 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	}
 
 	return candidates
+}
+
+// isSecondaryUnitLine reports whether a claim covers the span exactly and reads
+// it as a secondary unit. Exactly is the point: a line holding a unit and
+// something else is a street line that happens to carry a unit, which the tail
+// readings already handle.
+func isSecondaryUnitLine(claims []claim.Claim, start, end int) bool {
+	for _, c := range claims {
+		if c.Start() == start && c.End() == end && assigns(c, claim.PartSecondaryDesignator) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // lineStart returns the index of the first token on the same line as at.
@@ -277,14 +306,14 @@ func nameReadings(tokens []token.Token, claims []claim.Claim, from, to int) []na
 // opened the line. A parser that took one and rejected the other would hold a
 // reading this package never offered, which is the same reason a rural route
 // claims its route and box together.
-func streetClaim(claims []claim.Claim, h head, name nameReading) claim.Claim {
+func streetClaim(claims []claim.Claim, h head, t tail, name nameReading) claim.Claim {
 	parts := make([]claim.ClaimPart, 0, 2)
 	if h.number != nil {
 		parts = append(parts, *h.number)
 	}
 	parts = append(parts, name.part)
 
-	return claim.Claim{Confidence: streetConfidence(claims, h, name), Parts: parts}
+	return claim.Claim{Confidence: streetConfidence(claims, h, t, name), Parts: parts}
 }
 
 // streetConfidence rates the number and name reading.
@@ -300,11 +329,19 @@ func streetClaim(claims []claim.Claim, h head, name nameReading) claim.Claim {
 // legitimately overrule.
 //
 // A name that swallows tokens another vocabulary has claimed drops one further
-// step. That is what separates "123 MAIN ST" read with its suffix from the same
+// step, where the element that claim reads is one this reading left unfilled.
+// That is what separates "123 MAIN ST" read with its suffix from the same
 // tokens read as a name of "MAIN ST": both are offered, and the one that
 // explains the suffix is the better account of the line. The demotion is one
 // step whatever the name absorbed, because this package cannot tell which
 // absorbed claim was the one that mattered.
+//
+// A slot the reading did fill is not charged again for a claim buried in the
+// name, because there was no reading in which that claim went there. PARK is a
+// Pub 28 suffix, so "123 W FOX PARK DR" read as W, FOX PARK, DR has a suffix
+// claim inside its name — but its suffix is DR, and the alternative that puts
+// PARK in the suffix would strand DR, which this package never offers. Charging
+// it left every reading of that address demoted and all four of them tied.
 //
 // A corroborated name is exempt. The demotion is a guess that the name swallowed
 // a component it should have left outside, and a vocabulary claiming exactly
@@ -312,13 +349,13 @@ func streetClaim(claims []claim.Claim, h head, name nameReading) claim.Claim {
 // knowledge this package does not have. "123 STATE ROUTE 9" is the case:
 // ROUTE is a Pub 28 suffix, so the name absorbs one, and highways nonetheless
 // knows the whole run is the name of the street.
-func streetConfidence(claims []claim.Claim, h head, name nameReading) claim.Confidence {
+func streetConfidence(claims []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
 	confidence := claim.ConfidenceLikely
 	if h.number != nil {
 		confidence = claim.ConfidenceStrong
 	}
 
-	if name.corroborated || !absorbs(claims, name.part.Start, name.part.End()) {
+	if name.corroborated || !absorbs(claims, unplaced(h, t), name.part.Start, name.part.End()) {
 		return confidence
 	}
 
@@ -329,22 +366,43 @@ func streetConfidence(claims []claim.Claim, h head, name nameReading) claim.Conf
 	return claim.ConfidenceWeak
 }
 
+// unplaced returns the elements this package offers a place for that the
+// reading has left empty. Those are the only ones a name can be said to have
+// swallowed: an element the reading placed was not declined.
+func unplaced(h head, t tail) []claim.Part {
+	var open []claim.Part
+
+	for _, part := range []claim.Part{
+		claim.PartStreetSuffix,
+		claim.PartPredirectional,
+		claim.PartPostdirectional,
+		claim.PartSecondaryDesignator,
+	} {
+		filled := false
+		for _, c := range h.claims {
+			filled = filled || assigns(c, part)
+		}
+		for _, c := range t.claims {
+			filled = filled || assigns(c, part)
+		}
+
+		if !filled {
+			open = append(open, part)
+		}
+	}
+
+	return open
+}
+
 // absorbs reports whether the street name swallows tokens some vocabulary has
-// claimed as an element this package offers a place for.
+// claimed as one of the given elements.
 //
 // A street name claim is not one of those. A vocabulary naming the street is
 // saying the same thing this reading says, and where it covers the residue
 // exactly nameReadings has already adopted its spelling. Where it covers only
 // part of the residue it is a longer or shorter name, not a component this
 // reading declined to place.
-func absorbs(claims []claim.Claim, from, to int) bool {
-	placeable := []claim.Part{
-		claim.PartStreetSuffix,
-		claim.PartPredirectional,
-		claim.PartPostdirectional,
-		claim.PartSecondaryDesignator,
-	}
-
+func absorbs(claims []claim.Claim, placeable []claim.Part, from, to int) bool {
 	for _, c := range claims {
 		if c.Start() < from || c.End() > to {
 			continue
