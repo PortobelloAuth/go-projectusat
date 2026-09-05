@@ -1,37 +1,18 @@
+// Package secondaryunit reads a secondary unit designator out of an address.
+//
+// The rows are Publication 28 Appendix C2, held once in
+// github.com/poetic-systems/addresstables and read from there. What is here is
+// the part that is about parsing: which spelling a token is, whether the
+// designator takes a number, and how strongly a match should be rated.
 package secondaryunit
 
 import (
 	"fmt"
 	"maps"
 	"strings"
-)
 
-/*
-Apartment APT
-Basement BSMT**
-Building BLDG
-Department DEPT
-Floor FL
-Front FRNT**
-Hanger HNGR
-Key KEY
-Lobby LBBY**
-Lot LOT
-Lower LOWR**
-Office OFC**
-Penthouse PH**
-Pier PIER
-Rear REAR**
-Room RM
-Side SIDE**
-Slip SLIP
-Space SPC
-Stop STOP
-Suite STE
-Trailer TRLR
-Unit UNIT
-Upper UPPR**
-*/
+	"github.com/poetic-systems/addresstables/secondaryunit"
+)
 
 type SecondaryUnit struct {
 	Primary  string
@@ -39,44 +20,17 @@ type SecondaryUnit struct {
 	Numbered bool
 }
 
-var unitTypes = []SecondaryUnit{
-	{Primary: "Apartment", Short: "APT", Numbered: true},
-	{Primary: "Basement", Short: "BSMT", Numbered: false},
-	{Primary: "Building", Short: "BLDG", Numbered: true},
-	{Primary: "Department", Short: "DEPT", Numbered: true},
-	{Primary: "Floor", Short: "FL", Numbered: true},
-	{Primary: "Front", Short: "FRNT", Numbered: false},
-	{Primary: "Hanger", Short: "HNGR", Numbered: true},
-	{Primary: "Key", Short: "KEY", Numbered: true},
-	{Primary: "Lobby", Short: "LBBY", Numbered: false},
-	{Primary: "Lot", Short: "LOT", Numbered: true},
-	{Primary: "Lower", Short: "LOWR", Numbered: false},
-	{Primary: "Office", Short: "OFC", Numbered: false},
-	{Primary: "Penthouse", Short: "PH", Numbered: false},
-	{Primary: "Pier", Short: "PIER", Numbered: true},
-	{Primary: "Rear", Short: "REAR", Numbered: false},
-	{Primary: "Room", Short: "RM", Numbered: true},
-	{Primary: "Side", Short: "SIDE", Numbered: false},
-	{Primary: "Slip", Short: "SLIP", Numbered: true},
-	{Primary: "Space", Short: "SPC", Numbered: true},
-	{Primary: "Stop", Short: "STOP", Numbered: true},
-	{Primary: "Suite", Short: "STE", Numbered: true},
-	{Primary: "Trailer", Short: "TRLR", Numbered: true},
-	{Primary: "Unit", Short: "UNIT", Numbered: true},
-	{Primary: "Upper", Short: "UPPR", Numbered: false},
-}
-
 var unitMap = maps.Collect(func(yield func(string, SecondaryUnit) bool) {
-	for _, v := range unitTypes {
-		if !yield(strings.ToUpper(v.Primary), v) {
+	for u := range secondaryunit.All() {
+		if !yield(u.Full, SecondaryUnit{Primary: u.Full, Short: u.Short, Numbered: u.Numbered}) {
 			return
 		}
 	}
 })
 
 var unitShortMap = maps.Collect(func(yield func(string, string) bool) {
-	for _, v := range unitTypes {
-		if !yield(v.Short, strings.ToUpper(v.Primary)) {
+	for u := range secondaryunit.All() {
+		if !yield(u.Short, u.Full) {
 			return
 		}
 	}
@@ -84,7 +38,8 @@ var unitShortMap = maps.Collect(func(yield func(string, string) bool) {
 
 // hashUnit is the Project US@ exchange/matching designator for numbered
 // secondary units when the unit type is unknown or intentionally collapsed.
-// It is accepted by Info/Normalize so SecondaryAsHash results re-normalize.
+// It is not an Appendix C2 row, so it is not in the shared table; it is
+// accepted by Info/Normalize so SecondaryAsHash results re-normalize.
 var hashUnit = SecondaryUnit{
 	Primary:  "#",
 	Short:    "#",
@@ -121,11 +76,7 @@ func Info(u string) (*SecondaryUnit, error) {
 	// See if it is the primary (full) unit type word
 	info, ok := unitMap[full]
 	if ok {
-		return &SecondaryUnit{
-			Primary:  info.Primary,
-			Short:    info.Short,
-			Numbered: info.Numbered,
-		}, nil
+		return &info, nil
 	}
 
 	return nil, fmt.Errorf("Unrecognized unit type")
