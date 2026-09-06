@@ -3,10 +3,12 @@ package highways
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
+	"github.com/poetic-systems/addresstables/regions"
 )
 
 /*
@@ -120,57 +122,61 @@ var routeID = regexp.MustCompile(`^(\d+(\.\d+)?[A-Z]*|[A-Z]+)$`)
 // records a distance along a survey grid (RD 39.4). Letter-only tokens are excluded.
 var digitRouteID = regexp.MustCompile(`^\d+(\.\d+)?[A-Z]*$`)
 
-// multiWordStateNames are full US state/possession names (sorted longest-first for greedy match).
-// Built from region keys that contain a space and are not already two-letter codes.
-var multiWordStateNames = []string{
-	"DISTRICT OF COLUMBIA",
-	"FEDERATED STATES OF MICRONESIA",
-	"NORTHERN MARIANA ISLANDS",
-	"NEW HAMPSHIRE",
-	"NEW JERSEY",
-	"NEW MEXICO",
-	"NEW YORK",
-	"NORTH CAROLINA",
-	"NORTH DAKOTA",
-	"RHODE ISLAND",
-	"SOUTH CAROLINA",
-	"SOUTH DAKOTA",
-	"WEST VIRGINIA",
-	"AMERICAN SAMOA",
-	"MARSHALL ISLANDS",
-	"PUERTO RICO",
-	"VIRGIN ISLANDS",
-}
+// The state names below are the shared rows read through
+// github.com/poetic-systems/addresstables, not a fourth copy of Publication 28
+// Appendix B. Only the United States rows are read: a Canadian province never
+// leads a US highway form.
+//
+// What stays local is the judgment. Primary is the only spelling taken from a
+// row, because a highway is written with the state spelled out or with its
+// two-letter code, not with the ZIP+4 alternates - MARSHALL IS 16 is not a road
+// anyone signs. MICRONESIA is the one alternate kept, because it is how the
+// FM row is spoken. Whether to broaden this to the whole Alt list (N CAROLINA,
+// CONN) is a parsing question for this package to answer separately.
 
-// singleWordStateNames are full single-token US state names (not abbreviations).
-var singleWordStateNames = map[string]bool{
-	"ALABAMA": true, "ALASKA": true, "ARIZONA": true, "ARKANSAS": true,
-	"CALIFORNIA": true, "COLORADO": true, "CONNECTICUT": true, "DELAWARE": true,
-	"FLORIDA": true, "GEORGIA": true, "GUAM": true, "HAWAII": true,
-	"IDAHO": true, "ILLINOIS": true, "INDIANA": true, "IOWA": true,
-	"KANSAS": true, "KENTUCKY": true, "LOUISIANA": true, "MAINE": true,
-	"MARYLAND": true, "MASSACHUSETTS": true, "MICHIGAN": true, "MINNESOTA": true,
-	"MISSISSIPPI": true, "MISSOURI": true, "MONTANA": true, "NEBRASKA": true,
-	"NEVADA": true, "OHIO": true, "OKLAHOMA": true, "OREGON": true,
-	"PALAU": true, "PENNSYLVANIA": true, "TENNESSEE": true, "TEXAS": true,
-	"UTAH": true, "VERMONT": true, "VIRGINIA": true, "WASHINGTON": true,
-	"WISCONSIN": true, "WYOMING": true, "MICRONESIA": true,
-}
+// ambiguousAbbrevs are two-letter codes this package will not read as a state,
+// because here they are more likely to be highway vocabulary. FM is the
+// Federated States of Micronesia to region and Farm to Market to a Texas road
+// sign, and the tokens around it are what decide - which is why the exclusion
+// lives here and not in the shared table.
+var ambiguousAbbrevs = map[string]bool{"FM": true}
 
-// usStateAbbrevs are the two-letter US state/possession codes we treat as highway state prefixes.
-// Excludes ambiguous codes that double as highway vocabulary (FM = Farm to Market).
-var usStateAbbrevs = map[string]bool{
-	"AL": true, "AK": true, "AS": true, "AZ": true, "AR": true, "CA": true,
-	"CO": true, "CT": true, "DE": true, "DC": true, "FL": true, "GA": true,
-	"GU": true, "HI": true, "ID": true, "IL": true, "IN": true, "IA": true,
-	"KS": true, "KY": true, "LA": true, "ME": true, "MH": true, "MD": true,
-	"MA": true, "MI": true, "MN": true, "MS": true, "MO": true, "MT": true,
-	"NE": true, "NV": true, "NH": true, "NJ": true, "NM": true, "NY": true,
-	"NC": true, "ND": true, "MP": true, "OH": true, "OK": true, "OR": true,
-	"PW": true, "PA": true, "PR": true, "RI": true, "SC": true, "SD": true,
-	"TN": true, "TX": true, "UT": true, "VT": true, "VI": true, "VA": true,
-	"WA": true, "WV": true, "WI": true, "WY": true,
-}
+// extraStateNames are spellings held here rather than taken from a row.
+var extraStateNames = []string{"MICRONESIA"}
+
+// multiWordStateNames are full US state/possession names, longest first so the
+// greedy match in splitLeadingState reaches the longest name that fits.
+// singleWordStateNames are the one-token names, and usStateAbbrevs the
+// two-letter codes.
+var multiWordStateNames, singleWordStateNames, usStateAbbrevs = func() ([]string, map[string]bool, map[string]bool) {
+	multi := []string{}
+	single := map[string]bool{}
+	abbrevs := map[string]bool{}
+	for r := range regions.UnitedStates() {
+		if !ambiguousAbbrevs[r.Short] {
+			abbrevs[r.Short] = true
+		}
+		if strings.Contains(r.Primary, " ") {
+			multi = append(multi, r.Primary)
+		} else {
+			single[r.Primary] = true
+		}
+	}
+	for _, n := range extraStateNames {
+		if strings.Contains(n, " ") {
+			multi = append(multi, n)
+		} else {
+			single[n] = true
+		}
+	}
+	slices.SortFunc(multi, func(a, b string) int {
+		if n := len(strings.Fields(b)) - len(strings.Fields(a)); n != 0 {
+			return n
+		}
+		return strings.Compare(a, b)
+	})
+	return multi, single, abbrevs
+}()
 
 // NormalizeStreetName normalizes highway-style primary street names per Project
 // US@. Input is the street name portion only, not a full address. Returns
