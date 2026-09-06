@@ -1,3 +1,14 @@
+// Package region reads a state, possession, Canadian province or military
+// "state" out of an address.
+//
+// The rows are held once in github.com/poetic-systems/addresstables and read
+// from there: Publication 28 Appendix B for the states, possessions and the
+// three military "states", and the Project US@ specification pp. 31-32 for the
+// Canadian provinces and territories, which Appendix B does not carry.
+//
+// What stays here is the part that is about parsing: the punctuation strip,
+// the edit-distance fallback, whether a name could also be read as a street
+// name, and Claims with its confidence rules.
 package region
 
 import (
@@ -8,94 +19,11 @@ import (
 	"strings"
 
 	"github.com/hbollon/go-edlib"
+	"github.com/poetic-systems/addresstables/regions"
 )
 
-/*
-State or Possession Postal Abbreviations
-
-Alabama AL
-Alaska AK
-American Samoa AS
-Arizona AZ
-Arkansas AR
-California CA
-Colorado CO
-Connecticut CT
-Delaware DE
-District of Columbia DC
-Federated States of Micronesia FM
-Florida FL
-Georgia GA
-Guam GU
-Hawaii HI
-Idaho ID
-Illinois IL
-Indiana IN
-Iowa IA
-Kansas KS
-Kentucky KY
-Louisiana LA
-Maine ME
-Marshall Islands MH
-Maryland MD
-Massachusetts MA
-Michigan MI
-Minnesota MN
-Mississippi MS
-Missouri MO
-Montana MT
-Nebraska NE
-Nevada NV
-New Hampshire NH
-New Jersey NJ
-New Mexico NM
-New York NY
-North Carolina NC
-North Dakota ND
-Northern Mariana Islands MP
-Ohio OH
-Oklahoma OK
-Oregon OR
-Palau PW
-Pennsylvania PA
-Puerto Rico PR
-Rhode Island RI
-South Carolina SC
-South Dakota SD
-Tennessee TN
-Texas TX
-Utah UT
-Vermont VT
-Virgin Islands VI
-Virginia VA
-Washington WA
-West Virginia WV
-Wisconsin WI
-Wyoming WY
-
-Canadian Province/Territory Postal Service Abbreviations
-
-Alberta                     AB
-British Columbia            BC
-Manitoba                    MB
-New Brunswick               NB
-Newfoundland and Labrador   NL
-Northwest Territories       NT
-Nova Scotia                 NS
-Nunavat Territory           NU
-Ontario                     ON
-Prince Edward Island        PE
-Quebec                      QC
-Saskatchewan                SK
-Yukon Territory             YT
-
-Military "State" Abbreviations
-
-Armed Forces Europe, the Middle East, and Canada   AE
-Armed Forces Pacific                               AP
-Armed Forces Americas (except Canada)              AA
-*/
-
+// RegionInfo is a shared row plus the one thing a parser needs that a table of
+// abbreviations has no opinion about.
 type RegionInfo struct {
 	Primary            string
 	Short              string
@@ -103,287 +31,47 @@ type RegionInfo struct {
 	PossibleStreetName bool
 }
 
-var usStatesAndPossessions = []RegionInfo{
-	{Primary: "ALABAMA", Short: "AL", Alt: []string{"ALABAMA", "AL"}, PossibleStreetName: true},
-	{"ALASKA", "AK", []string{"ALASKA", "AK"}, true},
-	{"AMERICAN SAMOA", "AS", []string{"AMERICAN SAMOA", "AS"}, false},
-	{"ARIZONA", "AZ", []string{"ARIZONA", "AZ"}, true},
-	{"ARKANSAS", "AR", []string{"ARKANSAS", "AR"}, true},
-	{"CALIFORNIA", "CA", []string{"CALIFORNIA", "CA"}, true},
-	{"COLORADO", "CO", []string{"COLORADO", "CO"}, true},
-	{"CONNECTICUT", "CT", []string{"CONNECTICUT", "CT", "CONN"}, true},
-	{"DELAWARE", "DE", []string{"DELAWARE", "DELEWARE", "DE"}, true},
-	{"DISTRICT OF COLUMBIA", "DC", []string{"DISTRICT OF COLUMBIA", "DC"}, true},
-	{
-		Primary: "FEDERATED STATES OF MICRONESIA",
-		Short:   "FM",
-		Alt: []string{
-			"FEDERATED STATES OF MICRONESIA",
-			"MICRONESIA",
-			"FM",
-		},
-		PossibleStreetName: false,
-	},
-	{"FLORIDA", "FL", []string{"FLORIDA", "FL"}, true},
-	{"GEORGIA", "GA", []string{"GEORGIA", "GA"}, true},
-	{"GUAM", "GU", []string{"GUAM", "GU"}, true},
-	{"HAWAII", "HI", []string{"HAWAII", "HI"}, true},
-	{"IDAHO", "ID", []string{"IDAHO", "ID"}, true},
-	{"ILLINOIS", "IL", []string{"ILLINOIS", "IL"}, true},
-	{"INDIANA", "IN", []string{"INDIANA", "IN"}, true},
-	{"IOWA", "IA", []string{"IOWA", "IA"}, true},
-	{"KANSAS", "KS", []string{"KANSAS", "KS"}, true},
-	{"KENTUCKY", "KY", []string{"KENTUCKY", "KY"}, true},
-	{"LOUISIANA", "LA", []string{"LOUISIANA", "LA"}, true},
-	{"MAINE", "ME", []string{"MAINE", "ME"}, true},
-	{
-		Primary: "MARSHALL ISLANDS",
-		Short:   "MH",
-		Alt: []string{
-			"MARSHALL ISLANDS",
-			"MARSHALL IS",
-			"MARSHALL ISL",
-			"MARSHALL ISLS",
-			"MARSHALL ISS",
-			"MARSHALL ISLD",
-			"MH",
-		},
-		PossibleStreetName: true,
-	},
-	{"MARYLAND", "MD", []string{"MARYLAND", "MD"}, true},
-	{"MASSACHUSETTS", "MA", []string{"MASSACHUSETTS", "MA", "MASS"}, true},
-	{"MICHIGAN", "MI", []string{"MICHIGAN", "MI"}, true},
-	{"MINNESOTA", "MN", []string{"MINNESOTA", "MN", "MINN"}, true},
-	{"MISSISSIPPI", "MS", []string{"MISSISSIPPI", "MS"}, true},
-	{"MISSOURI", "MO", []string{"MISSOURI", "MO"}, true},
-	{"MONTANA", "MT", []string{"MONTANA", "MT"}, true},
-	{"NEBRASKA", "NE", []string{"NEBRASKA", "NE"}, true},
-	{"NEVADA", "NV", []string{"NEVADA", "NV"}, true},
-	{"NEW HAMPSHIRE", "NH", []string{"NEW HAMPSHIRE", "NH"}, true},
-	{"NEW JERSEY", "NJ", []string{"NEW JERSEY", "NJ"}, true},
-	{"NEW MEXICO", "NM", []string{"NEW MEXICO", "NM"}, true},
-	{"NEW YORK", "NY", []string{"NEW YORK", "NY"}, true},
-	{
-		Primary: "NORTH CAROLINA",
-		Short:   "NC",
-		Alt: []string{
-			"NORTH CAROLINA",
-			"N CAROLINA",
-			"NC",
-		},
-		PossibleStreetName: true,
-	},
-	{
-		Primary: "NORTH DAKOTA",
-		Short:   "ND",
-		Alt: []string{
-			"NORTH DAKOTA",
-			"N DAKOTA",
-			"ND",
-		},
-		PossibleStreetName: true,
-	},
-	{
-		Primary: "NORTHERN MARIANA ISLANDS",
-		Short:   "MP",
-		Alt: []string{
-			"NORTHERN MARIANA ISLANDS",
-			"NORTHERN MARIANA IS",
-			"NORTHERN MARIANA ISL",
-			"NORTHERN MARIANA ISLS",
-			"NORTHERN MARIANA ISS",
-			"NORTHERN MARIANA ISLD",
-			"N MARIANA ISLANDS",
-			"N MARIANA IS",
-			"N MARIANA ISL",
-			"N MARIANA ISLS",
-			"N MARIANA ISS",
-			"N MARIANA ISLD",
-			"MP",
-		},
-		PossibleStreetName: true,
-	},
-	{"OHIO", "OH", []string{"OHIO", "OH"}, true},
-	{"OKLAHOMA", "OK", []string{"OKLAHOMA", "OK"}, true},
-	{"OREGON", "OR", []string{"OREGON", "OR"}, true},
-	{"PALAU", "PW", []string{"PALAU", "PW"}, true},
-	{"PENNSYLVANIA", "PA", []string{"PENNSYLVANIA", "PENN", "PA"}, true},
-	{"PUERTO RICO", "PR", []string{"PUERTO RICO", "PR"}, true},
-	{
-		Primary: "RHODE ISLAND",
-		Short:   "RI",
-		Alt: []string{
-			"RHODE ISLAND",
-			"RHODE IS",
-			"RHODE ISL",
-			"RHODE ISLD",
-			"RI",
-		},
-		PossibleStreetName: true,
-	},
-	{
-		Primary: "SOUTH CAROLINA",
-		Short:   "SC",
-		Alt: []string{
-			"SOUTH CAROLINA",
-			"S CAROLINA",
-			"SC",
-		},
-		PossibleStreetName: true,
-	},
-	{
-		Primary: "SOUTH DAKOTA",
-		Short:   "SD",
-		Alt: []string{
-			"SOUTH DAKOTA",
-			"S DAKOTA",
-			"SD",
-		},
-		PossibleStreetName: true,
-	},
-	{"TENNESSEE", "TN", []string{"TENNESSEE", "TENN", "TN"}, true},
-	{"TEXAS", "TX", []string{"TEXAS", "TX"}, true},
-	{"UTAH", "UT", []string{"UTAH", "UT"}, true},
-	{"VERMONT", "VT", []string{"VERMONT", "VT"}, true},
-	{
-		Primary: "VIRGIN ISLANDS",
-		Short:   "VI",
-		Alt: []string{
-			"VIRGIN ISLANDS",
-			"VIRGIN IS",
-			"VIRGIN ISL",
-			"VIRGIN ISLS",
-			"VIRGIN ISS",
-			"VIRGIN ISLD",
-			"US VIRGIN ISLANDS",
-			"US VIRGIN IS",
-			"US VIRGIN ISL",
-			"US VIRGIN ISLS",
-			"US VIRGIN ISS",
-			"US VIRGIN ISLD",
-			"USVI",
-			"VIS",
-			"USA VI",
-			"VI USA",
-			"VI",
-		},
-		PossibleStreetName: true,
-	},
-	{"VIRGINIA", "VA", []string{"VIRGINIA", "VA"}, true},
-	{"WASHINGTON", "WA", []string{"WASHINGTON", "WA"}, true},
-	{"WEST VIRGINIA", "WV", []string{"WEST VIRGINIA", "W VIRGINIA", "WV"}, true},
-	{"WISCONSIN", "WI", []string{"WISCONSIN", "WI"}, true},
-	{"WYOMING", "WY", []string{"WYOMING", "WY"}, true},
+// notStreetNames names the regions whose spelling must never be offered as a
+// street name as well as a region. Everything absent from this set may be
+// both: PENNSYLVANIA is a state and an avenue in Washington.
+//
+// Keyed by Short, the one field of a row that is unique. The values came
+// across unchanged from the table this package used to hold; where a row was
+// silent there, it relied on the zero value rather than saying nothing.
+//
+// Deliberately not shared with highways, though FM is exactly the collision
+// that raises the question. Reading FM as Farm to Market rather than as the
+// Federated States of Micronesia is a judgment made from the tokens around it,
+// which highways has and this package does not.
+var notStreetNames = map[string]bool{
+	"AS": true, // American Samoa
+	"FM": true, // Federated States of Micronesia; also Farm to Market
+	"NL": true, // Newfoundland and Labrador
+	"NT": true, // Northwest Territories
+	"NU": true, // Nunavut Territory
+	"PE": true, // Prince Edward Island
+	"AE": true, // Armed Forces Europe, the Middle East and Canada
+	"AP": true, // Armed Forces Pacific
+	"AA": true, // Armed Forces Americas
 }
 
-var canadianProvincesAndTerritories = []RegionInfo{
-	{"ALBERTA", "AB", []string{"ALBERTA", "AB"}, true},
-	{"BRITISH COLUMBIA", "BC", []string{"BRITISH COLUMBIA", "BC"}, true},
-	{"MANITOBA", "MB", []string{"MANITOBA", "MB"}, true},
-	{"NEW BRUNSWICK", "NB", []string{"NEW BRUNSWICK", "NB"}, true},
-	{
-		Primary: "NEWFOUNDLAND AND LABRADOR",
-		Short:   "NL",
-		Alt: []string{
-			"NEWFOUNDLAND AND LABRADOR",
-			"NEWFOUNDLAND",
-			"LABRADOR",
-			"NL",
-		},
-		PossibleStreetName: false,
-	},
-	{
-		Primary: "NORTHWEST TERRITORIES",
-		Short:   "NT",
-		Alt: []string{
-			"NORTHWEST TERRITORIES",
-			"NORTHWEST TERR",
-			"NW TERRITORIES",
-			"NW TERR",
-			"NT",
-		},
-	},
-	{"NOVA SCOTIA", "NS", []string{"NOVA SCOTIA", "NS"}, true},
-	{
-		Primary: "NUNAVAT TERRITORIES",
-		Short:   "NU",
-		Alt: []string{
-			"NUNAVAT TERRITORY",
-			"NUNAVAT TERR",
-			"NU",
-		},
-	},
-	{"ONTARIO", "ON", []string{"ONTARIO", "ON"}, true},
-	{
-		Primary: "PRINCE EDWARD ISLAND",
-		Short:   "PE",
-		Alt: []string{
-			"PRINCE EDWARD ISLAND",
-			"PRINCE EDWARD IS",
-			"PRINCE EDWARD ISL",
-			"PRINCE EDWARD ISLD",
-			"PE",
-		},
-	},
-	{"QUEBEC", "QC", []string{"QUEBEC", "QC"}, true},
-	{"SASKATCHEWAN", "SK", []string{"SASKATCHEWAN", "SK"}, true},
-	{
-		Primary: "YUKON TERRITORY",
-		Short:   "YT",
-		Alt: []string{
-			"YUKON TERRITORY",
-			"YUKON TERR",
-			"YUKON",
-			"YT",
-		},
-		PossibleStreetName: true,
-	},
+func info(r regions.Region) RegionInfo {
+	return RegionInfo{
+		Primary:            r.Primary,
+		Short:              r.Short,
+		Alt:                r.Alt,
+		PossibleStreetName: !notStreetNames[r.Short],
+	}
 }
 
-var usMillitaryRegions = []RegionInfo{
-	{
-		Primary: "ARMED FORCES EUROPE THE MIDDLE EAST AND CANADA",
-		Short:   "AE",
-		Alt: []string{
-			"ARMED FORCES EUROPE THE MIDDLE EAST AND CANADA",
-			"ARMED FORCES EUROPE",
-			"AE",
-		},
-		PossibleStreetName: false,
-	},
-	{"ARMED FORCES PACIFIC", "AP", []string{"ARMED FORCES PACIFIC", "AP"}, false},
-	{
-		Primary: "ARMED FORCES AMERICA",
-		Short:   "AA",
-		Alt: []string{
-			"ARMED FORCES AMERICAS",
-			"ARMED FORCES AMERICA",
-			"AA",
-		},
-		PossibleStreetName: false,
-	},
-}
-
+// regionMap is keyed by Alt alone. The shared table states and enforces that
+// every row repeats its own Primary and Short into Alt, so that reaches every
+// row by every spelling it answers to.
 var regionMap = maps.Collect(func(yield func(string, RegionInfo) bool) {
-	for _, v := range usStatesAndPossessions {
-		for _, a := range v.Alt {
-			if !yield(a, v) {
-				return
-			}
-		}
-	}
-
-	for _, v := range canadianProvincesAndTerritories {
-		for _, a := range v.Alt {
-			if !yield(a, v) {
-				return
-			}
-		}
-	}
-
-	for _, v := range usMillitaryRegions {
-		for _, a := range v.Alt {
-			if !yield(a, v) {
+	for r := range regions.All() {
+		i := info(r)
+		for _, a := range i.Alt {
+			if !yield(a, i) {
 				return
 			}
 		}
