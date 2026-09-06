@@ -1,84 +1,29 @@
+// Package puertorico reads a Puerto Rico address.
+//
+// The vocabularies are held once, in github.com/poetic-systems/addresstables,
+// and read from there: the leading street types, the secondary address
+// identifiers, and the urbanization designators in urbanization.go. What is
+// here is the part that is about parsing — which spelling a token is, which
+// form to return, and the claim rules.
 package puertorico
 
 import (
 	"fmt"
 	"maps"
 	"strings"
+
+	"github.com/poetic-systems/addresstables/puertorico"
 )
-
-/*
-Spanish        Sp. Abreviation    English
-AVENIDA   <->  AVE                Avenue
-CALLE     <->  CLL                Street
-CAMINITO  <->  CMT                Little Road
-CAMINO    <->  CAM                Road
-CERRADA   <->  CER                Closed
-CIRCULO   <->  CIR                Circle
-ENTRADA   <->  ENT                Entrance
-PASEO     <->  PSO                Path
-PLACITA   <->  PLA                Little Plaza
-RANCHO    <->  RCH                Ranch
-VEREDA    <->  VER                Small Path
-VISTA     <->  VIS                View
-*/
-
-/*
-Spanish             English
-Apartado       <->  PO Box
-Buzon          <->  Box
-Buzon Rural    <->  Rural Box
-Ruta Rural     <->  Rural Route
-Ruta Estrella  <->  Highway Contract
-Edificio       <->  Building
-
-NOTE: for Puerto Rico addresses, normalize to the Spanish word
-*/
-
-/*
-Apartamento APT
-Barriada BDA
-Building BLDG
-Bloque BL
-Barrio BO
-Carretera CARR
-Caserio CAS
-Condominio COND
-Cooperativa COOP
-Corporacion CORP
-Departamento DEPT
-Edificio EDIF
-Entrega General GEN DEL
-Extencion EXT
-Hospital HOSP
-Industrial IND
-Jardines JARD
-Mansiones MANS
-Parcelas PARC
-Quebrada QBDA
-Reparto REPTO
-Residencial RES
-Sector SEC
-Terraza TERR
-Urbanization URB
-Villa VIL
-*/
 
 // streetTypeMap maps Spanish primary street type -> abbreviation.
 // Project US@ keeps Spanish forms (do not force English).
-var streetTypeMap = map[string]string{
-	"AVENIDA":  "AVE",
-	"CALLE":    "CLL",
-	"CAMINITO": "CMT",
-	"CAMINO":   "CAM",
-	"CERRADA":  "CER",
-	"CIRCULO":  "CIR",
-	"ENTRADA":  "ENT",
-	"PASEO":    "PSO",
-	"PLACITA":  "PLA",
-	"RANCHO":   "RCH",
-	"VEREDA":   "VER",
-	"VISTA":    "VIS",
-}
+var streetTypeMap = maps.Collect(func(yield func(string, string) bool) {
+	for t := range puertorico.StreetTypes() {
+		if !yield(t.Full, t.Short) {
+			return
+		}
+	}
+})
 
 var streetTypeShortMap = maps.Collect(func(yield func(string, string) bool) {
 	for primary, short := range streetTypeMap {
@@ -91,38 +36,18 @@ var streetTypeShortMap = maps.Collect(func(yield func(string, string) bool) {
 // secondaryMap maps Spanish/English primary secondary designator -> abbreviation.
 // Per Project US@ secondary designators, Normalize returns the uppercase short form.
 //
-// The urbanization is deliberately absent. The standard puts it on a line of
-// its own above the secondary address identifier, and this library carries it
-// in Address.Area rather than as a secondary designator, so it has its own
-// vocabulary in urbanization.go. Listing it in both places would make URB two
-// things at once.
-var secondaryMap = map[string]string{
-	"APARTAMENTO":     "APT",
-	"BARRIADA":        "BDA",
-	"BUILDING":        "BLDG",
-	"BLOQUE":          "BL",
-	"BARRIO":          "BO",
-	"CARRETERA":       "CARR",
-	"CASERIO":         "CAS",
-	"CONDOMINIO":      "COND",
-	"COOPERATIVA":     "COOP",
-	"CORPORACION":     "CORP",
-	"DEPARTAMENTO":    "DEPT",
-	"EDIFICIO":        "EDIF",
-	"ENTREGA GENERAL": "GEN DEL",
-	"EXTENCION":       "EXT",
-	"HOSPITAL":        "HOSP",
-	"INDUSTRIAL":      "IND",
-	"JARDINES":        "JARD",
-	"MANSIONES":       "MANS",
-	"PARCELAS":        "PARC",
-	"QUEBRADA":        "QBDA",
-	"REPARTO":         "REPTO",
-	"RESIDENCIAL":     "RES",
-	"SECTOR":          "SEC",
-	"TERRAZA":         "TERR",
-	"VILLA":           "VIL",
-}
+// The urbanization is deliberately absent from this table, upstream as well as
+// here. The standard puts it on a line of its own above the secondary address
+// identifier, and this library carries it in Address.Area rather than as a
+// secondary designator, so it has its own vocabulary in urbanization.go.
+// Listing it in both places would make URB two things at once.
+var secondaryMap = maps.Collect(func(yield func(string, string) bool) {
+	for d := range puertorico.Secondaries() {
+		if !yield(d.Full, d.Short) {
+			return
+		}
+	}
+})
 
 var secondaryShortMap = maps.Collect(func(yield func(string, string) bool) {
 	for primary, short := range secondaryMap {

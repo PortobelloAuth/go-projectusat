@@ -2,23 +2,27 @@ package puertorico
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
+	"github.com/poetic-systems/addresstables/puertorico"
 )
 
 // urbanizationDesignators are the spellings that open an urbanization, mapped
 // to the abbreviation the standard requires.
 //
-// The Spanish spelling carries an accent — URBANIZACIÓN — and this table holds
-// only the unaccented form. Lookups fold the input rather than the table
+// The Spanish spelling carries an accent — URBANIZACIÓN — and the shared table
+// holds only the unaccented form. Lookups fold the input rather than the table
 // carrying both spellings, so a form that adds another accented designator
-// needs one entry here and no second thought about how it is typed.
-var urbanizationDesignators = map[string]string{
-	"URB":          "URB",
-	"URBANIZACION": "URB",
-	"URBANIZATION": "URB",
-}
+// needs one row upstream and no second thought about how it is typed.
+var urbanizationDesignators = maps.Collect(func(yield func(string, string) bool) {
+	for u := range puertorico.Urbanizations() {
+		if !yield(u.Full, u.Short) {
+			return
+		}
+	}
+})
 
 // NormalizeUrbanization maps an urbanization designator to its abbreviation.
 // Example: "Urbanización", "URBANIZACION" or "urb" -> "URB".
