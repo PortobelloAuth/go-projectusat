@@ -85,6 +85,7 @@ var recognizedDesignators = []designator{
 	{"RFD", "RR"},
 	{"RR", "RR"},
 	{"RD", "RR"},
+	{"RT", "RR"},
 	{"HIGHWAY CONTRACT ROUTE", "HC"},
 	{"HIGHWAY CONTRACT", "HC"},
 	{"HCR", "HC"},
@@ -124,6 +125,16 @@ var routeHashPattern = regexp.MustCompile(
 var leadingzero = regexp.MustCompile(
 	`(` + strings.Join(append(slices.Clone(standardDesignators), "BOX"), "|") + `)\s*0+`)
 
+// gluednumber matches a designator written straight onto the number it
+// introduces. The standard requires the space — "developers MUST have a space
+// between RR and the route number and BOX and the box number" — and its own
+// RR03 example only survives today because the leading zero happens to be
+// rewritten with one. A route number that starts with any other digit has no
+// such luck, so the space is put in on its own account and the zero rule is
+// left to do only its own work.
+var gluednumber = regexp.MustCompile(
+	`(` + strings.Join(append(slices.Clone(standardDesignators), "BOX"), "|") + `)(\d)`)
+
 var routeReplacements = slices.Collect(func(yield func(string) bool) {
 	for _, d := range recognizedDesignators {
 		if !yield(d.Spelling) {
@@ -146,6 +157,7 @@ func Normalize(sn string) (string, error) {
 	capitalized = whitespace.ReplaceAllString(capitalized, " ")
 
 	replaced := routeReplacer.Replace(capitalized)
+	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
 	replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
 
 	suffix := routePattern.ReplaceAllString(replaced, "")

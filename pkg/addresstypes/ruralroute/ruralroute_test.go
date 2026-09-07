@@ -19,6 +19,18 @@ var cases = []struct {
 	{"RR 2 BOX 18 Bryan Dairy Rd", "RR 2 BOX 18"},
 	{"RR03 BOX 98D", "RR 3 BOX 98D"},
 	{"RR03 BOX 0098D", "RR 3 BOX 98D"},
+
+	// RT is the third spelling the Puerto Rico section requires be changed
+	// to RR, alongside the RFD and RD the general section names.
+	{"RT 4 BOX 12", "RR 4 BOX 12"},
+	{"Rt. 4 Box 12", "RR 4 BOX 12"},
+
+	// A designator glued to its number, where no leading zero is there to
+	// carry the space in. The standard asks for the space in both slots.
+	{"RT4 BOX 12", "RR 4 BOX 12"},
+	{"RR4 BOX 12", "RR 4 BOX 12"},
+	{"RR 4 BOX12", "RR 4 BOX 12"},
+	{"RFD4 BOX12", "RR 4 BOX 12"},
 	{"RURAL ROUTE 91 BOX #A7", "RR 91 BOX A7"},
 	{"Rural Route 91 Box Num. A7", "RR 91 BOX A7"},
 	{"RFD 82 BOX NUMBER 12", "RR 82 BOX 12"},
@@ -34,6 +46,7 @@ var cases = []struct {
 	{"Highway Contract Route 4 Box 12", "HC 4 BOX 12"},
 	{"HIGHWAY CONTRACT 4 BOX 12", "HC 4 BOX 12"},
 	{"HC04 BOX 0012", "HC 4 BOX 12"},
+	{"HC4 BOX12", "HC 4 BOX 12"},
 	{"HC No. 4 # 12", "HC 4 BOX 12"},
 	{"HC 4 BOX 12 Bryan Dairy Rd", "HC 4 BOX 12"},
 }
