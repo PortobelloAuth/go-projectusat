@@ -118,3 +118,24 @@ func TestFuzzyNormalizeRegion(t *testing.T) {
 		t.Fatalf("FuzzyNormalizeRegion(Californa) = %q, want CA", got)
 	}
 }
+
+// Every province and territory may also be read as a street name. The four that
+// once said otherwise - NL, NT, NU and PE - did so for no reason anyone could
+// name, while YUKON TERRITORY beside them said the opposite. PRINCE EDWARD RD
+// is as ordinary an address as PENNSYLVANIA AVE.
+func TestCanadianRegionsMayBeStreetNames(t *testing.T) {
+	for _, in := range []string{
+		"ALBERTA", "BRITISH COLUMBIA", "MANITOBA", "NEW BRUNSWICK",
+		"NEWFOUNDLAND AND LABRADOR", "NORTHWEST TERRITORIES", "NOVA SCOTIA",
+		"NUNAVUT TERRITORY", "ONTARIO", "PRINCE EDWARD ISLAND", "QUEBEC",
+		"SASKATCHEWAN", "YUKON TERRITORY",
+	} {
+		info, err := region.Info(in, false)
+		if err != nil {
+			t.Fatalf("region.Info(%q): %v", in, err)
+		}
+		if !info.PossibleStreetName {
+			t.Errorf("%q should be readable as a street name as well as a region", in)
+		}
+	}
+}

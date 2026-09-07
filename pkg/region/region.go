@@ -35,9 +35,12 @@ type RegionInfo struct {
 // street name as well as a region. Everything absent from this set may be
 // both: PENNSYLVANIA is a state and an avenue in Washington.
 //
-// Keyed by Short, the one field of a row that is unique. The values came
-// across unchanged from the table this package used to hold; where a row was
-// silent there, it relied on the zero value rather than saying nothing.
+// Keyed by Short, the one field of a row that is unique.
+//
+// A row earns a place here only by naming something no street is named after.
+// The military "states" are addressing routes rather than places. FM is the
+// Federated States of Micronesia and also Farm to Market, so the two-letter
+// spelling reads as a road number far more often than as a region.
 //
 // Deliberately not shared with highways, though FM is exactly the collision
 // that raises the question. Reading FM as Farm to Market rather than as the
@@ -46,10 +49,6 @@ type RegionInfo struct {
 var notStreetNames = map[string]bool{
 	"AS": true, // American Samoa
 	"FM": true, // Federated States of Micronesia; also Farm to Market
-	"NL": true, // Newfoundland and Labrador
-	"NT": true, // Northwest Territories
-	"NU": true, // Nunavut Territory
-	"PE": true, // Prince Edward Island
 	"AE": true, // Armed Forces Europe, the Middle East and Canada
 	"AP": true, // Armed Forces Pacific
 	"AA": true, // Armed Forces Americas
