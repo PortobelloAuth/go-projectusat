@@ -107,47 +107,88 @@ type tail struct {
 // tails returns every reading of the elements that close the street line.
 //
 // They are taken in the order the standard puts them — suffix, then
-// postdirectional, then secondary unit — and each is optional, so the readings
-// range from a bare name to all three present. A missing element is not an
-// error and not a lower rating here; whether its absence matters is settled by
-// what the name then has to absorb. See streetConfidence.
+// postdirectional, then secondary unit, then the private mailbox — and each is
+// optional, so the readings range from a bare name to all four present. A
+// missing element is not an error and not a lower rating here; whether its
+// absence matters is settled by what the name then has to absorb. See
+// streetConfidence.
 func tails(claims []claim.Claim, from, to int) []tail {
 	var out []tail
 
-	for _, secondary := range endingAt(claims, claim.PartSecondaryDesignator, to, from) {
-		afterName := to
-		var accepted []claim.Claim
-		if secondary != nil {
-			afterName = secondary.Start()
-			accepted = []claim.Claim{*secondary}
+	for _, detail := range endingAt(claims, claim.PartDetail, to, from) {
+		afterUnit := to
+		if detail != nil {
+			afterUnit = detail.Start()
 		}
 
-		for _, post := range endingAt(claims, claim.PartPostdirectional, afterName, from) {
-			afterSuffix := afterName
-			withPost := accepted
-			if post != nil {
-				afterSuffix = post.Start()
-				withPost = append(append([]claim.Claim{}, accepted...), *post)
-			}
-
-			for _, suffix := range endingAt(claims, claim.PartStreetSuffix, afterSuffix, from) {
-				nameEnd := afterSuffix
-				withSuffix := withPost
-				if suffix != nil {
-					nameEnd = suffix.Start()
-					withSuffix = append(append([]claim.Claim{}, withPost...), *suffix)
-				}
-
-				if nameEnd <= from {
+		for _, secondary := range endingAt(claims, claim.PartSecondaryDesignator, afterUnit, from) {
+			afterName := afterUnit
+			var accepted []claim.Claim
+			if detail != nil {
+				mailbox, ok := admitMailbox(*detail, secondary != nil)
+				if !ok {
 					continue
 				}
+				accepted = append(accepted, mailbox)
+			}
+			if secondary != nil {
+				afterName = secondary.Start()
+				accepted = append(accepted, *secondary)
+			}
 
-				out = append(out, tail{claims: withSuffix, nameEnd: nameEnd})
+			for _, post := range endingAt(claims, claim.PartPostdirectional, afterName, from) {
+				afterSuffix := afterName
+				withPost := accepted
+				if post != nil {
+					afterSuffix = post.Start()
+					withPost = append(append([]claim.Claim{}, accepted...), *post)
+				}
+
+				for _, suffix := range endingAt(claims, claim.PartStreetSuffix, afterSuffix, from) {
+					nameEnd := afterSuffix
+					withSuffix := withPost
+					if suffix != nil {
+						nameEnd = suffix.Start()
+						withSuffix = append(append([]claim.Claim{}, withPost...), *suffix)
+					}
+
+					if nameEnd <= from {
+						continue
+					}
+
+					out = append(out, tail{claims: withSuffix, nameEnd: nameEnd})
+				}
 			}
 		}
 	}
 
 	return out
+}
+
+// admitMailbox returns the private mailbox reading this package accepts from a
+// Detail claim, if it accepts one.
+//
+// privatemailbox holds PMB 234 at Exact and # 234 below it, because # is also
+// the secondary unit designator of unspecified type and secondaryunit claims
+// it so at Exact (Publication 28 §213.2). With no unit placed elsewhere on the
+// line that is what a # is, and no mailbox reading is offered: the unit
+// reading wins and the address renders as # 234, which is deliverable either
+// way (#78). Beside a placed unit the # is the reading left that explains the
+// tokens — the standard forbids combining the CMRA's secondary element with
+// the patient's mailbox, so a second unit is not a reading at all — and the
+// mailbox is taken at Strong. The vocabulary rates what the tokens could be;
+// this package rates what they are on this line, which is the same split as
+// streetConfidence.
+func admitMailbox(detail claim.Claim, unitPlaced bool) (claim.Claim, bool) {
+	if detail.Confidence == claim.ConfidenceExact {
+		return detail, true
+	}
+
+	if !unitPlaced {
+		return claim.Claim{}, false
+	}
+
+	return claim.Claim{Confidence: claim.ConfidenceStrong, Parts: detail.Parts}, true
 }
 
 // head is one reading of the left hand end of the street line: the primary
@@ -377,6 +418,7 @@ func unplaced(h head, t tail) []claim.Part {
 		claim.PartPredirectional,
 		claim.PartPostdirectional,
 		claim.PartSecondaryDesignator,
+		claim.PartDetail,
 	} {
 		filled := false
 		for _, c := range h.claims {

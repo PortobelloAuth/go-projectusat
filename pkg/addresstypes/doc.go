@@ -50,8 +50,10 @@
 // a box, whatever ordinarystreet could make of the same tokens.
 //
 // Where the code does not yet match its row, the row is the intent and the gap
-// is tracked: no vocabulary produces a Detail claim, so the two rows that admit
-// one describe the seam and not a working path (#76); puertorico has Claims for
-// the urbanization but no Candidates and no street vocabulary of its own (#60,
-// #71); ordinarystreet is #56.
+// is tracked: privatemailbox produces the Detail claim and ordinarystreet admits
+// it, but pobox and ruralroute still hand the last line exactly one claim, so
+// their trailing Detail describes the seam and not a working path (#77);
+// puertorico has Claims for the urbanization but no Candidates and no street
+// vocabulary of its own (#60, #71); a unit or mailbox on the line above the
+// street line is read by no type (#98).
 package addresstypes
