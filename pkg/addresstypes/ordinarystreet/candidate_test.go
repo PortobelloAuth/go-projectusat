@@ -13,6 +13,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
+	"github.com/PortobelloAuth/go-projectusat/pkg/privatemailbox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
@@ -31,6 +32,7 @@ func vocabulary(tokens []token.Token) []claim.Claim {
 	for _, f := range []func([]token.Token) []claim.Claim{
 		region.Claims, postalcode.Claims, country.Claims,
 		highways.Claims, streetsuffixes.Claims, directionals.Claims, secondaryunit.Claims,
+		privatemailbox.Claims,
 	} {
 		claims = append(claims, f(tokens)...)
 	}
@@ -85,6 +87,7 @@ func bestReading(t *testing.T, source string) *addressReading {
 		post:       a.Postdirectional,
 		designator: a.SecondaryDesignator,
 		secondary:  a.SecondaryNumber,
+		detail:     a.Detail,
 		formatted:  a.FormatStreetLine(),
 	}
 }
@@ -98,6 +101,7 @@ type addressReading struct {
 	post       string
 	designator string
 	secondary  string
+	detail     string
 	formatted  string
 }
 
@@ -212,6 +216,46 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				confidence: claim.ConfidenceStrong,
 				number:     "123", name: "STATE ROUTE 9",
 				formatted: "123 STATE ROUTE 9",
+			},
+		},
+		{
+			// The standard's trailing form. PMB means one thing, so the
+			// mailbox is taken wherever it stands.
+			name:   "a private mailbox closes the street line",
+			source: "123 MAIN STREET PMB 4545\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "MAIN", suffix: "ST",
+				detail:    "PMB 4545",
+				formatted: "123 MAIN ST PMB 4545",
+			},
+		},
+		{
+			// # is a secondary unit of unspecified type unless a unit is
+			// already placed (#78). Here STE 11 is, and the standard forbids
+			// a second one, so the # is the patient's mailbox. secondaryunit
+			// still offers # 234 as the unit, and that reading loses because
+			// its name has to swallow STE 11.
+			name:   "a numerical identifier beside a placed unit is the mailbox",
+			source: "10 MAIN ST STE 11 # 234\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "10", name: "MAIN", suffix: "ST",
+				designator: "STE", secondary: "11",
+				detail:    "PMB 234",
+				formatted: "10 MAIN ST STE 11 PMB 234",
+			},
+		},
+		{
+			// The other half of #78: with no unit placed, # 234 is the unit,
+			// and this package offers no mailbox reading of it at all.
+			name:   "a numerical identifier alone is the secondary unit",
+			source: "123 MAIN ST # 234\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "MAIN", suffix: "ST",
+				designator: "#", secondary: "234",
+				formatted: "123 MAIN ST # 234",
 			},
 		},
 		{
