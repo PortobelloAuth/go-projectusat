@@ -129,6 +129,9 @@ func TestCanadianRegionsMayBeStreetNames(t *testing.T) {
 		"NEWFOUNDLAND AND LABRADOR", "NORTHWEST TERRITORIES", "NOVA SCOTIA",
 		"NUNAVUT TERRITORY", "ONTARIO", "PRINCE EDWARD ISLAND", "QUEBEC",
 		"SASKATCHEWAN", "YUKON TERRITORY",
+		// American Samoa is a place, and a place a street can be named
+		// after, which is the only test for the set. See #96.
+		"AMERICAN SAMOA",
 	} {
 		info, err := region.Info(in, false)
 		if err != nil {

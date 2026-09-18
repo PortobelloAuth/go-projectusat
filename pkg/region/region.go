@@ -47,7 +47,6 @@ type RegionInfo struct {
 // Federated States of Micronesia is a judgment made from the tokens around it,
 // which highways has and this package does not.
 var notStreetNames = map[string]bool{
-	"AS": true, // American Samoa
 	"FM": true, // Federated States of Micronesia; also Farm to Market
 	"AE": true, // Armed Forces Europe, the Middle East and Canada
 	"AP": true, // Armed Forces Pacific
