@@ -327,17 +327,41 @@ func TestAPostOfficeBoxAdmitsAPrivateMailboxOnTheLineAbove(t *testing.T) {
 	}
 }
 
-// The same rule as the trailing position: with no secondary unit ever placed
-// by this package, a bare # above the box is read as the secondary unit of
-// unspecified type wherever it stands, not as this box's mailbox (#78).
-func TestAHashOnTheLineAboveIsNotTakenAsAPrivateMailbox(t *testing.T) {
-	top, ok := best(candidates("# 5\nPO BOX 11890\nDENVER CO 80201"))
+// The same rule as the trailing position: a box line never carries a
+// secondary unit, so a bare # above the box has nowhere else to be read
+// (Aaron on #102).
+func TestAHashOnTheLineAboveIsThePrivateMailbox(t *testing.T) {
+	found := candidates("# 234\nPO BOX 159753\nHERNDON VA 22071")
+	top, ok := best(found)
 	if !ok {
 		t.Fatal("no candidate")
 	}
 
-	if top.Address.Detail != "" {
-		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if top.Confidence != claim.ConfidenceExact {
+		t.Errorf("Confidence = %d, want %d", top.Confidence, claim.ConfidenceExact)
+	}
+
+	if got := top.Address.Type.(*pobox.POBoxAddress).FormatStreetLine(top.Address); got != "PO BOX 159753 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 159753 PMB 234")
+	}
+
+	ties := 0
+	for _, c := range found {
+		if c != top && c.Confidence == top.Confidence {
+			ties++
+		}
+	}
+	if ties > 0 {
+		t.Errorf("%d other candidates tied the winner at confidence %d; the reading is not unique",
+			ties, top.Confidence)
 	}
 }
 

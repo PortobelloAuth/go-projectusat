@@ -48,7 +48,8 @@
 // on the street line, and §285's four-line CMRA form puts PMB or # there
 // instead of trailing the street line. A type reads that line only when it is
 // covered exactly by one claim it would otherwise admit at the end of its own
-// line, under the same rule for # (#78, #98).
+// line, under the same rule for which identifiers count as the mailbox that
+// governs the trailing position (#98).
 //
 // * The same section says the words PO BOX and the private mailbox number MUST
 // NOT be used on the street address line, and two lines later gives

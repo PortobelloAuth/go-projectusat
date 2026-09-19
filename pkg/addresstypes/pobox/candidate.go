@@ -153,14 +153,17 @@ func trailingDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim, l
 }
 
 // aboveLineDetail returns the private mailbox claim that covers the line
-// immediately above the box's own line, if the pool offers one.
+// immediately above the box's own line, if the pool offers one, re-rated to
+// Exact for the same reason trailingDetail is: this package knows something
+// the vocabulary that made the claim cannot.
 //
 // Pub 28 §285's four-line CMRA form puts PMB 234 or #234 above the street
-// line instead of trailing it. This package never places a secondary unit,
-// so the # reading trailingDetail rejects for lack of one beside it is
-// rejected here for the same reason — a bare # is read as the secondary
-// unit of unspecified type wherever it stands, not as this box's mailbox,
-// absent evidence otherwise (Aaron on #78).
+// line instead of trailing it: "Either a three line or four line address
+// format can be used with a CMRA address and the PMB or # identifier." The
+// reason trailingDetail rejected the # reading no longer holds — a box line
+// has no secondary unit position, per trailingDetail — and that is equally
+// true of the line above the box: there is nothing there for # to mean but
+// the mailbox, so both identifiers are admitted the same way.
 func aboveLineDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim) (claim.Claim, bool) {
 	start := lineStart(tokens, c.Start())
 	if start <= 0 {
@@ -176,11 +179,11 @@ func aboveLineDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim) 
 		if d.Start() != above || d.End() != start {
 			continue
 		}
-		if d.Confidence != claim.ConfidenceExact || len(d.Parts) != 1 || d.Parts[0].Part != claim.PartDetail {
+		if len(d.Parts) != 1 || d.Parts[0].Part != claim.PartDetail {
 			continue
 		}
 
-		return d, true
+		return claim.Claim{Confidence: claim.ConfidenceExact, Parts: d.Parts}, true
 	}
 
 	return claim.Claim{}, false
