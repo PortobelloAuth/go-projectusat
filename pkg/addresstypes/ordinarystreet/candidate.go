@@ -72,7 +72,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 				if above, ok := aboveLineClaim(tokens, claims, start,
 					hasPart(accepted, claim.PartSecondaryDesignator), hasPart(accepted, claim.PartDetail)); ok {
 					candidates = append(candidates,
-						line.Candidate(&OrdinaryStreetAddress{}, len(tokens), append(accepted, above)))
+						line.Candidate(&OrdinaryStreetAddress{}, len(tokens), append(append([]claim.Claim{}, accepted...), above)))
 				}
 			}
 		}
