@@ -218,6 +218,41 @@ func TestAHashAfterABoxNumberIsNotTakenAsAPrivateMailbox(t *testing.T) {
 	}
 }
 
+// Pub 28 §285's own three-line CMRA example: PMB 234 on its own line above
+// RR 1 BOX 12 (#98).
+func TestARuralRouteAdmitsAPrivateMailboxOnTheLineAbove(t *testing.T) {
+	top, ok := best(candidates("PMB 234\nRR 1 BOX 12\nHERNDON VA 22071-2716"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*ruralroute.RuralRouteAddress).FormatStreetLine(top.Address); got != "RR 1 BOX 12 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 1 BOX 12 PMB 234")
+	}
+}
+
+// The same rule as the trailing position: with no secondary unit ever placed
+// by this package, a bare # above the route is read as the secondary unit
+// of unspecified type wherever it stands, not as this route's mailbox (#78).
+func TestAHashOnTheLineAboveIsNotTakenAsAPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("# 5\nRR 1 BOX 12\nHERNDON VA 22071"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "" {
+		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
+	}
+}
+
 // A highway contract route builds the same candidate a rural route does. It
 // shares this package's address type, so nothing downstream has to know which
 // designator it was.

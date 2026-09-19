@@ -277,6 +277,46 @@ func TestAHashAfterABoxNumberIsNotTakenAsAPrivateMailbox(t *testing.T) {
 	}
 }
 
+// Pub 28 §213.3 puts a secondary element on the line above the delivery
+// address line when it does not fit there; §285's four-line CMRA form does
+// the same with PMB. A private mailbox above the box reads the same as one
+// trailing it (#98). Invented per CONTRIBUTING §5 — the standard's own
+// four-line examples are over an ordinary street and a rural route, not a
+// post office box, but the rule this package admits it under is the same
+// one either way.
+func TestAPostOfficeBoxAdmitsAPrivateMailboxOnTheLineAbove(t *testing.T) {
+	top, ok := best(candidates("PMB 3571\nPO BOX 159753\nDENVER CO 80201"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 3571" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 3571")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*pobox.POBoxAddress).FormatStreetLine(top.Address); got != "PO BOX 159753 PMB 3571" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 159753 PMB 3571")
+	}
+}
+
+// The same rule as the trailing position: with no secondary unit ever placed
+// by this package, a bare # above the box is read as the secondary unit of
+// unspecified type wherever it stands, not as this box's mailbox (#78).
+func TestAHashOnTheLineAboveIsNotTakenAsAPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("# 5\nPO BOX 11890\nDENVER CO 80201"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "" {
+		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
+	}
+}
+
 func TestFormatStreetLineRendersTheDetail(t *testing.T) {
 	a := &address.Address{
 		StreetName:    "PO BOX",

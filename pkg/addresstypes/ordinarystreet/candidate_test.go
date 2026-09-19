@@ -270,6 +270,46 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				formatted:  "BROADWAY",
 			},
 		},
+		{
+			// Pub 28 §213.3: a secondary unit goes on the line above the
+			// street when it does not fit on the street line. This is the
+			// same shape as "under the street" above, read the other way.
+			name:   "a secondary unit on its own line above the street",
+			source: "APT 4\n123 MAIN ST\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "MAIN", suffix: "ST",
+				designator: "APT", secondary: "4",
+				formatted: "123 MAIN ST APT 4",
+			},
+		},
+		{
+			// §285's four-line CMRA form: PMB 234 above a street line that
+			// already carries its own secondary unit. PMB is taken wherever
+			// it stands.
+			name:   "a private mailbox on its own line above the street",
+			source: "PMB 234\n10 MAIN ST STE 11\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "10", name: "MAIN", suffix: "ST",
+				designator: "STE", secondary: "11",
+				detail:    "PMB 234",
+				formatted: "10 MAIN ST STE 11 PMB 234",
+			},
+		},
+		{
+			// Same shape, the numerical identifier. #78's ruling holds here
+			// too: beside the placed unit STE 11, # is the mailbox.
+			name:   "a numerical identifier on its own line above the street, beside a placed unit",
+			source: "#234\n10 MAIN ST STE 11\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "10", name: "MAIN", suffix: "ST",
+				designator: "STE", secondary: "11",
+				detail:    "PMB 234",
+				formatted: "10 MAIN ST STE 11 PMB 234",
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := bestReading(t, tc.source)

@@ -23,8 +23,8 @@
 //	                 n BOX n; APO/FPO/DPO as the city;
 //	                 AA/AE/AP as the region
 //	generaldelivery  whole line: GENERAL DELIVERY        nothing
-//	pobox            whole line: PO BOX n                a trailing Detail (PMB) *
-//	ruralroute       whole line: RR/HC n BOX n           a trailing Detail (PMB)
+//	pobox            whole line: PO BOX n                a Detail (PMB), trailing or above *
+//	ruralroute       whole line: RR/HC n BOX n           a Detail (PMB), trailing or above
 //	puertorico       URB name; its own street types,     region and postal code
 //	                 numbered streets and secondaries
 //	ordinarystreet   none                                everything
@@ -35,6 +35,14 @@
 // private box number, which is why Detail is a field of its own on
 // address.Address rather than a second secondary. A type that admits a
 // secondary unit therefore admits Detail beside it, never instead of it.
+//
+// Both a secondary unit and a Detail may also be read from the line
+// immediately above a type's own street line, not only from the position
+// trailing it: Pub 28 §213.3 puts a secondary unit there when it does not fit
+// on the street line, and §285's four-line CMRA form puts PMB or # there
+// instead of trailing the street line. A type reads that line only when it is
+// covered exactly by one claim it would otherwise admit at the end of its own
+// line, under the same rule for # (#78, #98).
 //
 // * The same section says the words PO BOX and the private mailbox number MUST
 // NOT be used on the street address line, and two lines later gives
@@ -51,6 +59,5 @@
 //
 // Where the code does not yet match its row, the row is the intent and the gap
 // is tracked: puertorico has Claims for the urbanization but no Candidates and
-// no street vocabulary of its own (#60, #71); a unit or mailbox on the line
-// above the street line is read by no type (#98).
+// no street vocabulary of its own (#60, #71).
 package addresstypes
