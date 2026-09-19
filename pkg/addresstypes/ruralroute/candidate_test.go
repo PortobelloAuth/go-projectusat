@@ -11,6 +11,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/country"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
+	"github.com/PortobelloAuth/go-projectusat/pkg/privatemailbox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 )
@@ -18,8 +19,9 @@ import (
 // candidates runs the vocabularies an address is assembled from and returns
 // every rural route candidate, over every reading of the last line. military is
 // among them so the tests see the look-alike street line this package has to
-// tell its own work apart from, and streetsuffixes so they see the competing
-// reading of the text a rural route line should not carry.
+// tell its own work apart from, streetsuffixes so they see the competing
+// reading of the text a rural route line should not carry, and privatemailbox
+// so they see the trailing Detail claim a rural route may admit (#77).
 func candidates(source string) []*address.CandidateAddress {
 	tokens := token.Tokenize(source)
 
@@ -30,6 +32,7 @@ func candidates(source string) []*address.CandidateAddress {
 	claims = append(claims, streetsuffixes.Claims(tokens)...)
 	claims = append(claims, military.Claims(tokens)...)
 	claims = append(claims, ruralroute.Claims(tokens)...)
+	claims = append(claims, privatemailbox.Claims(tokens)...)
 
 	var found []*address.CandidateAddress
 	for _, line := range lastline.LineClaims(tokens, claims) {
@@ -175,6 +178,43 @@ func TestEveryCandidateIsWellFormed(t *testing.T) {
 				t.Errorf("Leftover run %v is empty", s)
 			}
 		}
+	}
+}
+
+// Publication 28 §285's own three-line CMRA example puts "PMB 234" above
+// "RR 1 BOX 12"; this library emits only the trailing form, so the same
+// tokens read the other way around are the acceptance case for #77.
+func TestARuralRouteAdmitsATrailingPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("RR 1 BOX 12 PMB 234\nHERNDON VA 22071-2716"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the trailing tokens", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*ruralroute.RuralRouteAddress).FormatStreetLine(top.Address); got != "RR 1 BOX 12 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 1 BOX 12 PMB 234")
+	}
+}
+
+// A # after a box number has no secondary unit standing beside it to give it a
+// mailbox meaning, so under §213.2 it is still just the secondary unit
+// designator of unspecified type — not a private mailbox this package should
+// read into Detail (Aaron on #76 and #78).
+func TestAHashAfterABoxNumberIsNotTakenAsAPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("RR 1 BOX 12 # 5\nHERNDON VA 22071"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "" {
+		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
 	}
 }
 

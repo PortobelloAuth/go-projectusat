@@ -65,6 +65,11 @@ func (p *POBoxAddress) FormatStreetLine(a *address.Address) string {
 // over one run — so a package that recognized its own work by shape would build
 // a PO box out of RR 4 BOX 125. Re-reading the tokens with this package's own
 // recognizer is what tells the three apart.
+//
+// Where a private mailbox claim follows the box number on the same line, a
+// second candidate offers it too. See trailingDetail for which readings that
+// is (#77). The candidate without it is offered as well, so the leftover step
+// on the one that strands the mailbox is what separates the two.
 func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) []*address.CandidateAddress {
 	var candidates []*address.CandidateAddress
 
@@ -79,9 +84,47 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 		candidates = append(candidates,
 			line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c}))
+
+		if detail, ok := trailingDetail(tokens, claims, c, line); ok {
+			candidates = append(candidates,
+				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, detail}))
+		}
 	}
 
 	return candidates
+}
+
+// trailingDetail returns the private mailbox claim that follows the box
+// number on its own line, if the pool offers one.
+//
+// Pub 28 §285 gives "PO BOX 159753 PMB 3571" as a correct form: PMB names the
+// patient's private box, immediately after the CMRA's own box number. Only the
+// PMB reading is admitted, at privatemailbox's ConfidenceExact — # here has no
+// secondary unit standing beside it to give # a mailbox meaning the way
+// ordinarystreet.admitMailbox reasons about the street line, so under §213.2 it
+// is still just the secondary unit designator of unspecified type. And a box
+// number can never end in a glued #1234 in the first place: this package
+// requires its whole pattern, POBoxAddress number included, to claim a box at
+// all (Aaron on #76).
+func trailingDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
+	for _, d := range claims {
+		if d.Start() < 0 || d.End() > len(tokens) {
+			continue
+		}
+		if d.Start() != c.End() || d.End() > line.Span.Start {
+			continue
+		}
+		if d.Confidence != claim.ConfidenceExact || len(d.Parts) != 1 || d.Parts[0].Part != claim.PartDetail {
+			continue
+		}
+		if tokens[d.Start()].Line != tokens[c.Start()].Line {
+			continue
+		}
+
+		return d, true
+	}
+
+	return claim.Claim{}, false
 }
 
 // isStreetLine reports whether a claim is one this package made.

@@ -12,6 +12,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/country"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
+	"github.com/PortobelloAuth/go-projectusat/pkg/privatemailbox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
 )
@@ -19,7 +20,8 @@ import (
 // candidates runs the vocabularies an address is assembled from and returns
 // every post office box candidate, over every reading of the last line.
 // military and ruralroute are among them so the tests see the two look-alike
-// street lines this package has to tell its own work apart from.
+// street lines this package has to tell its own work apart from, and
+// privatemailbox so they see the trailing Detail claim pobox may admit (#77).
 func candidates(source string) []*address.CandidateAddress {
 	tokens := token.Tokenize(source)
 
@@ -31,6 +33,7 @@ func candidates(source string) []*address.CandidateAddress {
 	claims = append(claims, military.Claims(tokens)...)
 	claims = append(claims, ruralroute.Claims(tokens)...)
 	claims = append(claims, pobox.Claims(tokens)...)
+	claims = append(claims, privatemailbox.Claims(tokens)...)
 
 	var found []*address.CandidateAddress
 	for _, line := range lastline.LineClaims(tokens, claims) {
@@ -237,6 +240,43 @@ func TestFormatStreetLine(t *testing.T) {
 // line, so a private mailbox number renders after the box number. See
 // FormatStreetLine for why that does not contradict the sentence forbidding
 // PO BOX on the street line.
+// The standard's own example under Private Mailbox Addresses: a post office
+// box admits a trailing private mailbox number the same way a rural route
+// does (#77).
+func TestAPostOfficeBoxAdmitsATrailingPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("PO BOX 159753 PMB 3571\nDENVER CO 80201"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 3571" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 3571")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the trailing tokens", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*pobox.POBoxAddress).FormatStreetLine(top.Address); got != "PO BOX 159753 PMB 3571" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 159753 PMB 3571")
+	}
+}
+
+// A # after a box number has no secondary unit standing beside it to give it a
+// mailbox meaning, so under §213.2 it is still just the secondary unit
+// designator of unspecified type — not a private mailbox this package should
+// read into Detail (Aaron on #76 and #78).
+func TestAHashAfterABoxNumberIsNotTakenAsAPrivateMailbox(t *testing.T) {
+	top, ok := best(candidates("PO BOX 11890 # 5\nDENVER CO 80201"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "" {
+		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
+	}
+}
+
 func TestFormatStreetLineRendersTheDetail(t *testing.T) {
 	a := &address.Address{
 		StreetName:    "PO BOX",
