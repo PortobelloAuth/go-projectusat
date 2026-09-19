@@ -72,34 +72,24 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 }
 
 // trailingDetail returns the private mailbox claim that follows the route's
-// box number on its own line, if the pool offers one, re-rated to Exact
-// because this package knows something the vocabulary that made the claim
-// cannot.
+// box number on its own line, if the pool offers one, re-rated to Exact.
 //
 // Pub 28 §285's own three-line CMRA example is "RR 1 BOX 12" with "PMB 234"
 // above it; the trailing form this library emits is the same tokens read the
-// other way around. §241 gives the rural route delivery line as RR ## BOX ##
-// and says "Do not use the words RURAL, NUMBER, NO., or the pound sign (#)",
-// and §245 adds that the line carries no additional designations, so unlike
-// an ordinary street line a rural route line never carries a secondary unit
-// (Aaron on #102). That is what privatemailbox's demotion of # depends on —
-// # is also the secondary unit designator of unspecified type, and
-// secondaryunit claims it there at Exact under §213.2 — and a rural route
-// line has no secondary unit position for # to be read into instead. So on
-// this line both identifiers §285 permits, PMB and #, can only be the
-// patient's mailbox, and both are admitted: the value privatemailbox already
-// normalized to PMB n is what renders, so "# 234" renders "PMB 234" the same
-// as "PMB 234" does.
+// other way around. Both identifiers §285 permits are taken. privatemailbox
+// holds # below PMB because # is also the secondary unit designator of
+// unspecified type, and §241 makes the route line RR ## BOX ## — "Do not use
+// the words RURAL, NUMBER, NO., or the pound sign (#)" — with no additional
+// designation on it (§245), so a rural route line never carries a secondary
+// unit (Aaron on #102). Here a # has nowhere else to be read, and the value
+// the vocabulary already normalized to PMB n is what renders.
 //
-// The vocabulary rates what the tokens could be; this package rates what
-// they are on this line — the same split ordinarystreet.admitMailbox draws
-// for the street line. Exact rather than Strong is the rating that matters:
-// the route-and-box claim is Exact, and the candidate without the mailbox is
-// the same claim alone, demoted one step by lastline.Candidate for the
-// leftover run the trailing tokens leave — Exact down to Strong. A mailbox
-// admitted at Strong would only tie that candidate; at Exact, the reading
-// that accounts for every token wins outright, which is what the leftover
-// step exists to do.
+// The vocabulary rates what the tokens could be; this package rates what they
+// are on this line, the split ordinarystreet.admitMailbox draws. Exact is the
+// rating that matters: the route claim is Exact, and the candidate that
+// strands the mailbox is that claim demoted one step for its leftover run, to
+// Strong. A mailbox admitted at Strong would tie it; at Exact the reading that
+// explains every token wins, which is what the leftover step is for.
 func trailingDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
 	for _, d := range claims {
 		if d.Start() < 0 || d.End() > len(tokens) {
