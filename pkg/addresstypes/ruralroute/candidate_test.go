@@ -203,18 +203,41 @@ func TestARuralRouteAdmitsATrailingPrivateMailbox(t *testing.T) {
 	}
 }
 
-// A # after a box number has no secondary unit standing beside it to give it a
-// mailbox meaning, so under §213.2 it is still just the secondary unit
-// designator of unspecified type — not a private mailbox this package should
-// read into Detail (Aaron on #76 and #78).
-func TestAHashAfterABoxNumberIsNotTakenAsAPrivateMailbox(t *testing.T) {
-	top, ok := best(candidates("RR 1 BOX 12 # 5\nHERNDON VA 22071"))
+// A rural route line never carries a secondary unit (Pub 28 §241, §245), so #
+// after the box number has nowhere else to be read: it is the patient's
+// private mailbox, the same as PMB is (Aaron on #102).
+func TestAHashAfterABoxNumberIsThePrivateMailbox(t *testing.T) {
+	found := candidates("RR 1 BOX 12 # 234\nHERNDON VA 22071")
+	top, ok := best(found)
 	if !ok {
 		t.Fatal("no candidate")
 	}
 
-	if top.Address.Detail != "" {
-		t.Errorf("Detail = %q, want none: # 5 is not a private mailbox here", top.Address.Detail)
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the trailing tokens", top.Leftover)
+	}
+
+	if top.Confidence != claim.ConfidenceExact {
+		t.Errorf("Confidence = %d, want %d", top.Confidence, claim.ConfidenceExact)
+	}
+
+	if got := top.Address.Type.(*ruralroute.RuralRouteAddress).FormatStreetLine(top.Address); got != "RR 1 BOX 12 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 1 BOX 12 PMB 234")
+	}
+
+	ties := 0
+	for _, c := range found {
+		if c != top && c.Confidence == top.Confidence {
+			ties++
+		}
+	}
+	if ties > 0 {
+		t.Errorf("%d other candidates tied the winner at confidence %d; the reading is not unique",
+			ties, top.Confidence)
 	}
 }
 
