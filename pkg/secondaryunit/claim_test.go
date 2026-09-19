@@ -77,6 +77,34 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
+			// The tokenizer keeps #234 as one token. Publication 28 §213.2's
+			// space is the standardized form, not a filter on input. Same
+			// confidence and values as the spaced reading.
+			name: "hash glued to its number",
+			in:   "#234",
+			want: []reading{
+				{"#234", claim.PartSecondaryDesignator, claim.ConfidenceExact, "#"},
+				{"#234", claim.PartSecondaryNumber, claim.ConfidenceExact, "234"},
+			},
+		},
+		{
+			name: "hash glued to an alphanumeric unit number",
+			in:   "123 MAIN ST #4B",
+			want: []reading{
+				{"#4B", claim.PartSecondaryDesignator, claim.ConfidenceExact, "#"},
+				{"#4B", claim.PartSecondaryNumber, claim.ConfidenceExact, "4B"},
+			},
+		},
+		{
+			// #WEST is one token and WEST is not a unit number, so there is
+			// no glued reading. The spaced KEY WEST case is offered because
+			// those are two tokens and a numbered designator always takes
+			// the next word.
+			name: "hash glued to an ordinary word is not claimed",
+			in:   "#WEST",
+			want: []reading{},
+		},
+		{
 			// An unnumbered designator standing alone is the whole pattern.
 			name: "unnumbered designator",
 			in:   "BSMT",
@@ -153,6 +181,24 @@ func TestNumberedDesignatorIsOneClaim(t *testing.T) {
 	}
 	if claims[0].Start() != 0 || claims[0].End() != 2 {
 		t.Errorf("claim covers [%d,%d), want [0,2)", claims[0].Start(), claims[0].End())
+	}
+}
+
+func TestGluedHashIsOneClaim(t *testing.T) {
+	tokens := token.Tokenize("#234")
+	claims := secondaryunit.Claims(tokens)
+
+	if len(claims) != 1 {
+		t.Fatalf("expected one claim covering the glued token, got %+v", claims)
+	}
+	if len(claims[0].Parts) != 2 {
+		t.Fatalf("expected a designator and a number, got %+v", claims[0].Parts)
+	}
+	if claims[0].Start() != 0 || claims[0].End() != 1 {
+		t.Errorf("claim covers [%d,%d), want [0,1)", claims[0].Start(), claims[0].End())
+	}
+	if claims[0].Parts[0].Value != "#" || claims[0].Parts[1].Value != "234" {
+		t.Errorf("values = %q %q, want # 234", claims[0].Parts[0].Value, claims[0].Parts[1].Value)
 	}
 }
 
