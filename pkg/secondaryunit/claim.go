@@ -27,12 +27,21 @@ import (
 // a reading because the number does not look like one would drop real
 // addresses. The shape of the number sets the confidence instead: APT 4B is
 // exact, KEY WEST is a reading worth offering and losing.
+//
+// The tokenizer keeps #234 as one token. Publication 28 §213.2 requires a
+// space between the pound sign and the secondary number on a standardized
+// record; that is output, not a restriction on what arrives. The glued form
+// is the same numbered-hash reading as "# 234", and the part values are "#"
+// and the number so a caller that accepts the claim still writes "# 234".
 func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for i, t := range tokens {
 		info, err := Info(t.Text)
 		if err != nil {
+			if number, ok := gluedHashNumber(t.Text); ok {
+				claims = append(claims, gluedHashClaim(i, number))
+			}
 			continue
 		}
 
@@ -71,6 +80,45 @@ func Claims(tokens []token.Token) []claim.Claim {
 	}
 
 	return claims
+}
+
+// gluedHashNumber reports the unit number in a single token of the shape
+// "#" + number. The tokenizer does not split #234, and that is how the
+// Project US@ examples write a private mailbox and how a great deal of real
+// data writes a unit.
+func gluedHashNumber(text string) (string, bool) {
+	if len(text) < 2 || text[0] != '#' {
+		return "", false
+	}
+
+	number := strings.ToUpper(text[1:])
+	if !looksLikeUnitNumber(number) {
+		return "", false
+	}
+
+	return number, true
+}
+
+// gluedHashClaim is the numbered-hash reading over one token. Both parts
+// cover that token: Value is what the part says, the token is what it covers.
+func gluedHashClaim(i int, number string) claim.Claim {
+	return claim.Claim{
+		Confidence: claim.ConfidenceExact,
+		Parts: []claim.ClaimPart{
+			{
+				Start:  i,
+				Length: 1,
+				Part:   claim.PartSecondaryDesignator,
+				Value:  hashUnit.Short,
+			},
+			{
+				Start:  i,
+				Length: 1,
+				Part:   claim.PartSecondaryNumber,
+				Value:  number,
+			},
+		},
+	}
 }
 
 // numberedConfidence rates a designator claimed together with its number.
