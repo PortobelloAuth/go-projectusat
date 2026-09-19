@@ -42,8 +42,8 @@ comparable, and because the exception in §285 requires PMB whenever the CMRA's
 own line carries a secondary element. Ruled on #76.
 
 The # form is claimed below Exact. Under Publication 28 §213.2 the same tokens
-are a secondary unit of unspecified type, and pkg/secondaryunit claims them so
-at Exact. That order is the intended one: without evidence otherwise a # is a
+are a secondary unit of unspecified type, and pkg/secondaryunit claims them at
+Exact. That order is the intended one: without evidence otherwise a # is a
 secondary unit (#78), and the evidence — a secondary unit already placed on the
 line — is something only an address type can see. This package offers the
 reading; the address type decides.
