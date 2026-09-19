@@ -113,17 +113,13 @@ func trailingDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim, l
 
 // aboveLineDetail returns the private mailbox claim that covers the line
 // immediately above the route's own line, if the pool offers one, re-rated to
-// Exact for the same reason trailingDetail is: this package knows something
-// the vocabulary that made the claim cannot.
+// Exact as trailingDetail does.
 //
-// Pub 28 §285's own three-line CMRA example puts PMB 234 above RR 1 BOX 12,
-// and the section's four-line form allows the same with #: "Either a three
-// line or four line address format can be used with a CMRA address and the
-// PMB or # identifier." The reason trailingDetail rejected the # reading no
-// longer holds — a rural route line has no secondary unit position, per
-// trailingDetail — and that is equally true of the line above the route:
-// there is nothing there for # to mean but the mailbox, so both identifiers
-// are admitted the same way.
+// Pub 28 §285's four-line CMRA form puts PMB 234 or #234 above the street
+// line instead of trailing it: "Either a three line or four line address
+// format can be used with a CMRA address and the PMB or # identifier." Both
+// identifiers are admitted for the reason trailingDetail gives — this type has
+// no secondary unit position on any line, so a # here can only be the mailbox.
 func aboveLineDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim) (claim.Claim, bool) {
 	start := lineStart(tokens, c.Start())
 	if start <= 0 {
