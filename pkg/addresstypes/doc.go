@@ -23,8 +23,8 @@
 //	                 n BOX n; APO/FPO/DPO as the city;
 //	                 AA/AE/AP as the region
 //	generaldelivery  whole line: GENERAL DELIVERY        nothing
-//	pobox            whole line: PO BOX n                a trailing Detail (PMB) *
-//	ruralroute       whole line: RR/HC n BOX n           a trailing Detail (PMB)
+//	pobox            whole line: PO BOX n                a trailing Detail (PMB or #) *
+//	ruralroute       whole line: RR/HC n BOX n           a trailing Detail (PMB or #)
 //	puertorico       URB name; its own street types,     region and postal code
 //	                 numbered streets and secondaries
 //	ordinarystreet   none                                everything
@@ -34,7 +34,12 @@
 // secondary address element of the CMRA's own address with the patient's
 // private box number, which is why Detail is a field of its own on
 // address.Address rather than a second secondary. A type that admits a
-// secondary unit therefore admits Detail beside it, never instead of it.
+// secondary unit therefore admits Detail beside it, never instead of it. A
+// box line has no secondary unit at all — Pub 28 §281 makes the PO Box line
+// PO BOX and its number, §241 the rural route line RR n BOX n — so on pobox
+// and ruralroute a # identifier can only be the mailbox and is admitted the
+// same as PMB. ordinarystreet has a secondary unit position, and takes # as
+// the mailbox only beside a unit already placed (#78).
 //
 // * The same section says the words PO BOX and the private mailbox number MUST
 // NOT be used on the street address line, and two lines later gives
@@ -50,10 +55,7 @@
 // a box, whatever ordinarystreet could make of the same tokens.
 //
 // Where the code does not yet match its row, the row is the intent and the gap
-// is tracked: privatemailbox produces the Detail claim and ordinarystreet admits
-// it, but pobox and ruralroute still hand the last line exactly one claim, so
-// their trailing Detail describes the seam and not a working path (#77);
-// puertorico has Claims for the urbanization but no Candidates and no street
-// vocabulary of its own (#60, #71); a unit or mailbox on the line above the
-// street line is read by no type (#98).
+// is tracked: puertorico has Claims for the urbanization but no Candidates and
+// no street vocabulary of its own (#60, #71); a unit or mailbox on the line
+// above the street line is read by no type (#98).
 package addresstypes
