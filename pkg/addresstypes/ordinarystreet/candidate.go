@@ -30,10 +30,12 @@ import (
 // entirely. The span reaches back over the line above so the unit is read where
 // it always is, at the end of the delivery address.
 //
-// A unit on the line above the street is the other half of that shape and is
-// not read yet. Pub 28 puts it there when it does not fit on the street line,
-// and reading it takes a leading element this package does not offer. It falls
-// out as leftover, which is at least rated as what it is.
+// A unit or a private mailbox on the line above the street is the other half
+// of that shape, and is read the same way in the other direction: where the
+// whole of that line is exactly one claim this package already admits at the
+// end of its own line, a second reading accepts it too. Pub 28 §213.3 puts a
+// secondary unit there when it does not fit on the street line, and §285's
+// four-line CMRA form puts PMB 234 or #234 there. See aboveLineClaim.
 //
 // Anything else above the street line — a business name, an urbanization — is
 // not this package's business and falls out as leftover, which costs the
@@ -66,11 +68,72 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 				candidates = append(candidates,
 					line.Candidate(&OrdinaryStreetAddress{}, len(tokens), accepted))
+
+				if above, ok := aboveLineClaim(tokens, claims, start,
+					hasPart(accepted, claim.PartSecondaryDesignator), hasPart(accepted, claim.PartDetail)); ok {
+					candidates = append(candidates,
+						line.Candidate(&OrdinaryStreetAddress{}, len(tokens), append(append([]claim.Claim{}, accepted...), above)))
+				}
 			}
 		}
 	}
 
 	return candidates
+}
+
+// aboveLineClaim returns the claim this package accepts from the line
+// immediately above the street line, if the pool offers one.
+//
+// It is isSecondaryUnitLine's rule applied in the other direction: only a
+// line covered by exactly one such claim qualifies, and the same two
+// elements this package already admits at the end of its own line — a
+// secondary unit or a private mailbox — are the only ones offered here.
+//
+// unitPlaced and detailPlaced describe what this reading of the street line
+// itself has already accepted. A second secondary unit is never offered
+// beside one already placed — the standard has one designator per address —
+// and admitMailbox's ruling on # carries over unchanged: #78 is about what a
+// bare # means, not about which line it sits on, so a placed unit still
+// turns a # above the street into the patient's mailbox at Strong, and PMB is
+// still taken wherever it stands. A second Detail is never offered beside one
+// the street line's own tail already supplied, for the same reason as the
+// second secondary unit.
+func aboveLineClaim(tokens []token.Token, claims []claim.Claim, start int, unitPlaced, detailPlaced bool) (claim.Claim, bool) {
+	if start <= 0 {
+		return claim.Claim{}, false
+	}
+
+	above := lineStart(tokens, start-1)
+
+	for _, c := range claims {
+		if c.Start() != above || c.End() != start {
+			continue
+		}
+
+		if !detailPlaced && assigns(c, claim.PartDetail) {
+			if admitted, ok := admitMailbox(c, unitPlaced); ok {
+				return admitted, true
+			}
+			continue
+		}
+
+		if !unitPlaced && assigns(c, claim.PartSecondaryDesignator) {
+			return c, true
+		}
+	}
+
+	return claim.Claim{}, false
+}
+
+// hasPart reports whether any accepted claim assigns the named part.
+func hasPart(claims []claim.Claim, part claim.Part) bool {
+	for _, c := range claims {
+		if assigns(c, part) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isSecondaryUnitLine reports whether a claim covers the span exactly and reads

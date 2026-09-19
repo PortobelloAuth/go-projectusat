@@ -241,6 +241,65 @@ func TestAHashAfterABoxNumberIsThePrivateMailbox(t *testing.T) {
 	}
 }
 
+// Pub 28 §285's own three-line CMRA example: PMB 234 on its own line above
+// RR 1 BOX 12 (#98).
+func TestARuralRouteAdmitsAPrivateMailboxOnTheLineAbove(t *testing.T) {
+	top, ok := best(candidates("PMB 234\nRR 1 BOX 12\nHERNDON VA 22071-2716"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*ruralroute.RuralRouteAddress).FormatStreetLine(top.Address); got != "RR 1 BOX 12 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 1 BOX 12 PMB 234")
+	}
+}
+
+// The same rule as the trailing position: a rural route line never carries a
+// secondary unit, so a bare # above the route has nowhere else to be read
+// (Aaron on #102).
+func TestAHashOnTheLineAboveIsThePrivateMailbox(t *testing.T) {
+	found := candidates("# 234\nRR 1 BOX 12\nHERNDON VA 22071")
+	top, ok := best(found)
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if top.Confidence != claim.ConfidenceExact {
+		t.Errorf("Confidence = %d, want %d", top.Confidence, claim.ConfidenceExact)
+	}
+
+	if got := top.Address.Type.(*ruralroute.RuralRouteAddress).FormatStreetLine(top.Address); got != "RR 1 BOX 12 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "RR 1 BOX 12 PMB 234")
+	}
+
+	ties := 0
+	for _, c := range found {
+		if c != top && c.Confidence == top.Confidence {
+			ties++
+		}
+	}
+	if ties > 0 {
+		t.Errorf("%d other candidates tied the winner at confidence %d; the reading is not unique",
+			ties, top.Confidence)
+	}
+}
+
 // A highway contract route builds the same candidate a rural route does. It
 // shares this package's address type, so nothing downstream has to know which
 // designator it was.

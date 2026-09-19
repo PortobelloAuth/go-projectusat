@@ -301,6 +301,70 @@ func TestAHashAfterABoxNumberIsThePrivateMailbox(t *testing.T) {
 	}
 }
 
+// Pub 28 §213.3 puts a secondary element on the line above the delivery
+// address line when it does not fit there; §285's four-line CMRA form does
+// the same with PMB. A private mailbox above the box reads the same as one
+// trailing it (#98). Invented per CONTRIBUTING §5 — the standard's own
+// four-line examples are over an ordinary street and a rural route, not a
+// post office box, but the rule this package admits it under is the same
+// one either way.
+func TestAPostOfficeBoxAdmitsAPrivateMailboxOnTheLineAbove(t *testing.T) {
+	top, ok := best(candidates("PMB 3571\nPO BOX 159753\nDENVER CO 80201"))
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 3571" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 3571")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if got := top.Address.Type.(*pobox.POBoxAddress).FormatStreetLine(top.Address); got != "PO BOX 159753 PMB 3571" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 159753 PMB 3571")
+	}
+}
+
+// The same rule as the trailing position: a box line never carries a
+// secondary unit, so a bare # above the box has nowhere else to be read
+// (Aaron on #102).
+func TestAHashOnTheLineAboveIsThePrivateMailbox(t *testing.T) {
+	found := candidates("# 234\nPO BOX 159753\nHERNDON VA 22071")
+	top, ok := best(found)
+	if !ok {
+		t.Fatal("no candidate")
+	}
+
+	if top.Address.Detail != "PMB 234" {
+		t.Errorf("Detail = %q, want %q", top.Address.Detail, "PMB 234")
+	}
+
+	if len(top.Leftover) != 0 {
+		t.Errorf("Leftover = %v, want none: the mailbox explains the line above", top.Leftover)
+	}
+
+	if top.Confidence != claim.ConfidenceExact {
+		t.Errorf("Confidence = %d, want %d", top.Confidence, claim.ConfidenceExact)
+	}
+
+	if got := top.Address.Type.(*pobox.POBoxAddress).FormatStreetLine(top.Address); got != "PO BOX 159753 PMB 234" {
+		t.Errorf("FormatStreetLine() = %q, want %q", got, "PO BOX 159753 PMB 234")
+	}
+
+	ties := 0
+	for _, c := range found {
+		if c != top && c.Confidence == top.Confidence {
+			ties++
+		}
+	}
+	if ties > 0 {
+		t.Errorf("%d other candidates tied the winner at confidence %d; the reading is not unique",
+			ties, top.Confidence)
+	}
+}
+
 func TestFormatStreetLineRendersTheDetail(t *testing.T) {
 	a := &address.Address{
 		StreetName:    "PO BOX",
