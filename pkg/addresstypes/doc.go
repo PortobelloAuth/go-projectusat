@@ -23,8 +23,8 @@
 //	                 n BOX n; APO/FPO/DPO as the city;
 //	                 AA/AE/AP as the region
 //	generaldelivery  whole line: GENERAL DELIVERY        nothing
-//	pobox            whole line: PO BOX n                a trailing Detail (PMB) *
-//	ruralroute       whole line: RR/HC n BOX n           a trailing Detail (PMB)
+//	pobox            whole line: PO BOX n                a trailing Detail (PMB or #) *
+//	ruralroute       whole line: RR/HC n BOX n           a trailing Detail (PMB or #)
 //	puertorico       URB name; its own street types,     region and postal code
 //	                 numbered streets and secondaries
 //	ordinarystreet   none                                everything
@@ -34,7 +34,13 @@
 // secondary address element of the CMRA's own address with the patient's
 // private box number, which is why Detail is a field of its own on
 // address.Address rather than a second secondary. A type that admits a
-// secondary unit therefore admits Detail beside it, never instead of it.
+// secondary unit therefore admits Detail beside it, never instead of it. A
+// box line has no secondary unit at all — Pub 28 §281 standardizes the PO Box
+// delivery line as PO BOX and the box number, and §241 does the same for the
+// rural route line — so on pobox and ruralroute the # identifier has nowhere
+// else to be read and is admitted as the mailbox the same as PMB is; only
+// ordinarystreet, which does have a secondary unit position, takes # as the
+// mailbox solely beside a unit already placed (Aaron on #78).
 //
 // * The same section says the words PO BOX and the private mailbox number MUST
 // NOT be used on the street address line, and two lines later gives
