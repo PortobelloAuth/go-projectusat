@@ -232,9 +232,9 @@ func tails(claims []claim.Claim, from, to int) []tail {
 // Detail claim, if it accepts one.
 //
 // privatemailbox holds PMB 234 at Exact and # 234 below it, because # is also
-// the secondary unit designator of unspecified type and secondaryunit claims
-// it so at Exact (Publication 28 §213.2). With no unit placed elsewhere on the
-// line that is what a # is, and no mailbox reading is offered: the unit
+// the secondary unit designator of unspecified type, which secondaryunit
+// claims at Exact (Publication 28 §213.2). With no unit placed elsewhere on
+// the line a # is that unit, and no mailbox reading is offered: the unit
 // reading wins and the address renders as # 234, which is deliverable either
 // way (#78). Beside a placed unit the # is the reading left that explains the
 // tokens — the standard forbids combining the CMRA's secondary element with
