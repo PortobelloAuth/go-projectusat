@@ -68,8 +68,10 @@ func (p *POBoxAddress) FormatStreetLine(a *address.Address) string {
 //
 // Where a private mailbox claim follows the box number on the same line, a
 // second candidate offers it too. See trailingDetail for which readings that
-// is (#77). The candidate without it is offered as well, so the leftover step
-// on the one that strands the mailbox is what separates the two.
+// is (#77). A private mailbox on the line immediately above the box is read
+// the same way; see aboveLineDetail (#98). The candidate without either is
+// offered as well, so the leftover step on the one that strands the mailbox
+// is what separates the two.
 func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) []*address.CandidateAddress {
 	var candidates []*address.CandidateAddress
 
@@ -86,6 +88,11 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 			line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c}))
 
 		if detail, ok := trailingDetail(tokens, claims, c, line); ok {
+			candidates = append(candidates,
+				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, detail}))
+		}
+
+		if detail, ok := aboveLineDetail(tokens, claims, c); ok {
 			candidates = append(candidates,
 				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, detail}))
 		}
@@ -134,6 +141,50 @@ func trailingDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim, l
 	}
 
 	return claim.Claim{}, false
+}
+
+// aboveLineDetail returns the private mailbox claim that covers the line
+// immediately above the box's own line, if the pool offers one, re-rated to
+// Exact as trailingDetail does.
+//
+// Pub 28 §285's four-line CMRA form puts PMB 234 or #234 above the street
+// line instead of trailing it: "Either a three line or four line address
+// format can be used with a CMRA address and the PMB or # identifier." Both
+// identifiers are admitted for the reason trailingDetail gives — this type has
+// no secondary unit position on any line, so a # here can only be the mailbox.
+func aboveLineDetail(tokens []token.Token, claims []claim.Claim, c claim.Claim) (claim.Claim, bool) {
+	start := lineStart(tokens, c.Start())
+	if start <= 0 {
+		return claim.Claim{}, false
+	}
+
+	above := lineStart(tokens, start-1)
+
+	for _, d := range claims {
+		if d.Start() < 0 || d.End() > len(tokens) {
+			continue
+		}
+		if d.Start() != above || d.End() != start {
+			continue
+		}
+		if len(d.Parts) != 1 || d.Parts[0].Part != claim.PartDetail {
+			continue
+		}
+
+		return claim.Claim{Confidence: claim.ConfidenceExact, Parts: d.Parts}, true
+	}
+
+	return claim.Claim{}, false
+}
+
+// lineStart returns the index of the first token on the same line as at.
+func lineStart(tokens []token.Token, at int) int {
+	start := at
+	for start > 0 && tokens[start-1].Line == tokens[at].Line {
+		start--
+	}
+
+	return start
 }
 
 // isStreetLine reports whether a claim is one this package made.
