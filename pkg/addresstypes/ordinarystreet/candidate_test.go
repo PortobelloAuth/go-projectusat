@@ -160,6 +160,44 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// AVENUE is a Pub 28 suffix, but it leads the name instead of
+			// sitting inside it. A suffix reading must end the street line, so
+			// no reading of this address ever places AVENUE in the suffix
+			// slot — there is nothing here that was declined. The standard
+			// would not have it there anyway: rendering this as "1250 OF THE
+			// AMERICAS AVE" is wrong, so the name is not charged for a slot it
+			// could not have filled.
+			name:   "a leading suffix word is not a declined slot",
+			source: "1250 AVENUE OF THE AMERICAS\nNEW YORK NY 10020",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "1250", name: "AVENUE OF THE AMERICAS",
+				formatted: "1250 AVENUE OF THE AMERICAS",
+			},
+		},
+		{
+			// Same shape as AVENUE OF THE AMERICAS: BOULEVARD leads the name
+			// and no reading ever places it in the suffix slot.
+			name:   "a leading boulevard is not a declined slot",
+			source: "600 BOULEVARD OF THE ALLIES\nPITTSBURGH PA 15222",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "600", name: "BOULEVARD OF THE ALLIES",
+				formatted: "600 BOULEVARD OF THE ALLIES",
+			},
+		},
+		{
+			// Same shape again, with a single-letter name after the leading
+			// suffix word instead of a multi-word one.
+			name:   "a leading suffix word before a single letter is not a declined slot",
+			source: "400 AVENUE A\nNEW YORK NY 10009",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "400", name: "AVENUE A",
+				formatted: "400 AVENUE A",
+			},
+		},
+		{
 			// The delivery address written across two lines. Reading the unit
 			// line as the street line discarded 123 MAIN ST and reported a
 			// street named APT 4.
