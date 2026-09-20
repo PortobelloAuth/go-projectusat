@@ -58,7 +58,11 @@ func New(opts ...AddressParsingOptions) *Parser {
 
 func (p *Parser) Parse(source string) (*address.Address, error) {
 	if p.Options.CustomParser != nil {
-		return p.Options.CustomParser.Parse(source)
+		addr, err := p.Options.CustomParser.Parse(source)
+		if err != nil {
+			return nil, err
+		}
+		return p.Options.Verifier(addr)
 	}
 	// TODO: implement Parse
 	/*
