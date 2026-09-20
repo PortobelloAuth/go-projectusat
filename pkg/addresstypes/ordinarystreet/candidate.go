@@ -57,6 +57,8 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 		start = lineStart(tokens, start-1)
 	}
 
+	placed := placements(tokens, claims, start, end)
+
 	var candidates []*address.CandidateAddress
 	for _, t := range tails(claims, start, end) {
 		for _, h := range heads(tokens, claims, start, t.nameEnd) {
@@ -64,7 +66,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 				accepted := make([]claim.Claim, 0, len(h.claims)+len(t.claims)+1)
 				accepted = append(accepted, h.claims...)
 				accepted = append(accepted, t.claims...)
-				accepted = append(accepted, streetClaim(claims, h, t, name))
+				accepted = append(accepted, streetClaim(placed, h, t, name))
 
 				candidates = append(candidates,
 					line.Candidate(&OrdinaryStreetAddress{}, len(tokens), accepted))
@@ -291,6 +293,28 @@ func heads(tokens []token.Token, claims []claim.Claim, from, nameEnd int) []head
 	return out
 }
 
+// placements returns every claim some reading of the line places in a slot,
+// which is the only sense in which a reading can have declined to place one.
+//
+// heads offers a predirectional only where it opens the name, and tails
+// offers the closing elements only in the order the standard puts them, each
+// ending where the next begins. A claim buried anywhere else was never
+// offered a slot, so no reading left it unfilled: "1250 AVENUE OF THE
+// AMERICAS" has a suffix claim on AVENUE, and no reading in which it is the
+// suffix. See streetConfidence.
+func placements(tokens []token.Token, claims []claim.Claim, from, to int) []claim.Claim {
+	var out []claim.Claim
+
+	for _, t := range tails(claims, from, to) {
+		out = append(out, t.claims...)
+		for _, h := range heads(tokens, claims, from, t.nameEnd) {
+			out = append(out, h.claims...)
+		}
+	}
+
+	return out
+}
+
 // fraction is a primary number written as a fraction of the one before it, the
 // "1/2" of "123 1/2 MAIN ST".
 var fraction = regexp.MustCompile(`^[0-9]+/[0-9]+$`)
@@ -410,14 +434,14 @@ func nameReadings(tokens []token.Token, claims []claim.Claim, from, to int) []na
 // opened the line. A parser that took one and rejected the other would hold a
 // reading this package never offered, which is the same reason a rural route
 // claims its route and box together.
-func streetClaim(claims []claim.Claim, h head, t tail, name nameReading) claim.Claim {
+func streetClaim(placed []claim.Claim, h head, t tail, name nameReading) claim.Claim {
 	parts := make([]claim.ClaimPart, 0, 2)
 	if h.number != nil {
 		parts = append(parts, *h.number)
 	}
 	parts = append(parts, name.part)
 
-	return claim.Claim{Confidence: streetConfidence(claims, h, t, name), Parts: parts}
+	return claim.Claim{Confidence: streetConfidence(placed, h, t, name), Parts: parts}
 }
 
 // streetConfidence rates the number and name reading.
@@ -446,6 +470,11 @@ func streetClaim(claims []claim.Claim, h head, t tail, name nameReading) claim.C
 // claim inside its name — but its suffix is DR, and the alternative that puts
 // PARK in the suffix would strand DR, which this package never offers. Charging
 // it left every reading of that address demoted and all four of them tied.
+// Nor is a slot charged for a claim no reading could have put there, which is
+// why only placed claims are consulted: "1250 AVENUE OF THE AMERICAS" absorbs
+// a suffix claim, but a suffix closes the street line and AVENUE opens it, so
+// no reading ever offered it the suffix slot, and the standard would not have
+// it rendered there in any case. See placements.
 //
 // A corroborated name is exempt. The demotion is a guess that the name swallowed
 // a component it should have left outside, and a vocabulary claiming exactly
@@ -453,13 +482,13 @@ func streetClaim(claims []claim.Claim, h head, t tail, name nameReading) claim.C
 // knowledge this package does not have. "123 STATE ROUTE 9" is the case:
 // ROUTE is a Pub 28 suffix, so the name absorbs one, and highways nonetheless
 // knows the whole run is the name of the street.
-func streetConfidence(claims []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
+func streetConfidence(placed []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
 	confidence := claim.ConfidenceLikely
 	if h.number != nil {
 		confidence = claim.ConfidenceStrong
 	}
 
-	if name.corroborated || !absorbs(claims, unplaced(h, t), name.part.Start, name.part.End()) {
+	if name.corroborated || !absorbs(placed, unplaced(h, t), name.part.Start, name.part.End()) {
 		return confidence
 	}
 
@@ -499,16 +528,16 @@ func unplaced(h head, t tail) []claim.Part {
 	return open
 }
 
-// absorbs reports whether the street name swallows tokens some vocabulary has
-// claimed as one of the given elements.
+// absorbs reports whether the street name swallows tokens that some reading
+// of the line places as one of the given elements.
 //
 // A street name claim is not one of those. A vocabulary naming the street is
 // saying the same thing this reading says, and where it covers the residue
 // exactly nameReadings has already adopted its spelling. Where it covers only
 // part of the residue it is a longer or shorter name, not a component this
 // reading declined to place.
-func absorbs(claims []claim.Claim, placeable []claim.Part, from, to int) bool {
-	for _, c := range claims {
+func absorbs(placed []claim.Claim, placeable []claim.Part, from, to int) bool {
+	for _, c := range placed {
 		if c.Start() < from || c.End() > to {
 			continue
 		}

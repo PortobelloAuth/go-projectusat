@@ -23,7 +23,7 @@ type AddressType interface {
 // Compare addresses with Equals rather than ==. See that method for why.
 type Address struct {
 	// Type indicates that this address is a special format, such as ruralroute,
-	// military, pobox, puertorico, or streetsuffixfirst
+	// military, pobox, or puertorico
 	Type         AddressType
 	BusinessName string // firm / business line (optional)
 
