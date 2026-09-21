@@ -112,10 +112,8 @@ var cases = slices.Collect(func(yield func(NormalizeTestCase) bool) {
 
 // TestNormalizeWithCustomParser checks that Normalize routes a custom
 // parser's address through the same normalizer and formatter the built-in
-// parser uses, with a stub parser.ParsingFn standing in for libpostal.
-// libpostalhttp has its own package for the mapping from libpostal's labels
-// to an address.Address; testing that mapping against a live service does
-// not belong in this repository (per Aaron's ask on #71).
+// parser uses, with a stub parser.ParsingFn standing in for any pluggable
+// parser.
 func TestNormalizeWithCustomParser(t *testing.T) {
 	stub := parser.ParsingFn(func(source string) (*address.Address, error) {
 		return &address.Address{

@@ -262,10 +262,11 @@ rather than a new standalone lookup function.
 you to substitute behavior, it does so with an interface plus a function-typed
 adapter, following the `http.Handler` / `http.HandlerFunc` idiom. `ParsingFunc`
 and `ParsingFn` are the existing example: implement the interface when you have
-state, pass a function when you do not. `pkg/address/parser/libpostalhttp` is a
-worked example of an external parser plugged in this way — and of the project's
-preference for keeping anything that reaches outside the process in its own
-clearly-fenced package.
+state, pass a function when you do not. The test suite's stub `ParsingFn`
+(`goprojectusat_test.go`) is a worked example of plugging in an external
+parser this way; a parser that actually reaches outside the process, such as
+one backed by an HTTP service, belongs in its own repository rather than in
+this one.
 
 More specific extension-design guidance, including a fuller account of which
 seams are intended to be extended, is expected to follow. **(evolving)** In the

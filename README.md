@@ -118,14 +118,9 @@ conjunction with Go Project US@.
 - [golang-address](https://github.com/kminehart/golang-address) is 10 years old
   and recommends using [gopostal](https://github.com/openvenues/gopostal). It
   also only parses the street line of adresses.
-- [gopostal](https://github.com/openvenues/gopostal) uses machine learning to
-  select an appropriate parser for international addresses. It is built on
-  [libpostal](https://github.com/openvenues/libpostal) and requires that library
-  to be installed. libpostal is broadly deployed and used by several projects.
-  Employing it through
-  [libpostal-rest](https://github.com/johnlonganecker/libpostal-rest) on a
-  [docker image](https://github.com/johnlonganecker/libpostal-rest-docker) might
-  be a great way to tap in to that community.
+- An HTTP [libpostal](https://github.com/openvenues/libpostal) parser lives in
+  its own repository and plugs in to Go Project US@ through `ParsingFunc`,
+  rather than as a package here.
 - [Boostport address](https://github.com/Boostport/address) does address
   validation rather than normalization. It might pair well with a normalization
   library.
