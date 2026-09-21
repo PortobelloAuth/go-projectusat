@@ -1,6 +1,10 @@
 package libpostalhttp_test
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -8,117 +12,76 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/libpostalhttp"
 )
 
+// TestParse checks Parse's mapping from a libpostal label/value response to
+// an address.Address, against a canned response from an httptest server
+// rather than a live libpostal service. The challenging live cases this test
+// used to carry move with this package to its own repository (per Aaron's
+// ask on #71); they stay in this file's git history.
 func TestParse(t *testing.T) {
-	cases := []struct {
-		In   string
-		Want address.Address
-	}{
-		// Post-directional followed by a City with a directional prefix
-		{
-			In: "43 E 200 N, NORTH SALT LAKE, UT",
-			Want: address.Address{
-				PrimaryNumber:       "43",
-				Predirectional:      "E",
-				StreetName:          "200",
-				StreetSuffix:        "",
-				Postdirectional:     "N",
-				SecondaryDesignator: "",
-				SecondaryNumber:     "",
-				City:                "NORTH SALT LAKE",
-				Region:              "UT",
-				Postal:              "",
-				Country:             "",
-			},
-		},
-		// 3253 W 9200 S, West Jordan, UT 84088
-		{
-			In: "3253 W 9200 S, West Jordan, UT 84088",
-			Want: address.Address{
-				PrimaryNumber:       "3253",
-				Predirectional:      "W",
-				StreetName:          "9200",
-				StreetSuffix:        "",
-				Postdirectional:     "S",
-				SecondaryDesignator: "",
-				SecondaryNumber:     "",
-				City:                "WEST JORDAN",
-				Region:              "UT",
-				Postal:              "84088",
-				Country:             "",
-			},
-		},
-		// 3590 S Jordan Pkwy W, South Jordan, UT 84095
-		// This address was collected from Google Maps. The street
-		// name is actually "South Jordan Parkway" which runs east/west
-		// (and is also known as 10600 S and 10400 S depending on what
-		// segment of the road you are referencing) but some
-		// pre/postdirectional logic seems to have moved the "West"
-		// predirectional to a postdirectional and treated "South"
-		// from the city name in the street name as a predirectional.
-		// Oddly, "West" as a postdirectional feels reasonable to me.
-		// I don't know if it is "right". I suspect that it is the
-		// maps service handling the mix of directionals incorrectly
-		//
-		// 3590 W South Jordan Pkwy, South Jordan, Utah 84095
-		// This is the expected construction and, according to a
-		// Google AI summary referencing https://gis.utah.gov/_assets/911addressing.MvlRLWTr.pdf
-		// the format "favored by modern mapping and emergency dispatch in Utah",
-		// with the "West" postdirectional described as a legacy format.
-		// The PDF's allowance of postdirectionals to distinguish road
-		// segments doesn't actually seem to justify the Google Maps'
-		// address construction or the AI summary's explaination.
-		//
-		// All of this is just to demonstrate that address parsing is challenging
-		//
-		// See https://gis.ny.gov/system/files/documents/2022/07/streetaddressparsing-cldxf.pdf
-		// for various other difficult to parse street name constructions
-	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/parse" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]libpostalhttp.LibpostalAddressPart{
+			{Label: "house_number", Value: "43"},
+			{Label: "road", Value: "e 200 n"},
+			{Label: "city", Value: "north salt lake"},
+			{Label: "state", Value: "ut"},
+		})
+	}))
+	defer srv.Close()
 
-	p, err := libpostalhttp.NewService("http://localhost:4400", 50*time.Millisecond)
+	p, err := libpostalhttp.NewService(srv.URL, time.Second)
 	if err != nil {
 		t.Fatalf("Unable to create libpostal http service: %v", err)
 	}
-	for _, tc := range cases {
-		got, err := p.Parse(tc.In)
-		if err != nil {
-			t.Fatalf("Error parsing '%s': %s", tc.In, err)
-		}
 
-		if !got.Equals(&tc.Want) {
-			t.Errorf("Unexpected result parsing '%s': %s expected: %s", tc.In, *got, tc.Want)
-			if got.PrimaryNumber != tc.Want.PrimaryNumber {
-				t.Errorf("Primary Number did not match: %s expected: %s", got.PrimaryNumber, tc.Want.PrimaryNumber)
-			}
-			if got.Predirectional != tc.Want.Predirectional {
-				t.Errorf("Predirectional did not match: %s expected: %s", got.Predirectional, tc.Want.Predirectional)
-			}
-			if got.StreetName != tc.Want.StreetName {
-				t.Errorf("Street Name did not match: %s expected: %s", got.StreetName, tc.Want.StreetName)
-			}
-			if got.StreetSuffix != tc.Want.StreetSuffix {
-				t.Errorf("Street Suffix did not match: %s expected: %s", got.StreetSuffix, tc.Want.StreetSuffix)
-			}
-			if got.Postdirectional != tc.Want.Postdirectional {
-				t.Errorf("Postdirectional did not match: %s expected: %s", got.Postdirectional, tc.Want.Postdirectional)
-			}
-			if got.SecondaryDesignator != tc.Want.SecondaryDesignator {
-				t.Errorf("Secondary Designator did not match: %s expected: %s", got.SecondaryDesignator, tc.Want.SecondaryDesignator)
-			}
-			if got.SecondaryNumber != tc.Want.SecondaryNumber {
-				t.Errorf("Secondary Number did not match: %s expected: %s", got.SecondaryNumber, tc.Want.SecondaryNumber)
-			}
-			if got.City != tc.Want.City {
-				t.Errorf("City did not match: %s expected: %s", got.City, tc.Want.City)
-			}
-			if got.Region != tc.Want.Region {
-				t.Errorf("Region did not match: %s expected: %s", got.Region, tc.Want.Region)
-			}
-			if got.Postal != tc.Want.Postal {
-				t.Errorf("Postal code did not match: %s expected: %s", got.Postal, tc.Want.Postal)
-			}
-			if got.Country != tc.Want.Country {
-				t.Errorf("Country did not match: %s expected: %s", got.Country, tc.Want.Country)
-			}
+	// Post-directional followed by a city with a directional prefix: the
+	// same "43 E 200 N, NORTH SALT LAKE, UT" case the live test used to
+	// exercise the two-word road split against.
+	want := address.Address{
+		PrimaryNumber:   "43",
+		Predirectional:  "E",
+		StreetName:      "200",
+		Postdirectional: "N",
+		City:            "NORTH SALT LAKE",
+		Region:          "UT",
+	}
+	got, err := p.Parse("43 E 200 N, NORTH SALT LAKE, UT")
+	if err != nil {
+		t.Fatalf("Error parsing '43 E 200 N, NORTH SALT LAKE, UT': %s", err)
+	}
+	if !got.Equals(&want) {
+		t.Errorf("Parse(...) = %s, want %s", *got, want)
+	}
+}
+
+// TestHTTPExpand checks HTTPExpand decodes libpostal's /expand response, a
+// plain JSON array of strings, against a canned response.
+func TestHTTPExpand(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/expand" {
+			http.NotFound(w, r)
+			return
 		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]string{"43 east 200 north", "43 e 200 n"})
+	}))
+	defer srv.Close()
+
+	p, err := libpostalhttp.NewService(srv.URL, time.Second)
+	if err != nil {
+		t.Fatalf("Unable to create libpostal http service: %v", err)
+	}
+
+	want := []string{"43 east 200 north", "43 e 200 n"}
+	got, err := p.HTTPExpand("43 E 200 N")
+	if err != nil {
+		t.Fatalf("Error expanding '43 E 200 N': %s", err)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("HTTPExpand(...) = %v, want %v", got, want)
 	}
 }
