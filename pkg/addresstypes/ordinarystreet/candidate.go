@@ -538,7 +538,17 @@ func unplaced(h head, t tail) []claim.Part {
 // is the reading that declined to place something. Charging both left them
 // tied, and "123 NORTH AVENUE" read as a name of NORTH AVENUE, where the
 // suffix is neither placed nor abbreviated.
+//
+// This only exempts a one-token name. N E ST is N followed by the alphabet
+// street E (p.17), not the compound directional NORTH EAST — a name of two
+// tokens ties a directional reading to that compound only because
+// directionals also claims N E as one span, not because the name is nothing
+// but a placed direction.
 func isDirectional(placed []claim.Claim, name claim.ClaimPart) bool {
+	if name.Length != 1 {
+		return false
+	}
+
 	for _, c := range placed {
 		if c.Start() == name.Start && c.End() == name.End() &&
 			(assigns(c, claim.PartPredirectional) || assigns(c, claim.PartPostdirectional)) {
