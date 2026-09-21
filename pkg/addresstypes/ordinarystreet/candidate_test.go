@@ -223,6 +223,19 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// N E ST is N followed by the alphabet street E (p.17), not the
+			// compound directional NORTH EAST: directionals also claims N E as
+			// one span, and isDirectional must not exempt a two-token name
+			// just because that reading ties with it.
+			name:   "a predirectional before an alphabet street name is not a compound directional",
+			source: "123 N E ST\nWASHINGTON DC 20001",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", pre: "N", name: "E", suffix: "ST",
+				formatted: "123 N E ST",
+			},
+		},
+		{
 			// The delivery address written across two lines. Reading the unit
 			// line as the street line discarded 123 MAIN ST and reported a
 			// street named APT 4.
