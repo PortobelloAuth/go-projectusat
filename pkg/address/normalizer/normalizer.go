@@ -72,11 +72,19 @@ func NewMatchingNomalizer() *Normalizer {
 
 // Normalize applies the Normalizer's AddressNormalizationOptions to the Address
 func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
-	var out address.Address
+	// The type is how the address formats; normalizing the fields does not
+	// change which kind of address they make.
+	out := address.Address{Type: a.Type}
 
 	var err error
 	if out.BusinessName, err = textutil.FreeTextField(a.BusinessName, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("business name: %w", err)
+	}
+	if out.Area, err = textutil.FreeTextField(a.Area, n.Options.DiacriticMode); err != nil {
+		return nil, fmt.Errorf("area: %w", err)
+	}
+	if out.Detail, err = textutil.FreeTextField(a.Detail, n.Options.DiacriticMode); err != nil {
+		return nil, fmt.Errorf("detail: %w", err)
 	}
 	if out.PrimaryNumber, err = textutil.FreeTextField(a.PrimaryNumber, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("primary number: %w", err)
