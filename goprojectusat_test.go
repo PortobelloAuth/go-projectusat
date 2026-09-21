@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"slices"
 	"testing"
-	"time"
 
 	goprojectusat "github.com/PortobelloAuth/go-projectusat"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/libpostalhttp"
 )
 
 type NormalizeTestCase struct {
@@ -111,23 +110,27 @@ var cases = slices.Collect(func(yield func(NormalizeTestCase) bool) {
 	}
 })
 
+// TestNormalizeWithCustomParser checks that Normalize routes a custom
+// parser's address through the same normalizer and formatter the built-in
+// parser uses, with a stub parser.ParsingFn standing in for libpostal.
+// libpostalhttp has its own package for the mapping from libpostal's labels
+// to an address.Address; testing that mapping against a live service does
+// not belong in this repository (per Aaron's ask on #71).
 func TestNormalizeWithCustomParser(t *testing.T) {
-	lph, err := libpostalhttp.NewService("http://127.0.0.1:4400/", 30*time.Millisecond)
-	if err != nil {
-		t.Fatalf("Unable to create libpostalhttp parser: %v", err)
-	}
-	for _, tc := range cases {
-		got, err := goprojectusat.Normalize(
-			tc.in,
-			goprojectusat.WithCustomAddressParser(parser.ParsingFn(lph.Parse)),
-		)
-		if err != nil {
-			t.Fatalf("Normalize: %v", err)
-		}
+	stub := parser.ParsingFn(func(source string) (*address.Address, error) {
+		return &address.Address{
+			PrimaryNumber: "1015",
+			StreetName:    "NORTH",
+			StreetSuffix:  "AVENUE",
+		}, nil
+	})
 
-		if got != tc.want {
-			t.Fatalf("Format(Normalize(...)) = %q, want %q, %s", got, tc.want, tc.group)
-		}
+	got, err := goprojectusat.Normalize("1015 NORTH AVENUE", goprojectusat.WithCustomAddressParser(stub))
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if want := "1015 NORTH AVE"; got != want {
+		t.Fatalf("Format(Normalize(...)) = %q, want %q", got, want)
 	}
 }
 
