@@ -6,6 +6,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
@@ -414,5 +415,34 @@ func TestContentNormalizerIsZeroOptions(t *testing.T) {
 	}
 	if *a != *b {
 		t.Fatalf("Normalize = %+v, NormalizeWithOptions(zero) = %+v", a, b)
+	}
+}
+
+func TestNormalizerKeepsTypeAreaAndDetail(t *testing.T) {
+	// PO Box 159753 PMB 3571 — the standard's own CMRA example, with an
+	// urbanization above it so every field the street line does not own is
+	// exercised at once.
+	in := &address.Address{
+		Type:          &pobox.POBoxAddress{},
+		Area:          "Urb  Highland Gdns",
+		PrimaryNumber: "159753",
+		StreetName:    "PO Box",
+		Detail:        "pmb 3571",
+		City:          "San Juan",
+		Region:        "PR",
+		Postal:        "00926",
+	}
+	got, err := normalizer.NewContentNomalizer().Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.Type != in.Type {
+		t.Fatalf("Normalize dropped Type: got %v, want %T", got.Type, in.Type)
+	}
+	if got.Area != "URB HIGHLAND GDNS" || got.Detail != "PMB 3571" {
+		t.Fatalf("Normalize Area = %q, Detail = %q; want URB HIGHLAND GDNS, PMB 3571", got.Area, got.Detail)
+	}
+	if want := "PO BOX 159753 PMB 3571"; got.FormatStreetLine() != want {
+		t.Fatalf("FormatStreetLine = %q, want %q", got.FormatStreetLine(), want)
 	}
 }
