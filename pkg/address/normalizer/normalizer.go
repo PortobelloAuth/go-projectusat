@@ -114,16 +114,32 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		}
 		// if street name has only 1 word, run it through the streetsuffix normalizer;
 		// a directional street name is spelled out (NORTH AVE), as one inside a
-		// longer name is below
+		// longer name is below. A single letter is left as written instead: it
+		// may be an alphabet indicator (1000 AVENUE E), and the standard says
+		// directional letters SHOULD NOT be combined with alphabet indicators
+		// (p.17). Anything longer is a spelled-out or abbreviated direction,
+		// never an alphabet indicator, and is spelled out (p.18: BAY WEST DRIVE).
 		snparts := whitespace.Split(sn, -1)
 		if snparts[0] == sn {
-			if full, err := directionals.NormalizeDirectional(sn); err == nil {
+			if len(sn) == 1 {
+				if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
+					sn = ss
+				}
+			} else if full, err := directionals.NormalizeDirectional(sn); err == nil {
 				sn = full
 			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
 				sn = ss
 			}
 		} else {
 			for i, snp := range snparts {
+				// A one-letter final part that follows a street suffix word is
+				// an alphabet indicator (AVENUE E), not a direction, and stays
+				// as written (p.17). BAY W, where the preceding word is not a
+				// suffix, is still a direction and is spelled out (p.18).
+				if i == len(snparts)-1 && len(snp) == 1 && isStreetSuffix(snparts[i-1]) {
+					continue
+				}
+
 				// directionals left in the street name should be the full text
 				full, err := directionals.NormalizeDirectional(snp)
 				if err == nil {
@@ -225,4 +241,12 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	}
 
 	return &out, nil
+}
+
+// isStreetSuffix reports whether s is a street suffix, abbreviated or spelled
+// out, so a one-letter part right after it can be read as an alphabet
+// indicator rather than a directional (p.17).
+func isStreetSuffix(s string) bool {
+	_, err := streetsuffixes.NormalizeStreetSuffix(s)
+	return err == nil
 }

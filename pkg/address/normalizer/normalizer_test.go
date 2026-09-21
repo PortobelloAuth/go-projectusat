@@ -78,15 +78,32 @@ func TestContentNormalizerDirectionalsAndHighway(t *testing.T) {
 
 // A directional street name is spelled out, whether it arrives abbreviated or
 // not: Project US@ p.17 gives NORTH AVE as the correct form.
-func TestContentNormalizerSpellsOutADirectionalStreetName(t *testing.T) {
+// TestContentNormalizerKeepsAnAlphabetLetterAndSpellsOutADirectionalName
+// checks the p.17/p.18 rule this normalizer implements: a single letter is
+// left as written because it may be an alphabet indicator (1000 AVENUE E),
+// and directional letters SHOULD NOT be combined with alphabet indicators
+// (p.17); anything longer than one letter is a direction, not a letter of
+// the alphabet, and is spelled out (p.18: BAY WEST DRIVE, NORTH AVE).
+func TestContentNormalizerKeepsAnAlphabetLetterAndSpellsOutADirectionalName(t *testing.T) {
 	n := normalizer.NewContentNomalizer()
-	for _, name := range []string{"N", "North"} {
-		got, err := n.Normalize(&address.Address{PrimaryNumber: "123", StreetName: name, StreetSuffix: "Avenue"})
+	for _, tc := range []struct {
+		name   string
+		suffix string
+		want   string
+	}{
+		{"N", "Avenue", "123 N AVE"},
+		{"North", "Avenue", "123 NORTH AVE"},
+		{"SE", "Fwy", "123 SOUTHEAST FWY"},
+		{"E", "St", "123 E ST"},
+		{"AVE E", "", "123 AVENUE E"},
+		{"BAY W", "Drive", "123 BAY WEST DR"},
+	} {
+		got, err := n.Normalize(&address.Address{PrimaryNumber: "123", StreetName: tc.name, StreetSuffix: tc.suffix})
 		if err != nil {
-			t.Fatalf("Normalize(%q): unexpected error: %v", name, err)
+			t.Fatalf("Normalize(name=%q, suffix=%q): unexpected error: %v", tc.name, tc.suffix, err)
 		}
-		if got.FormatStreetLine() != "123 NORTH AVE" {
-			t.Errorf("street line for name %q = %q, want 123 NORTH AVE", name, got.FormatStreetLine())
+		if got.FormatStreetLine() != tc.want {
+			t.Errorf("street line for name %q suffix %q = %q, want %q", tc.name, tc.suffix, got.FormatStreetLine(), tc.want)
 		}
 	}
 }
