@@ -112,11 +112,14 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		if err == nil {
 			sn = poboxsn
 		}
-		// if street name has only 1 word, run it through the streetsuffix normalizer
+		// if street name has only 1 word, run it through the streetsuffix normalizer;
+		// a directional street name is spelled out (NORTH AVE), as one inside a
+		// longer name is below
 		snparts := whitespace.Split(sn, -1)
 		if snparts[0] == sn {
-			ss, err := streetsuffixes.NormalizeStreetSuffix(sn)
-			if err == nil {
+			if full, err := directionals.NormalizeDirectional(sn); err == nil {
+				sn = full
+			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
 				sn = ss
 			}
 		} else {

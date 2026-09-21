@@ -488,7 +488,7 @@ func streetConfidence(placed []claim.Claim, h head, t tail, name nameReading) cl
 		confidence = claim.ConfidenceStrong
 	}
 
-	if name.corroborated || !absorbs(placed, unplaced(h, t), name.part.Start, name.part.End()) {
+	if name.corroborated || isDirectional(placed, name.part) || !absorbs(placed, unplaced(h, t), name.part.Start, name.part.End()) {
 		return confidence
 	}
 
@@ -526,6 +526,27 @@ func unplaced(h head, t tail) []claim.Part {
 	}
 
 	return open
+}
+
+// isDirectional reports whether the street name is nothing but a directional
+// some reading of the line places as one.
+//
+// Such a name is not charged for it. The standard has directional street
+// names — NORTH AVE and SOUTHEAST FWY N are its own examples, spelled out
+// because the directional is the name — and the reading that takes the word
+// as the predirectional instead is left with the suffix as its name, which
+// is the reading that declined to place something. Charging both left them
+// tied, and "123 NORTH AVENUE" read as a name of NORTH AVENUE, where the
+// suffix is neither placed nor abbreviated.
+func isDirectional(placed []claim.Claim, name claim.ClaimPart) bool {
+	for _, c := range placed {
+		if c.Start() == name.Start && c.End() == name.End() &&
+			(assigns(c, claim.PartPredirectional) || assigns(c, claim.PartPostdirectional)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // absorbs reports whether the street name swallows tokens that some reading
