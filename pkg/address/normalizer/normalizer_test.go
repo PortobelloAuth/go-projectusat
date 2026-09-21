@@ -76,6 +76,21 @@ func TestContentNormalizerDirectionalsAndHighway(t *testing.T) {
 	}
 }
 
+// A directional street name is spelled out, whether it arrives abbreviated or
+// not: Project US@ p.17 gives NORTH AVE as the correct form.
+func TestContentNormalizerSpellsOutADirectionalStreetName(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, name := range []string{"N", "North"} {
+		got, err := n.Normalize(&address.Address{PrimaryNumber: "123", StreetName: name, StreetSuffix: "Avenue"})
+		if err != nil {
+			t.Fatalf("Normalize(%q): unexpected error: %v", name, err)
+		}
+		if got.FormatStreetLine() != "123 NORTH AVE" {
+			t.Errorf("street line for name %q = %q, want 123 NORTH AVE", name, got.FormatStreetLine())
+		}
+	}
+}
+
 func TestContentNormalizerUnknownAndEmpty(t *testing.T) {
 	in := &address.Address{
 		PrimaryNumber:       "UNKNOWN",

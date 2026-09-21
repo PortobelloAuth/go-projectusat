@@ -198,6 +198,31 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// A directional street name, which the standard spells out (p.17).
+			// N is also offered as the predirectional, and that reading is left
+			// with AVENUE as its name; the name here is not charged for a
+			// directional some reading placed, so the suffix is placed and
+			// abbreviated instead of buried in a name of NORTH AVENUE.
+			name:   "a directional alone is the street name, not a swallowed predirectional",
+			source: "123 NORTH AVENUE\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "NORTH", suffix: "AVE",
+				formatted: "123 NORTH AVE",
+			},
+		},
+		{
+			// The standard's own example of a directional name with a
+			// postdirectional after the suffix (p.16).
+			name:   "a directional name keeps its suffix and postdirectional",
+			source: "1234 SOUTHEAST FWY N\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "1234", name: "SOUTHEAST", suffix: "FWY", post: "N",
+				formatted: "1234 SOUTHEAST FWY N",
+			},
+		},
+		{
 			// The delivery address written across two lines. Reading the unit
 			// line as the street line discarded 123 MAIN ST and reported a
 			// street named APT 4.
