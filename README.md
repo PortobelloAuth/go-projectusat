@@ -125,7 +125,8 @@ conjunction with Go Project US@.
   Employing it through
   [libpostal-rest](https://github.com/johnlonganecker/libpostal-rest) on a
   [docker image](https://github.com/johnlonganecker/libpostal-rest-docker) might
-  be a great way to tap in to that community.
+  be a great way to tap in to that community. A parser that does so lives in
+  its own repository and plugs in through `ParsingFunc`.
 - [Boostport address](https://github.com/Boostport/address) does address
   validation rather than normalization. It might pair well with a normalization
   library.
