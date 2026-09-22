@@ -90,9 +90,31 @@ var saintHistorical = []historicalCase{
 // in parser did and did not get right before this package existed.
 var HistoricalCases = buildHistoricalCases()
 
+// buildHistoricalCases turns each historicalCase into a Case, completing the
+// csharpParity rows with a last line the way buildSpecCases completes a spec
+// fragment: those rows are street-line fragments the parser under test
+// cannot admit as any address type without a city, region and ZIP Code, which
+// is why HistoricalCases scored 0 out of 62 before amadsen raised it on
+// go-projectusat#112 — that was one structural fact, not 62 bugs.
+// mainlandLastLine is appended to csharpParity only, never to gridHistorical
+// or saintHistorical, which already carry their own city and region. This is
+// deliberately not driven by hasLastLine: that predicate requires a
+// five-digit ZIP Code, and a gridHistorical row such as
+// "43 E 200 N, NORTH SALT LAKE, UT" has a city and region but no ZIP, so a
+// blanket !hasLastLine test would wrongly append a second last line to a row
+// that already has one. Drive this off which set the row came from instead
+// of "simplifying" it back into that bug.
 func buildHistoricalCases() []Case {
 	var cases []Case
-	for _, set := range [][]historicalCase{csharpParity, gridHistorical, saintHistorical} {
+	for _, hc := range csharpParity {
+		cases = append(cases, Case{
+			Source: "go-projectusat",
+			Note:   fmt.Sprintf("parity - %s", hc.group),
+			Input:  hc.in + mainlandLastLine,
+			Want:   hc.want + mainlandLastLine,
+		})
+	}
+	for _, set := range [][]historicalCase{gridHistorical, saintHistorical} {
 		for _, hc := range set {
 			cases = append(cases, Case{
 				Source: "go-projectusat",
