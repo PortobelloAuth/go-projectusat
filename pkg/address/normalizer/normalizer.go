@@ -190,7 +190,13 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 					// a word follows it routinely without that being true:
 					// MAIN THING ST NORTH EAST is a suffix and a trailing
 					// direction, not a saint.
-					if i == 0 {
+					// And only where a word that is not a direction follows
+					// it. SAINT CLAIR is a name; SAINT NORTHWEST is not
+					// anything, and a name of nothing but ST and a direction
+					// is a suffix that was absorbed into the name rather than
+					// a saint — E ST NW in Washington is read that way by a
+					// parser that puts the direction in the name.
+					if i == 0 && !onlyDirectionsFollow(snparts) {
 						if full, err := cityabbreviations.Expand(snp); err == nil {
 							snparts[i] = full
 							continue
@@ -285,4 +291,27 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 func isStreetSuffix(s string) bool {
 	_, err := streetsuffixes.NormalizeStreetSuffix(s)
 	return err == nil
+}
+
+// onlyDirectionsFollow reports whether every part after the first is a
+// direction.
+//
+// It is what separates a saint from an absorbed suffix at the head of a street
+// name. SAINT CLAIR is a street name and STREET CLAIR is not, which is why the
+// city table is consulted there at all (#114); but ST NW is a suffix and a
+// trailing direction that a reading put inside the name, and SAINT NORTHWEST
+// is not a street anyone lives on. A direction cannot be the name a saint is
+// named for, so what follows the abbreviation is enough to tell the two apart.
+func onlyDirectionsFollow(parts []string) bool {
+	if len(parts) < 2 {
+		return false
+	}
+
+	for _, p := range parts[1:] {
+		if _, err := directionals.NormalizeDirectional(p); err != nil {
+			return false
+		}
+	}
+
+	return true
 }

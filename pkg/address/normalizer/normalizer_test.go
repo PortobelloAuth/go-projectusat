@@ -523,6 +523,12 @@ func TestContentNormalizerSpellsOutCityAbbreviationHeadingAStreetName(t *testing
 		{"FT MYERS", "FORT MYERS"},
 		{"STE GENEVIEVE", "SAINTE GENEVIEVE"},
 		{"MAIN", "MAIN"}, // unrelated, unaffected
+		// A name of nothing but the abbreviation and a direction is a suffix
+		// a reading absorbed, not a saint: SAINT NORTHWEST is not a street.
+		// The suffix table gets it instead. addressparsers#25 reads
+		// 100 EAST ST NW that way while it is weighing the alternatives.
+		{"ST NW", "STREET NORTHWEST"},
+		{"ST NORTH EAST", "STREET NORTH EAST"},
 	} {
 		got, err := n.Normalize(&address.Address{PrimaryNumber: "435", Predirectional: "S", StreetName: tc.streetName, StreetSuffix: "St", City: "Toledo", Region: "OH", Postal: "43601"})
 		if err != nil {
