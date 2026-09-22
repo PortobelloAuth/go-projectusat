@@ -177,16 +177,24 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 						continue
 					}
 
-					// ST/STE/MT/FT followed by another word is read as
+					// ST/STE/MT/FT heading the name is read as
 					// SAINT/SAINTE/MOUNT/FORT from the city table
 					// (addresstables/cityabbreviations), not as the STREET
 					// suffix word: no street is named STREET CLAIR, and
-					// SAINT CLAIR is common (go-projectusat#114). This is
-					// checked ahead of the suffix table so it wins the
-					// collision.
-					if full, err := cityabbreviations.Expand(snp); err == nil {
-						snparts[i] = full
-						continue
+					// SAINT CLAIR is common (#114). This is checked ahead of
+					// the suffix table so it wins the collision.
+					//
+					// Only at the head. The table's position rule — spelled
+					// out when another word follows — is a rule about city
+					// names, where ST can only be SAINT. Inside a street name
+					// a word follows it routinely without that being true:
+					// MAIN THING ST NORTH EAST is a suffix and a trailing
+					// direction, not a saint.
+					if i == 0 {
+						if full, err := cityabbreviations.Expand(snp); err == nil {
+							snparts[i] = full
+							continue
+						}
 					}
 
 					// Street suffixes left inside the street name should be the full text

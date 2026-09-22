@@ -542,4 +542,16 @@ func TestContentNormalizerSpellsOutCityAbbreviationHeadingAStreetName(t *testing
 	if got.StreetName != "MAIN ST" {
 		t.Errorf("StreetName = %q, want MAIN ST (trailing ST must not expand)", got.StreetName)
 	}
+
+	// And a ST inside the name with words after it is still the suffix word,
+	// not a saint. The table's "spelled out when another word follows" rule
+	// is about city names, where ST can only be SAINT; a street name has a
+	// word after its suffix whenever it carries a trailing direction.
+	got, err = n.Normalize(&address.Address{PrimaryNumber: "1011", StreetName: "Main Thing St North East"})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if strings.Contains(got.StreetName, "SAINT") {
+		t.Errorf("StreetName = %q, want no SAINT in it (ST here is the suffix word)", got.StreetName)
+	}
 }
