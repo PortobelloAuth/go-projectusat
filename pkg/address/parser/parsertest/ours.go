@@ -44,36 +44,42 @@ var OursCases = []Case{
 		Input:  "3253 W 9200 S, WEST JORDAN, UT",
 		Want:   "3253 W 9200 S\nWEST JORDAN UT",
 	},
-	// Whether EAST is a directional word that abbreviates, or already a
-	// street name. With no suffix or city to disambiguate, the standard's
-	// own rule (p.16-17: a directional after the name abbreviates) says
-	// EAST ST reaches E ST.
+	// Whether E ST is the alphabet street E with a suffix, or EAST ST is a
+	// directional street name. Both are real and common; amadsen on
+	// go-projectusat#108 and #110 is that the string cannot say which is
+	// meant and the input's form is kept until the data decides, so these
+	// two must not collapse into one. A last line is supplied because the
+	// parser admits no address type without one, and E ST NW is real in DC.
 	{
 		Source: "ours",
-		Note:   "addressparsers#17: E ST is already a fixed point",
-		Input:  "123 E ST",
-		Want:   "123 E ST",
+		Note:   "addressparsers#17: the alphabet street E keeps its own form",
+		Input:  "123 E ST\nWASHINGTON DC 20001",
+		Want:   "123 E ST\nWASHINGTON DC 20001",
 	},
 	{
 		Source: "ours",
-		Note:   "addressparsers#17: EAST ST should reach E ST",
-		Input:  "123 EAST ST",
-		Want:   "123 E ST",
+		Note:   "addressparsers#17: whether EAST ST abbreviates to E ST is go-projectusat#110's question and is not settled — the two are different streets if it does not",
+		Input:  "123 EAST ST\nWASHINGTON DC 20001",
+		Want:   "",
 	},
 	// Whether ST belongs to the street (NORTH PARK ST, city PAUL) or the
-	// city (NORTH PARK, city ST PAUL). Both are real Minnesota places; ST
-	// PAUL is the far more common one, and SAINT PAUL is how the content
-	// normalizer spells it out (cf. the ST CLOUD parity cases).
+	// city (NORTH PARK, city ST PAUL). Both readings are grammatical and
+	// Minnesota has never had a place called PAUL, so addressparsers#19
+	// settles the unmarked form to ST PAUL from the data — but whether a
+	// comma after ST should hold the older reading is the judgement call
+	// raised for amadsen on addressparsers#19 and not yet answered, and
+	// whether the city renders ST PAUL or SAINT PAUL is a second open
+	// question. Both are carried unsettled rather than guessed.
 	{
 		Source: "ours",
-		Note:   "addressparsers#17: ST before the comma is the street's suffix, city is PAUL",
+		Note:   "addressparsers#19: whether a comma after ST keeps the city PAUL is unanswered",
 		Input:  "123 NORTH PARK ST, PAUL, MN",
-		Want:   "123 NORTH PARK ST\nPAUL MN",
+		Want:   "",
 	},
 	{
 		Source: "ours",
-		Note:   "addressparsers#17: ST after the comma starts the city SAINT PAUL",
+		Note:   "addressparsers#19: the reading is settled, the ST PAUL / SAINT PAUL rendering is not",
 		Input:  "123 NORTH PARK, ST PAUL, MN",
-		Want:   "123 NORTH PARK\nSAINT PAUL MN",
+		Want:   "",
 	},
 }

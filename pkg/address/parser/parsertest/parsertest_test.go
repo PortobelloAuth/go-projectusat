@@ -23,11 +23,17 @@ func TestRunReportsPerCase(t *testing.T) {
 	cases := []parsertest.Case{
 		{Source: "ours", Note: "right answer", Input: "100 MAIN ST", Want: "100 MAIN ST"},
 		{Source: "ours", Note: "wrong answer", Input: "200 OAK AVE", Want: "200 OAK AVE"},
+		{Source: "ours", Note: "no ground truth yet", Input: "300 ELM PARK"},
 	}
 
 	results := parsertest.Run(stub, cases)
 	if len(results) != len(cases) {
 		t.Fatalf("Run returned %d results for %d cases", len(results), len(cases))
+	}
+	// An unsettled case must not read as a parser failure; see Case.Want.
+	if results[2].Settled() || results[2].Pass() {
+		t.Errorf("case %q: Settled() = %v, Pass() = %v; want false, false",
+			cases[2].Note, results[2].Settled(), results[2].Pass())
 	}
 	if !results[0].Pass() {
 		t.Errorf("case %q: got %q, want %q, Pass() = false", cases[0].Note, results[0].Got, cases[0].Want)
@@ -36,9 +42,9 @@ func TestRunReportsPerCase(t *testing.T) {
 		t.Errorf("case %q: Pass() = true for a parser that returns the wrong address", cases[1].Note)
 	}
 
-	pass, total := parsertest.CountPass(results)
-	if pass != 1 || total != 2 {
-		t.Errorf("CountPass = %d, %d; want 1, 2", pass, total)
+	pass, settled, total := parsertest.CountPass(results)
+	if pass != 1 || settled != 2 || total != 3 {
+		t.Errorf("CountPass = %d, %d, %d; want 1, 2, 3", pass, settled, total)
 	}
 }
 

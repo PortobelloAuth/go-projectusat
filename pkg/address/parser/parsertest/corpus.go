@@ -17,6 +17,11 @@ package parsertest
 // "go-projectusat" for the parity suite the project has carried since before
 // this package existed, or "ours" for cases this package originated. It is
 // what lets a report say which cases failed instead of only how many.
+//
+// An empty Want means the right answer is still an open question. The case is
+// carried so a parser reports what it does with it, and it is scored as
+// neither a pass nor a failure until someone settles it. Corpus entries are
+// ground truth, and inventing one is worse than admitting we do not have it.
 type Case struct {
 	Source string
 	Note   string
