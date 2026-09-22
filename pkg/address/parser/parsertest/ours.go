@@ -87,6 +87,10 @@ var OursCases = []Case{
 	// where that data-driven promotion gets built, not the reason the
 	// expectation is unknown. A last line is supplied because the parser
 	// admits no address type without one, and E ST NW is real in DC.
+	// Measured today, EAST ST returns "123 E STREET\nWASHINGTON DC
+	// 20001", which is neither reading: EAST taken as a predirectional
+	// and abbreviated, ST taken as the name and spelled out. It is
+	// expected to fail until the street window lands.
 	{
 		Source: "ours",
 		Note:   "addressparsers#17: the alphabet street E keeps its own form",
@@ -95,7 +99,7 @@ var OursCases = []Case{
 	},
 	{
 		Source: "ours",
-		Note:   "addressparsers#17: EAST ST is a directional street name and stays written out per amadsen on go-projectusat#112; measured today as \"123 E STREET\\nWASHINGTON DC 20001\" — neither reading, EAST taken as a predirectional and abbreviated, ST taken as the name and spelled out — expected to fail until the street window lands",
+		Note:   "addressparsers#17: EAST ST is a directional street name and stays written out",
 		Input:  "123 EAST ST\nWASHINGTON DC 20001",
 		Want:   "123 EAST ST\nWASHINGTON DC 20001",
 	},
