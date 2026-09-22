@@ -7,6 +7,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
+	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
@@ -95,6 +96,21 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	if out.City, err = textutil.FreeTextField(a.City, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("city: %w", err)
 	}
+	if out.City != "" {
+		// Publication 28 §223 and Project US@ (p.20) both require a city name
+		// spelled out in its entirety: ST CLOUD must read SAINT CLOUD, not
+		// stay abbreviated (go-projectusat#115). The table states the
+		// position rule (addresstables/cityabbreviations): a word is spelled
+		// out only when another word follows it, so a lone or trailing ST
+		// is left as written rather than expanded.
+		cityparts := whitespace.Split(out.City, -1)
+		for i := 0; i < len(cityparts)-1; i++ {
+			if full, err := cityabbreviations.Expand(cityparts[i]); err == nil {
+				cityparts[i] = full
+			}
+		}
+		out.City = strings.Join(cityparts, " ")
+	}
 	if out.Country, err = textutil.FreeTextField(a.Country, n.Options.DiacriticMode); err != nil {
 		return nil, fmt.Errorf("country: %w", err)
 	}
@@ -158,6 +174,18 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 						} else {
 							snparts[i] = regioninfo.Short
 						}
+						continue
+					}
+
+					// ST/STE/MT/FT followed by another word is read as
+					// SAINT/SAINTE/MOUNT/FORT from the city table
+					// (addresstables/cityabbreviations), not as the STREET
+					// suffix word: no street is named STREET CLAIR, and
+					// SAINT CLAIR is common (go-projectusat#114). This is
+					// checked ahead of the suffix table so it wins the
+					// collision.
+					if full, err := cityabbreviations.Expand(snp); err == nil {
+						snparts[i] = full
 						continue
 					}
 
