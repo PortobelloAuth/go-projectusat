@@ -12,9 +12,15 @@ type Result struct {
 	Err  error
 }
 
-// Pass reports whether the case's expectation was met.
+// Settled reports whether the case has ground truth to be scored against.
+func (r Result) Settled() bool {
+	return r.Case.Want != ""
+}
+
+// Pass reports whether the case's expectation was met. An unsettled case
+// never passes and never fails; see Case.Want.
 func (r Result) Pass() bool {
-	return r.Err == nil && r.Got == r.Case.Want
+	return r.Settled() && r.Err == nil && r.Got == r.Case.Want
 }
 
 // Run scores p against cases by running each Input through
@@ -35,12 +41,17 @@ func Run(p parser.ParsingFunc, cases []Case) []Result {
 	return results
 }
 
-// CountPass returns how many of results passed, out of the total.
-func CountPass(results []Result) (pass, total int) {
+// CountPass returns how many of results passed, how many were settled enough
+// to be scored at all, and the total. Reporting settled separately keeps an
+// open question from reading as a parser's failure.
+func CountPass(results []Result) (pass, settled, total int) {
 	for _, r := range results {
+		if r.Settled() {
+			settled++
+		}
 		if r.Pass() {
 			pass++
 		}
 	}
-	return pass, len(results)
+	return pass, settled, len(results)
 }
