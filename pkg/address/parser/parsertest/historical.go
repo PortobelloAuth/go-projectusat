@@ -73,16 +73,16 @@ var csharpParity = []historicalCase{
 
 var gridHistorical = []historicalCase{
 	// Post-directional followed by a City with a directional prefix
-	{"43 E 200 N, NORTH SALT LAKE, UT", "43 E 200 N NORTH SALT LAKE UT", "directional city"},
-	{"43 E 200 N NORTH SALT LAKE UT", "43 E 200 N NORTH SALT LAKE UT", "directional city"},
-	{"3253 W 9200 S, West Jordan, UT 84088", "3253 W 9200 S WEST JORDAN UT 84088", "directional city"},
+	{"43 E 200 N, NORTH SALT LAKE, UT", "43 E 200 N\nNORTH SALT LAKE UT", "directional city"},
+	{"43 E 200 N NORTH SALT LAKE UT", "43 E 200 N\nNORTH SALT LAKE UT", "directional city"},
+	{"3253 W 9200 S, West Jordan, UT 84088", "3253 W 9200 S\nWEST JORDAN UT 84088", "directional city"},
 }
 
 var saintHistorical = []historicalCase{
-	{"915 2ND ST N SAINT CLOUD MN 56301", "915 2ND ST N SAINT CLOUD MN 56301", "city"},
-	{"915 2ND ST N ST CLOUD MN 56301", "915 2ND ST N SAINT CLOUD MN 56301", "city"},
-	{"435 S SAINT CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST TOLEDO OH 43601", "street"},
-	{"435 S ST CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST TOLEDO OH 43601", "street"},
+	{"915 2ND ST N SAINT CLOUD MN 56301", "915 2ND ST N\nSAINT CLOUD MN 56301", "city"},
+	{"915 2ND ST N ST CLOUD MN 56301", "915 2ND ST N\nSAINT CLOUD MN 56301", "city"},
+	{"435 S SAINT CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST\nTOLEDO OH 43601", "street"},
+	{"435 S ST CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST\nTOLEDO OH 43601", "street"},
 }
 
 // HistoricalCases is go-projectusat's own pre-parsertest parity suite: the
@@ -96,6 +96,12 @@ var HistoricalCases = buildHistoricalCases()
 // admits no address type without a city, region and ZIP Code reads none of
 // them. That one fact, not 62 separate bugs, is why HistoricalCases scored
 // nothing at all before amadsen raised it on #112.
+//
+// gridHistorical and saintHistorical carry their last line inside the row
+// instead, because the city is what those rows are about. Their Want has to
+// carry the line break the completed rows get from mainlandLastLine: a
+// content-normalized address is a street line and a last line, and a Want
+// written on one line cannot be reached however well the parser reads it.
 //
 // The last line is a property of the set rather than of the row, and it is
 // deliberately not derived from hasLastLine: that predicate wants a
