@@ -478,3 +478,68 @@ func TestNormalizerKeepsTypeAreaAndDetail(t *testing.T) {
 		t.Fatalf("FormatStreetLine = %q, want %q", got.FormatStreetLine(), want)
 	}
 }
+
+// go-projectusat#115: Publication 28 §223 and Project US@ (p.20) both
+// require a city name spelled out in its entirety, so ST/STE/MT/FT heading a
+// city name must expand. A lone or trailing abbreviation, with nothing
+// following it, is left as written per the shared table's position rule.
+func TestContentNormalizerExpandsCityAbbreviations(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, tc := range []struct {
+		city string
+		want string
+	}{
+		{"ST CLOUD", "SAINT CLOUD"},
+		{"SAINT CLOUD", "SAINT CLOUD"},
+		{"MT VERNON", "MOUNT VERNON"},
+		{"FT WORTH", "FORT WORTH"},
+		{"STE GENEVIEVE", "SAINTE GENEVIEVE"},
+		{"ST", "ST"}, // lone abbreviation, nothing follows: left as written
+		{"SPRINGFIELD", "SPRINGFIELD"},
+	} {
+		got, err := n.Normalize(&address.Address{PrimaryNumber: "1", StreetName: "Main", StreetSuffix: "St", City: tc.city, Region: "MN", Postal: "56301"})
+		if err != nil {
+			t.Fatalf("Normalize(city=%q): unexpected error: %v", tc.city, err)
+		}
+		if got.City != tc.want {
+			t.Errorf("City for %q = %q, want %q", tc.city, got.City, tc.want)
+		}
+	}
+}
+
+// go-projectusat#114: a head-position ST/STE/MT/FT in a street *name*, with
+// another word following it, is read from the city table as
+// SAINT/SAINTE/MOUNT/FORT rather than reaching the street suffix table and
+// becoming STREET/ROUTE. A trailing suffix-position ST (MAIN ST) and a lone
+// ST street name are unaffected: they never entered this loop, or entered it
+// as the single-word case that #108 already settled.
+func TestContentNormalizerSpellsOutCityAbbreviationHeadingAStreetName(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, tc := range []struct {
+		streetName string
+		want       string
+	}{
+		{"ST CLAIR", "SAINT CLAIR"},
+		{"FT MYERS", "FORT MYERS"},
+		{"STE GENEVIEVE", "SAINTE GENEVIEVE"},
+		{"MAIN", "MAIN"}, // unrelated, unaffected
+	} {
+		got, err := n.Normalize(&address.Address{PrimaryNumber: "435", Predirectional: "S", StreetName: tc.streetName, StreetSuffix: "St", City: "Toledo", Region: "OH", Postal: "43601"})
+		if err != nil {
+			t.Fatalf("Normalize(streetName=%q): unexpected error: %v", tc.streetName, err)
+		}
+		if got.StreetName != tc.want {
+			t.Errorf("StreetName for %q = %q, want %q", tc.streetName, got.StreetName, tc.want)
+		}
+	}
+
+	// A trailing ST in a street name (MAIN ST as the name itself, not the
+	// suffix field) must not expand: nothing follows it.
+	got, err := n.Normalize(&address.Address{PrimaryNumber: "1", StreetName: "Main St"})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.StreetName != "MAIN ST" {
+		t.Errorf("StreetName = %q, want MAIN ST (trailing ST must not expand)", got.StreetName)
+	}
+}
