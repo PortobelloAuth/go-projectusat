@@ -7,6 +7,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
@@ -128,6 +129,16 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		if err == nil {
 			sn = poboxsn
 		}
+
+		// A Puerto Rico address uses only its own Spanish street-type
+		// vocabulary, never the English suffix table: AVE and BLVD collide
+		// between the two (go-projectusat#95), so a PR address run through
+		// the English table silently mistranslates (1234 AVE ASHFORD ->
+		// 1234 AVENUE ASHFORD instead of staying Spanish). Decided once,
+		// from the pre-normalization Region/Postal, since the loop below
+		// reads it more than once.
+		prDialect := puertorico.UsePRDialect(a.Region, a.Postal)
+
 		// if street name has only 1 word, run it through the streetsuffix normalizer;
 		// a directional street name is spelled out (NORTH AVE), as one inside a
 		// longer name is below. A single letter is left as written instead: it
@@ -143,6 +154,10 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 				}
 			} else if full, err := directionals.NormalizeDirectional(sn); err == nil {
 				sn = full
+			} else if prDialect {
+				if pr, err := puertorico.NormalizeStreetType(sn); err == nil {
+					sn = pr
+				}
 			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
 				sn = ss
 			}
@@ -205,9 +220,13 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 
 					// Street suffixes left inside the street name should be the full text
 					// Only replace street suffix abreviations if we have not already
-					// replaced this index with a state / region.
-					fullss, err := streetsuffixes.NormalizeStreetSuffix(snp)
-					if err == nil {
+					// replaced this index with a state / region. A Puerto Rico address
+					// uses its own Spanish vocabulary instead (go-projectusat#95).
+					if prDialect {
+						if pr, err := puertorico.NormalizeStreetType(snp); err == nil {
+							snparts[i] = pr
+						}
+					} else if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
 						snparts[i] = fullss
 					}
 				}
