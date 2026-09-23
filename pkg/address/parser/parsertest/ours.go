@@ -133,4 +133,21 @@ var OursCases = []Case{
 		Input:  "123 NORTH PARK, ST PAUL, MN",
 		Want:   "123 NORTH PARK\nSAINT PAUL MN",
 	},
+	// The standard prints 585 AVE FD ROOSEVELT as a Correct Form (p. 26), so
+	// pinning Want to AVENIDA here means this library is not a fixed point of
+	// the standard's own example — see NormalizeStreetLine's doc comment,
+	// pkg/addresstypes/puertorico/streetline.go, and go-projectusat#117 where
+	// Aaron ruled AVE spells out. amadsen on go-projectusat#120 pinned it
+	// anyway: we chose a stable, distinct name, and zipcity's TIGER index
+	// carries AVENIDA, so the spelled-out form is the one that can be
+	// corroborated at all — a street this library emitted as AVE could never
+	// match that index entry. His caveat: under matching semantics we might
+	// choose a more forgiving normalization instead. This row pins the
+	// normalizer's answer, not a matcher's.
+	{
+		Source: "ours",
+		Note:   "go-projectusat#120: the standard's own 585 AVE FD ROOSEVELT (p. 26) pinned to the AVENIDA spelling rather than left a fixed point",
+		Input:  "585 AVE FD ROOSEVELT\nSAN JUAN PR 00907",
+		Want:   "585 AVENIDA FD ROOSEVELT\nSAN JUAN PR 00907",
+	},
 }
