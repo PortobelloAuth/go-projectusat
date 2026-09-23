@@ -49,16 +49,20 @@ func TestRunReportsPerCase(t *testing.T) {
 	}
 }
 
-// TestRunFieldsReportsPerCase checks RunFields and FieldsResult.Pass against
-// a stub parser, the same way TestRunReportsPerCase checks Run: a matching
+// TestRunReportsFieldsPerCase checks Run and Result.PassFields against a stub
+// parser, the same way TestRunReportsPerCase checks Result.Pass: a matching
 // decomposition, a mismatching one, an unsettled case (nil WantFields), and
-// — the case this type exists for — a decomposition that matches everywhere
+// — the case WantFields exists for — a decomposition that matches everywhere
 // except a field WantFields expects to be empty. That last one is the case
-// Want could never catch: "123 NORTH PARK" renders the same whether NORTH is
-// split out as a predirectional or not, so only comparing the empty
-// Predirectional field against a wrongly non-empty one catches the bad
-// split (go-projectusat#123).
-func TestRunFieldsReportsPerCase(t *testing.T) {
+// Want could never catch on its own: "123 NORTH PARK" renders identically
+// ("123 NORTH PARK") whether NORTH PARK is read as one unsplit street name or
+// as NORTH plus a StreetSuffix of PARK, so only comparing the empty
+// StreetSuffix field against a wrongly non-empty one catches the difference
+// (go-projectusat#123). Which of those two readings is actually correct is
+// still open in addressparsers#24; this stub picks the StreetSuffix reading
+// only so the comparison has something to fire on, and does not settle that
+// question.
+func TestRunReportsFieldsPerCase(t *testing.T) {
 	stub := parser.ParsingFn(func(source string) (*address.Address, error) {
 		switch source {
 		case "999 UNASSERTED ST":
@@ -69,11 +73,12 @@ func TestRunFieldsReportsPerCase(t *testing.T) {
 			// Wrong: StreetName should be MAPLE, not MAPLEWOOD.
 			return &address.Address{PrimaryNumber: "3", StreetName: "MAPLEWOOD", StreetSuffix: "DR"}, nil
 		case "123 NORTH PARK":
-			// Wrong in a way Want cannot see: this reads NORTH as a
-			// predirectional and PARK as the name, rendering "123 N PARK".
-			// WantFields for this case asserts NORTH PARK as one unsplit
-			// street name instead, so Predirectional must come back empty.
-			return &address.Address{PrimaryNumber: "123", Predirectional: "N", StreetName: "PARK"}, nil
+			// Reads NORTH as the StreetName and PARK as a StreetSuffix,
+			// rendering "123 NORTH PARK" — the same string WantFields below
+			// renders NORTH PARK as one unsplit StreetName. Want cannot tell
+			// these apart; WantFields can, because it expects StreetSuffix
+			// empty and this stub returns it non-empty.
+			return &address.Address{PrimaryNumber: "123", StreetName: "NORTH", StreetSuffix: "PARK"}, nil
 		}
 		return nil, fmt.Errorf("stub: unexpected input %q", source)
 	})
@@ -94,43 +99,43 @@ func TestRunFieldsReportsPerCase(t *testing.T) {
 		},
 		{
 			Source:     "ours",
-			Note:       "NORTH PARK is one unsplit street name, not a predirectional plus PARK",
+			Note:       "NORTH PARK is Want-blind: both readings render \"123 NORTH PARK\"; WantFields asserts the one-unsplit-name reading, not settling addressparsers#24",
 			Input:      "123 NORTH PARK",
 			WantFields: &address.Address{PrimaryNumber: "123", StreetName: "NORTH PARK"},
 		},
 	}
 
-	results := parsertest.RunFields(stub, cases)
+	results := parsertest.Run(stub, cases)
 	if len(results) != len(cases) {
-		t.Fatalf("RunFields returned %d results for %d cases", len(results), len(cases))
+		t.Fatalf("Run returned %d results for %d cases", len(results), len(cases))
 	}
 
 	// A nil WantFields must not read as a parser failure; see Case.WantFields.
-	if results[0].Settled() || results[0].Pass() {
-		t.Errorf("case %q: Settled() = %v, Pass() = %v; want false, false",
-			cases[0].Note, results[0].Settled(), results[0].Pass())
+	if results[0].SettledFields() || results[0].PassFields() {
+		t.Errorf("case %q: SettledFields() = %v, PassFields() = %v; want false, false",
+			cases[0].Note, results[0].SettledFields(), results[0].PassFields())
 	}
 	if fields := results[0].Fields(); fields != nil {
 		t.Errorf("case %q: Fields() = %+v for an unsettled case; want nil", cases[0].Note, fields)
 	}
 
-	if !results[1].Pass() {
-		t.Errorf("case %q: Pass() = false, Fields() = %+v", cases[1].Note, results[1].Fields())
+	if !results[1].PassFields() {
+		t.Errorf("case %q: PassFields() = false, Fields() = %+v", cases[1].Note, results[1].Fields())
 	}
 
-	if results[2].Pass() {
-		t.Errorf("case %q: Pass() = true for a mismatching decomposition", cases[2].Note)
+	if results[2].PassFields() {
+		t.Errorf("case %q: PassFields() = true for a mismatching decomposition", cases[2].Note)
 	}
 	if !fieldMismatch(results[2].Fields(), "StreetName", "MAPLE", "MAPLEWOOD") {
 		t.Errorf("case %q: Fields() = %+v, want a StreetName mismatch of \"MAPLE\" vs \"MAPLEWOOD\"",
 			cases[2].Note, results[2].Fields())
 	}
 
-	if results[3].Pass() {
-		t.Errorf("case %q: Pass() = true for a decomposition with a wrongly non-empty Predirectional", cases[3].Note)
+	if results[3].PassFields() {
+		t.Errorf("case %q: PassFields() = true for a decomposition with a wrongly non-empty StreetSuffix", cases[3].Note)
 	}
-	if !fieldMismatch(results[3].Fields(), "Predirectional", "", "N") {
-		t.Errorf("case %q: Fields() = %+v, want a Predirectional mismatch of \"\" vs \"N\"",
+	if !fieldMismatch(results[3].Fields(), "StreetSuffix", "", "PARK") {
+		t.Errorf("case %q: Fields() = %+v, want a StreetSuffix mismatch of \"\" vs \"PARK\"",
 			cases[3].Note, results[3].Fields())
 	}
 
