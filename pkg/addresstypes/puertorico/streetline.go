@@ -33,13 +33,25 @@ var letterPrefixed = regexp.MustCompile(`^[A-Z]-[0-9]+[A-Z]?$`)
 // 1234 CALLE AURORA, 585 AVE FD ROOSEVELT, 1025 PARQUE DEL REY — and the type
 // is part of the name rather than a suffix that moved.
 //
-// The type stays spelled out. The same page says "Developers MUST NOT
-// abbreviate street names" and "MUST NOT translate CALLE to the suffix ST", so
-// an abbreviated type on input is expanded and never the other way around.
-// AVE is the exception the standard states: p. 24 permits "the word AVENIDA or
-// its abbreviation AVE" in this position and every example in the body writes
-// AVE, so both spellings are conforming and each is left as it arrives. See
-// #60, where that reading is stated and not yet ruled on.
+// Every type is spelled out, AVE included: an abbreviated type on input is
+// expanded and never the other way around. p. 26 says "Developers MUST NOT
+// abbreviate street names" and "MUST NOT translate CALLE to the suffix ST";
+// p. 24 separately permits "the word AVENIDA or its abbreviation AVE" in this
+// position. Both sentences describe the same text, and a MUST NOT over the
+// same ground outranks a MAY, so AVE is not carved out as an exception.
+// Aaron's ruling, on #117.
+//
+// The reference data settles it independently. zipcity's Pub28FeatureName
+// spells the type out when it renders Puerto Rico TIGER records — its
+// spanishPrefixOverrides maps AVE -> AVENIDA
+// (internal/ustigerline/featnames/featnames.go:32), applied both to the base
+// name (:145) and to the coded prefix type (:189). Observed there, under
+// STATEFP 72: "AVE FD ROOSEVELT" -> "AVENIDA FD ROOSEVELT". A street this
+// library emitted as AVE could never match that index entry.
+//
+// The cost is real and known, not a defect: p. 26's own example, 585 AVE FD
+// ROOSEVELT, stops being a fixed point of this library — NormalizeStreetLine
+// now returns "AVENIDA FD ROOSEVELT" for it, not "AVE FD ROOSEVELT".
 //
 // The root name is everything after the type. It is arbitrary text — the
 // standard validates it against nothing — so the caller's line boundary is
@@ -61,7 +73,9 @@ func NormalizeStreetLine(s string) (primaryNumber, streetName string, err error)
 		return "", "", fmt.Errorf("Not a Puerto Rico street line")
 	}
 
-	streetType, err := spellOutStreetType(fields[1])
+	// The type is always spelled out, per the doc comment above, so this is a
+	// direct call rather than a wrapper with a since-removed exception.
+	streetType, err := NormalizeStreetType(fields[1])
 	if err != nil {
 		return "", "", err
 	}
@@ -81,18 +95,4 @@ func normalizePrimaryNumber(field string) (string, bool) {
 	}
 
 	return field, true
-}
-
-// spellOutStreetType returns the street type as it belongs in a street name:
-// spelled out, except for AVE, which the standard permits abbreviated.
-func spellOutStreetType(field string) (string, error) {
-	if _, err := NormalizeStreetType(field); err != nil {
-		return "", err
-	}
-
-	if field == "AVE" || field == "AVENIDA" {
-		return field, nil
-	}
-
-	return NormalizeStreetType(field)
 }

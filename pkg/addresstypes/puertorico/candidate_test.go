@@ -117,13 +117,16 @@ func TestAMainlandAddressIsNotOfferedASpanishReading(t *testing.T) {
 
 // Either half of the last line engages the dialect on its own, so an address
 // that arrives without a region is still read in Spanish. See UsePRDialect.
+//
+// AVE on input comes back AVENIDA: every street type is spelled out, AVE
+// included, per NormalizeStreetLine.
 func TestTheZIPCodeEngagesTheDialectWithoutTheRegion(t *testing.T) {
 	got, ok := street(t, "1234 AVE ASHFORD\nSAN JUAN 00907")
 	if !ok {
 		t.Fatal("a Puerto Rico ZIP Code did not engage the dialect")
 	}
-	if got != "1234 AVE ASHFORD" {
-		t.Errorf("street line = %q, want %q", got, "1234 AVE ASHFORD")
+	if got != "1234 AVENIDA ASHFORD" {
+		t.Errorf("street line = %q, want %q", got, "1234 AVENIDA ASHFORD")
 	}
 }
 
