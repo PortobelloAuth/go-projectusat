@@ -92,7 +92,18 @@ var puertoRico = []specExample{
 	{30, "RR 3 BOX 3415\nBARRIO VISTA ALEGRE", "RR 3 BOX 3415"},
 	// Highway contract routes
 	{31, "Ruta Estrella 1 Buzón 18", "HC 1 BOX 18"},
-	{31, "HC 03 Bzn 1050", "HC 1 BOX 1050"},
+	// The standard's Highway Contract Routes table (p. 30, carried under the
+	// p. 31 heading with the rest of this group) prints "HC 03 Bzn 1050" ->
+	// "HC 1 BOX 1050" as its Correct Form, but the rule stated immediately
+	// above that same table reads "Likewise, Health IT developers MUST NOT
+	// include leading zeros before the route number." Applying that rule to
+	// HC 03 gives HC 3, not HC 1 — the printed 1 is copied down from the row
+	// above it (Ruta Estrella 1 Buzón 18 -> HC 1 BOX 18). The document
+	// contradicts itself on the same page and only one side is
+	// implementable; go-projectusat#119 is where we chose the rule over the
+	// printed example, so this Want is corrected to HC 3 BOX 1050 rather
+	// than pinning the standard's typo.
+	{31, "HC 03 Bzn 1050", "HC 3 BOX 1050"},
 }
 
 const (
