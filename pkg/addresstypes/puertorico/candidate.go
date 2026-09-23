@@ -4,6 +4,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico/ruralroute"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 )
 
@@ -57,19 +58,26 @@ func (p *PuertoRicoAddress) FormatStreetLine(a *address.Address) string {
 // Where an urbanization sits above the street line, two readings are offered —
 // with it and without — so that a reading which strands the urbanization is
 // ranked against one that does not, rather than being the only one on offer.
+//
+// A rural route or highway contract route is read from the same gate, by the
+// ruralroute sub-package, and is not conditional on there being a street line
+// at all: p. 30's route is the whole of the delivery address, and the line the
+// standard prints beneath it is a sector name to be eliminated rather than a
+// street.
 func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) []*address.CandidateAddress {
 	if !isPuertoRicoLastLine(line) {
 		return nil
 	}
 
+	candidates := routeCandidates(tokens, line)
+
 	street, ok := streetLine(tokens, line)
 	if !ok {
-		return nil
+		return candidates
 	}
 
-	candidates := []*address.CandidateAddress{
-		line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{street}),
-	}
+	candidates = append(candidates,
+		line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{street}))
 
 	for _, c := range claims {
 		if !isUrbanization(c) || c.End() > street.Start() {
@@ -78,6 +86,28 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 		candidates = append(candidates,
 			line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{c, street}))
+	}
+
+	return candidates
+}
+
+// routeCandidates offers one reading for each route the Spanish vocabulary
+// finds above the last line.
+//
+// A route claim reaching into the last line is discarded rather than trimmed:
+// the two would assign the same tokens, and a candidate may not claim one
+// twice. That is also the guard against reading a Puerto Rico ZIP range as a
+// box number.
+func routeCandidates(tokens []token.Token, line lastline.LineClaim) []*address.CandidateAddress {
+	var candidates []*address.CandidateAddress
+
+	for _, c := range ruralroute.Claims(tokens) {
+		if c.End() > line.Span.Start {
+			continue
+		}
+
+		candidates = append(candidates,
+			line.Candidate(&ruralroute.PuertoRicoRouteAddress{}, len(tokens), []claim.Claim{c}))
 	}
 
 	return candidates
