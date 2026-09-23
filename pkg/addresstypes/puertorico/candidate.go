@@ -11,9 +11,14 @@ import (
 //
 // The street line is a primary address number and a street name that carries
 // its own type at the front, so the fields it fills are the ordinary ones and
-// the order they are rendered in is the ordinary order. What makes the address
-// Puerto Rican is the vocabulary that reads it and the urbanization line above
-// it, not a different arrangement of the street line.
+// the order they are rendered in is the ordinary order. That is only true
+// because the Spanish type stays inside StreetName: a.Suffix is never used to
+// hold it. p. 26 is explicit that the type is part of the name rather than a
+// suffix that moved, and this package does not play that game for English
+// prefixes either — nothing here reaches for a.Suffix to carry a leading
+// word. What makes the address Puerto Rican is the vocabulary that reads it
+// and the urbanization line above it, not a different arrangement of the
+// street line.
 type PuertoRicoAddress struct{}
 
 // FormatStreetLine renders "A17 CALLE AMAPOLA", or "1 COND MIRAFLOR APT 104"

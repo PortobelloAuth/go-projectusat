@@ -17,8 +17,11 @@ func TestTheStandardsStreetLines(t *testing.T) {
 		{"123 CALLE MAIN", "123", "CALLE MAIN"},
 		{"1234 CALLE AURORA", "1234", "CALLE AURORA"},
 		{"150 CALLE A", "150", "CALLE A"},
-		{"1234 AVE ASHFORD", "1234", "AVE ASHFORD"},
-		{"585 AVE FD ROOSEVELT", "585", "AVE FD ROOSEVELT"},
+		{"1234 AVE ASHFORD", "1234", "AVENIDA ASHFORD"},
+		// The standard's own example, still read correctly, but no longer a
+		// fixed point byte for byte: spelling AVE out is the cost of #117's
+		// ruling, documented on NormalizeStreetLine.
+		{"585 AVE FD ROOSEVELT", "585", "AVENIDA FD ROOSEVELT"},
 		{"A17 CALLE AMAPOLA", "A17", "CALLE AMAPOLA"},
 		// PARQUE is missing from the street type table, so "1025 PARQUE DEL
 		// REY" (p. 25) is not read yet. The standard lists PARQUE among the
@@ -66,9 +69,10 @@ func TestTheHyphenMeansTwoDifferentThings(t *testing.T) {
 }
 
 // "Developers MUST NOT abbreviate street names" (p. 26), so an abbreviated
-// type is spelled out and never the other way around. AVE is the exception the
-// standard states on p. 24, where AVENIDA and AVE are both permitted in this
-// position; each is left as it arrives.
+// type is spelled out and never the other way around. AVE is not an
+// exception: p. 24 permits AVE alongside AVENIDA, but p. 26's MUST NOT
+// abbreviate outranks that MAY over the same text, so AVE is spelled out like
+// every other type. See NormalizeStreetLine.
 func TestAnAbbreviatedTypeIsSpelledOut(t *testing.T) {
 	for _, c := range []struct {
 		source string
@@ -77,7 +81,7 @@ func TestAnAbbreviatedTypeIsSpelledOut(t *testing.T) {
 		{"1234 CLL AURORA", "CALLE AURORA"},
 		{"1234 PSO DEL REY", "PASEO DEL REY"},
 		{"1234 CAM DEL MAR", "CAMINO DEL MAR"},
-		{"1234 AVE ASHFORD", "AVE ASHFORD"},
+		{"1234 AVE ASHFORD", "AVENIDA ASHFORD"},
 		{"1234 AVENIDA ASHFORD", "AVENIDA ASHFORD"},
 	} {
 		t.Run(c.source, func(t *testing.T) {
