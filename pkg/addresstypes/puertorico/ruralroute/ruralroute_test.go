@@ -14,12 +14,13 @@ func TestNormalizeStandardizesTheSpecExamples(t *testing.T) {
 		{30, "RFD ROUTE 4 BZN 1725", "RR 4 BOX 1725"},
 		{30, "RUTA RURAL 3 BUZON 12000", "RR 3 BOX 12000"},
 		{30, "RFD 1 Bzn 17-A", "RR 1 BOX 17A"},
-		{31, "Ruta Estrella 1 Buzón 18", "HC 1 BOX 18"},
-		// p. 31 prints "HC 1 BOX 1050" as the Correct Form for this row, which
-		// cannot be standardized from HC 03. The leading-zero rule on the same
-		// page gives HC 3, and only one of the two can be implemented. See
-		// #119, and Aaron's ruling to pin the implementable side.
-		{31, "HC 03 Bzn 1050", "HC 3 BOX 1050"},
+		{30, "Ruta Estrella 1 Buzón 18", "HC 1 BOX 18"},
+		// p. 30 prints "HC 1 BOX 1050" as the Correct Form for this row, which
+		// cannot be standardized from HC 03. The leading-zero rule that
+		// contradicts it is on the same page, four lines above the table, and
+		// only one of the two can be implemented. See #119, and Aaron's ruling
+		// to pin the implementable side.
+		{30, "HC 03 Bzn 1050", "HC 3 BOX 1050"},
 	}
 
 	for _, c := range cases {

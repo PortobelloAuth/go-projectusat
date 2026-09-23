@@ -30,12 +30,15 @@
 //
 //	Developers MUST NOT add a leading zero before the rural route number.
 //
-// and pp. 30-31, for the highway contract route:
+// and p. 30 again, for the highway contract route:
 //
 //	Highway contract route addresses MUST be standardized as HC____BOX____.
 //	It is basically the same format utilized for rural routes. Likewise,
 //	Health IT developers MUST NOT include leading zeros before the route
 //	number.
+//
+// p. 31 adds one sentence to that, and nothing else: the rule against
+// additional designations applies to highway contract routes too.
 //
 // The vocabulary itself is data and is held once, in
 // github.com/poetic-systems/addresstables/puertorico, beside the street types
