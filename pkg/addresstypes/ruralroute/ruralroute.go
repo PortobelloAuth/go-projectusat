@@ -65,7 +65,10 @@ Ruta Estrella is the Spanish for it and is not here — see the paragraph below.
 The Spanish spellings are absent for the same reason they are absent from the
 rural route half: Ruta Estrella, Ruta Rural, Buzon and Apartado are one Puerto
 Rico vocabulary, and taking a single row out of that table would leave
-RUTA ESTRELLA 4 BOX 12 recognized and RUTA ESTRELLA 4 BUZON 12 not.
+RUTA ESTRELLA 4 BOX 12 recognized and RUTA ESTRELLA 4 BUZON 12 not. That table
+now has a home of its own: pkg/addresstypes/puertorico/ruralroute reads it,
+under p. 30's rules rather than p. 22's. See #119 for the three places the two
+pages disagree.
 */
 
 var alphanumspace = regexp.MustCompile("[^0-9A-Z ]+")
