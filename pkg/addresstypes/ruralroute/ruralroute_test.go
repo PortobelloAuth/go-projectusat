@@ -49,6 +49,13 @@ var cases = []struct {
 	{"HC4 BOX12", "HC 4 BOX 12"},
 	{"HC No. 4 # 12", "HC 4 BOX 12"},
 	{"HC 4 BOX 12 Bryan Dairy Rd", "HC 4 BOX 12"},
+
+	// Pub 28 §253 gives STAR ROUTE as a spelling of the same designator.
+	// Project US@ never mentions it, so these rows are the only thing
+	// pinning a spelling this library accepts on Pub 28's authority.
+	{"STAR ROUTE 4 BOX 12", "HC 4 BOX 12"},
+	{"Star Route 4 Box 12", "HC 4 BOX 12"},
+	{"STAR ROUTE No. 4 # 12", "HC 4 BOX 12"},
 }
 
 func TestNormalize(t *testing.T) {
@@ -88,17 +95,20 @@ func TestFormatStreetLineOmitsDirectionals(t *testing.T) {
 	}
 }
 
-// The spellings this package deliberately does not accept yet, and why. See the
+// The spellings this package deliberately does not accept, and why. See the
 // deviation note in ruralroute.go: each is a plausible highway contract route
 // that no wording in this repository authorizes, so recognizing it would be a
 // guess. A failure here means the vocabulary grew without the note being
 // revisited.
+//
+// STAR ROUTE was on this list until Pub 28 §253 was quoted; it is now in
+// recognizedDesignators and pinned by the rows in cases above. What is left is
+// Spanish, and stays left until puertorico carries its own table (#119).
 func TestUnconfirmedHighwayContractSpellings(t *testing.T) {
 	cases := []struct {
 		in     string
 		reason string
 	}{
-		{"STAR ROUTE 4 BOX 12", "likely, but the standard's list of spellings is not quoted here"},
 		{"RUTA ESTRELLA 4 BOX 12", "Puerto Rico vocabulary, which belongs with the rest of that table"},
 	}
 

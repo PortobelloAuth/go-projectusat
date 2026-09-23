@@ -52,10 +52,15 @@ a street name, which is a road that an address sits on. A highway contract route
 is a mail delivery route, and HC 4 is no more a highway than RR 4 is rural.
 
 Deviation, per CONTRIBUTING §2: the accepted spellings below are the structural
-parallels of the rural route ones. The standard's own list of spellings that
-"SHOULD" be changed to HC is not quoted anywhere in this repository, so it has
-not been checked against one. STAR ROUTE is a likely member — Ruta Estrella is
-literally that — and is deliberately absent until the wording is confirmed.
+parallels of the rural route ones. Project US@ gives no list of spellings that
+become HC, and its silence is not a statement that the list is empty. Pub 28
+§253, Star Route Designations, supplies the one spelling it leaves out:
+
+	Change the designation STAR ROUTE, which usually refers to highway
+	contract route, to HC.
+
+so STAR ROUTE is carried here on Pub 28's authority rather than the standard's.
+Ruta Estrella is the Spanish for it and is not here — see the paragraph below.
 
 The Spanish spellings are absent for the same reason they are absent from the
 rural route half: Ruta Estrella, Ruta Rural, Buzon and Apartado are one Puerto
@@ -88,6 +93,7 @@ var recognizedDesignators = []designator{
 	{"RT", "RR"},
 	{"HIGHWAY CONTRACT ROUTE", "HC"},
 	{"HIGHWAY CONTRACT", "HC"},
+	{"STAR ROUTE", "HC"},
 	{"HCR", "HC"},
 	{"HC", "HC"},
 }

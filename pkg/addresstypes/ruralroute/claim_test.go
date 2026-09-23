@@ -410,6 +410,17 @@ func TestAHighwayContractRouteIsClaimedLikeARuralRoute(t *testing.T) {
 				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
 			},
 		},
+		{
+			// Pub 28 §253's spelling, which the standard never mentions.
+			// Two tokens, so it reaches the parser through the same span
+			// the spelled-out designator above needed.
+			name: "star route designator",
+			in:   "STAR ROUTE 4 BOX 125",
+			want: []reading{
+				{"STAR ROUTE 4", claim.PartStreetName, claim.ConfidenceExact, "HC 4"},
+				{"BOX 125", claim.PartPrimaryNumber, claim.ConfidenceExact, "BOX 125"},
+			},
+		},
 	}
 
 	for _, tc := range cases {
