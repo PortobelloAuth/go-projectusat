@@ -10,6 +10,8 @@
 // this package depending on either of them.
 package parsertest
 
+import "github.com/PortobelloAuth/go-projectusat/pkg/address"
+
 // Case is one address test: an input string, what goprojectusat.Normalize
 // should return for it, and where it came from.
 //
@@ -27,6 +29,23 @@ type Case struct {
 	Note   string
 	Input  string
 	Want   string
+
+	// WantFields, when set, is the decomposition a parser's Parse must
+	// return for Input, checked field by field — including the fields it
+	// leaves empty. A nil WantFields asserts nothing about the
+	// decomposition, the same way an empty Want asserts nothing about the
+	// rendering above: unsettled, not failing, and scored that way by
+	// RunFields.
+	//
+	// Want and WantFields are independent, so a case can pin the rendering,
+	// the decomposition, both, or neither. They have to be independent
+	// because rendering the same string is not evidence two parses agree:
+	// "123 NORTH PARK" renders identically whether NORTH is read as a
+	// predirectional before the street name PARK, or NORTH PARK is read as
+	// one unsplit name, and Want cannot tell those apart. WantFields can,
+	// which is the entire reason it exists (go-projectusat#123,
+	// addressparsers#24).
+	WantFields *address.Address
 }
 
 // Cases is the full corpus: the specification's own examples, the parity
