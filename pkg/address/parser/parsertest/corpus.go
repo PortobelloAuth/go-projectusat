@@ -34,8 +34,7 @@ type Case struct {
 	// return for Input, checked field by field — including the fields it
 	// leaves empty. A nil WantFields asserts nothing about the
 	// decomposition, the same way an empty Want asserts nothing about the
-	// rendering above: unsettled, not failing, and scored that way by
-	// RunFields.
+	// rendering above: unsettled, not failing, and scored that way by Run.
 	//
 	// Want and WantFields are independent, so a case can pin the rendering,
 	// the decomposition, both, or neither. They have to be independent
