@@ -507,6 +507,63 @@ func TestContentNormalizerExpandsCityAbbreviations(t *testing.T) {
 	}
 }
 
+// go-projectusat#95: a Puerto Rico address must use only its own Spanish
+// street-type vocabulary (pkg/addresstypes/puertorico), never the shared
+// English suffix table. AVE and BLVD collide between the two tables, so
+// without a dialect check a PR address silently mistranslates: the spec's
+// own example (p.25), 1234 AVE ASHFORD, must stay Spanish (AVENIDA) rather
+// than becoming the English AVENUE.
+func TestContentNormalizerPuertoRicoStreetTypeStaysSpanish(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+
+	// Spec p.25 example: abbreviated Spanish street type expands to its
+	// Spanish primary form, not the colliding English one.
+	got, err := n.Normalize(&address.Address{
+		PrimaryNumber: "1234",
+		StreetName:    "AVE Ashford",
+		City:          "San Juan",
+		Region:        "PR",
+		Postal:        "00907",
+	})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.StreetName != "AVENIDA ASHFORD" {
+		t.Errorf("StreetName = %q, want AVENIDA ASHFORD", got.StreetName)
+	}
+
+	// Already-full Spanish form is left unchanged.
+	got, err = n.Normalize(&address.Address{
+		PrimaryNumber: "1234",
+		StreetName:    "Avenida Ashford",
+		City:          "San Juan",
+		Region:        "PR",
+		Postal:        "00907",
+	})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.StreetName != "AVENIDA ASHFORD" {
+		t.Errorf("StreetName = %q, want AVENIDA ASHFORD (already full form)", got.StreetName)
+	}
+
+	// Non-PR address: English behavior is unchanged, AVE still expands to
+	// AVENUE inside a multi-word street name.
+	got, err = n.Normalize(&address.Address{
+		PrimaryNumber: "1234",
+		StreetName:    "AVE Ashford",
+		City:          "Miami",
+		Region:        "FL",
+		Postal:        "33101",
+	})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.StreetName != "AVENUE ASHFORD" {
+		t.Errorf("StreetName = %q, want AVENUE ASHFORD (English unaffected)", got.StreetName)
+	}
+}
+
 // go-projectusat#114: a head-position ST/STE/MT/FT in a street *name*, with
 // another word following it, is read from the city table as
 // SAINT/SAINTE/MOUNT/FORT rather than reaching the street suffix table and
