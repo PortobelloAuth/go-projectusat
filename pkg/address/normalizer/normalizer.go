@@ -32,6 +32,14 @@ type AddressNormalizationOptions struct {
 	DiacriticMode   diacritics.DiacriticMode
 }
 
+// NormalizingAddressType is an interface describing an AddressType that has a
+// Normalize() method because it implements its own Normalization rules. It may
+// or may not choose to employ normalization from shared address components, etc.
+type NormalizingAddressType interface {
+	address.AddressType
+	Normalize(a *address.Address, o AddressNormalizationOptions) (*address.Address, error)
+}
+
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
 type Normalizer struct {
@@ -77,6 +85,12 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	// The type is how the address formats; normalizing the fields does not
 	// change which kind of address they make.
 	out := address.Address{Type: a.Type}
+
+	// if the address type is an AddressNormalizingType (it implements its own Normalization
+	// rules) employ that Normalization instead of the default.
+	if normalizing, ok := a.Type.(NormalizingAddressType); ok {
+		return normalizing.Normalize(a, n.Options)
+	}
 
 	var err error
 	if out.BusinessName, err = textutil.FreeTextField(a.BusinessName, n.Options.DiacriticMode); err != nil {
