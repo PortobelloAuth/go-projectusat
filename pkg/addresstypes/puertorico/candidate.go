@@ -139,6 +139,14 @@ func isPuertoRicoLastLine(line lastline.LineClaim) bool {
 // that ends where the last line begins is the one to read. Everything above it
 // is the urbanization and the secondary identifier, which have their own
 // readings.
+//
+// The standard writes that line two ways round and both are read. The one it
+// requires puts the primary address number first, "A17 CALLE 1", and
+// NormalizeStreetLine reads it. The one pp. 26-27 print in their Incorrect
+// Form column puts the street first and the house number after it, "CALLE 1
+// A17", and NormalizeNumberedStreetLine reads that. The order is which
+// recognizer is asked, not a preference between readings: the two shapes do
+// not overlap, so at most one of them answers.
 func streetLine(tokens []token.Token, line lastline.LineClaim) (claim.Claim, bool) {
 	end := line.Span.Start
 	if end <= 0 || end > len(tokens) {
@@ -150,28 +158,37 @@ func streetLine(tokens []token.Token, line lastline.LineClaim) (claim.Claim, boo
 		start--
 	}
 
-	number, name, err := NormalizeStreetLine(token.Join(tokens[start:end]))
-	if err != nil {
-		return claim.Claim{}, false
+	text := token.Join(tokens[start:end])
+
+	if number, name, err := NormalizeStreetLine(text); err == nil {
+		return streetClaim(
+			claim.ClaimPart{Start: start, Length: 1, Part: claim.PartPrimaryNumber, Value: number},
+			claim.ClaimPart{Start: start + 1, Length: end - start - 1, Part: claim.PartStreetName, Value: name},
+		), true
 	}
 
-	return claim.Claim{
-		Confidence: claim.ConfidenceExact,
-		Parts: []claim.ClaimPart{
-			{
-				Start:  start,
-				Length: 1,
-				Part:   claim.PartPrimaryNumber,
-				Value:  number,
-			},
-			{
-				Start:  start + 1,
-				Length: end - start - 1,
-				Part:   claim.PartStreetName,
-				Value:  name,
-			},
-		},
-	}, true
+	// The number covers everything after the street name, identifiers
+	// included: p. 27 says those words MUST NOT be included in the address, so
+	// the tokens are spoken for by the part whose value drops them rather than
+	// left for another vocabulary to read. See claim.ClaimPart.Value.
+	if number, name, err := NormalizeNumberedStreetLine(text); err == nil {
+		nameEnd := start + numberedStreetNameFields
+
+		return streetClaim(
+			claim.ClaimPart{Start: start, Length: numberedStreetNameFields, Part: claim.PartStreetName, Value: name},
+			claim.ClaimPart{Start: nameEnd, Length: end - nameEnd, Part: claim.PartPrimaryNumber, Value: number},
+		), true
+	}
+
+	return claim.Claim{}, false
+}
+
+// streetClaim holds the confidence a street line reading is offered at, so the
+// two shapes streetLine reads cannot drift apart on it. Both are exact: the
+// shapes are disjoint, and within this vocabulary neither line can be read any
+// other way.
+func streetClaim(parts ...claim.ClaimPart) claim.Claim {
+	return claim.Claim{Confidence: claim.ConfidenceExact, Parts: parts}
 }
 
 // isUrbanization reports whether a claim is the urbanization line this package

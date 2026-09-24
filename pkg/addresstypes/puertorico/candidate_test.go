@@ -154,6 +154,36 @@ func TestTheUrbanizationIsOfferedWithTheStreetLine(t *testing.T) {
 	}
 }
 
+// pp. 26-27's numbered streets put the house number after the street instead
+// of in front of it, and the reading has to come out in the standard's order.
+// These are the Incorrect Form column of both tables, read through Candidates
+// so that the claim's parts are exercised and not only the line reader.
+//
+// "CALLE 191 B113" keeps its B1: see NormalizeNumberedStreetLine for why the
+// rule is followed here rather than the Correct Form the standard prints.
+func TestANumberedStreetPutsItsHouseNumberFirst(t *testing.T) {
+	for _, c := range []struct {
+		source string
+		street string
+	}{
+		{"CALLE 1 A17\nSAN JUAN PR 00907", "A17 CALLE 1"},
+		{"CALLE 191 B113\nSAN JUAN PR 00907", "B113 CALLE 191"},
+		{"CALLE 125 C-19\nSAN JUAN PR 00907", "C19 CALLE 125"},
+		{"CALLE 19 BLQ 199 Casa 31\nSAN JUAN PR 00907", "199-31 CALLE 19"},
+		{"CALLE 117 Bloque 23 Núm.18\nSAN JUAN PR 00907", "23-18 CALLE 117"},
+	} {
+		t.Run(c.source, func(t *testing.T) {
+			got, ok := street(t, c.source)
+			if !ok {
+				t.Fatal("no reading")
+			}
+			if got != c.street {
+				t.Errorf("street line = %q, want %q", got, c.street)
+			}
+		})
+	}
+}
+
 // Every candidate names this package as the address type, which is how the
 // parser tells one type's reading from another's.
 func TestEveryCandidateNamesThisAddressType(t *testing.T) {
