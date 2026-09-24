@@ -114,6 +114,42 @@ func TestStandaloneUrbanizationExceptions(t *testing.T) {
 	}
 }
 
+// #132 case 1: a primary address number may precede the designator on the
+// same line, when the number itself opens the line — p.28's own example, a
+// standalone urbanization name acting as the street name with the primary
+// number that always leads a Puerto Rico street line still in front of it.
+//
+// The claim covers the designator through the name, same as every other
+// urbanization claim; the primary number is a separate token this claim
+// leaves unclaimed; assembling it with the urbanization into a full street
+// line reading is a candidate.go concern this fix does not reach.
+func TestAPrimaryNumberMayPrecedeTheDesignator(t *testing.T) {
+	got, ok := area("A17 URB JARDINES FAGOTA\nPONCE PR 00731")
+	if !ok {
+		t.Fatal("the standard's A17 URB JARDINES FAGOTA example is not claimed")
+	}
+	if got != "JARD FAGOTA" {
+		t.Errorf("area = %q, want %q", got, "JARD FAGOTA")
+	}
+}
+
+// The exemption is for a primary number only, and only when it is the one
+// thing ahead of the designator. Arbitrary text is still refused, whether or
+// not a number happens to be the nearest token to the designator.
+func TestOnlyABarePrimaryNumberMayPrecedeTheDesignator(t *testing.T) {
+	for _, source := range []string{
+		"ACME CORP URB HIGHLAND GDNS\n123 CALLE MAIN\nSAN JUAN PR 00926",
+		"ACME A17 URB JARDINES FAGOTA\nPONCE PR 00731",
+		"A17 B18 URB JARDINES FAGOTA\nPONCE PR 00731",
+	} {
+		t.Run(source, func(t *testing.T) {
+			if claims := puertorico.Claims(token.Tokenize(source)); len(claims) != 0 {
+				t.Errorf("got %d claims, want none: only a bare primary number may precede the designator", len(claims))
+			}
+		})
+	}
+}
+
 // A claim never crosses a line break, so the street line that follows stays
 // available to whatever reads it.
 func TestTheClaimStopsAtTheLineBreak(t *testing.T) {
