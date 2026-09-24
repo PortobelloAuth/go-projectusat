@@ -51,10 +51,16 @@ func Claims(tokens []token.Token) []claim.Claim {
 // Three things have to hold, and each rules out a reading that would otherwise
 // absorb tokens belonging to something else.
 //
-// The designator must open the line. A URB appearing partway along one is not
-// the shape the standard describes, and claiming from there to the line end
-// would swallow whatever preceded it into an address component that cannot
-// contain it.
+// The designator must open the line, with one exception: a primary address
+// number immediately before it, and nothing before that. p.28's own example
+// puts one there — "A17 URB JARDINES FAGOTA" -> "A17 JARD FAGOTA" — a
+// standalone urbanization name acting as the street name, with the primary
+// number that always leads a Puerto Rico street line still in front of it.
+// Anything else preceding the designator is the shape this rule otherwise
+// guards against: claiming from there to the line end would swallow
+// "ACME CORP" or similar into an address component that cannot contain it,
+// and a number is not exempt from that risk unless it is the only thing
+// ahead — see precededOnlyByPrimaryNumber.
 //
 // A name must follow. A designator alone is a fragment of a pattern that did
 // not match, the same way a lone DRAWER is not a post office box.
@@ -66,7 +72,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 // weak one, because there is nothing in the tokens to tell where such a name
 // would stop.
 func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
-	if start > 0 && tokens[start-1].Line == tokens[start].Line {
+	if start > 0 && tokens[start-1].Line == tokens[start].Line && !precededOnlyByPrimaryNumber(tokens, start) {
 		return claim.Claim{}, false
 	}
 
@@ -127,4 +133,27 @@ func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 			},
 		},
 	}, true
+}
+
+// precededOnlyByPrimaryNumber reports whether the token immediately before
+// start is a primary address number (see normalizePrimaryNumber) that itself
+// opens the line — the one thing #132 case 1 needs to admit ahead of the
+// designator on the same line.
+//
+// Requiring the number to open the line, rather than merely to sit
+// immediately before the designator, is what keeps "ACME CORP 17 URB
+// HIGHLAND GDNS" from being read the same way "A17 URB JARDINES FAGOTA" is:
+// a number is only unambiguous evidence of p.28's pattern when there is
+// nothing ahead of it that the claim would otherwise have to explain away.
+func precededOnlyByPrimaryNumber(tokens []token.Token, start int) bool {
+	prev := start - 1
+	if prev < 0 || tokens[prev].Line != tokens[start].Line {
+		return false
+	}
+	if prev > 0 && tokens[prev-1].Line == tokens[prev].Line {
+		return false
+	}
+
+	_, ok := normalizePrimaryNumber(strings.ToUpper(tokens[prev].Text))
+	return ok
 }
