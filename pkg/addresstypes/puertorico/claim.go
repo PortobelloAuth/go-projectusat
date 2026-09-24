@@ -75,8 +75,42 @@ func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 		return claim.Claim{}, false
 	}
 
-	designator, err := NormalizeUrbanization(tokens[start].Text)
-	if err != nil {
+	designator, desErr := NormalizeUrbanization(tokens[start].Text)
+
+	// p.28-29's Exceptions table: a standalone urbanization name "stand[s]
+	// alone and MUST NOT require the use of the abbreviation URB" — the rule
+	// is a plain word substitution on whichever word opens the name, whether
+	// or not URB precedes it. So the name's first word is checked against
+	// that table before falling back to the ordinary URB-plus-free-text
+	// reading below; when it matches, any URB ahead of it is dropped and the
+	// word is replaced by its abbreviation, per the standard's own examples:
+	// "URB EXT VISTA BELLA" -> "EXT VISTA BELLA", "URB ALTS DE CANA" ->
+	// "ALTS DE CANA".
+	nameStart := start
+	if desErr == nil {
+		nameStart = start + 1
+	}
+	if short, err := NormalizeStandaloneUrbanization(tokens[nameStart].Text); err == nil {
+		rest := strings.ToUpper(token.Join(tokens[nameStart+1 : end]))
+		value := short
+		if rest != "" {
+			value += " " + rest
+		}
+
+		return claim.Claim{
+			Confidence: claim.ConfidenceExact,
+			Parts: []claim.ClaimPart{
+				{
+					Start:  start,
+					Length: end - start,
+					Part:   claim.PartArea,
+					Value:  value,
+				},
+			},
+		}, true
+	}
+
+	if desErr != nil {
 		return claim.Claim{}, false
 	}
 
