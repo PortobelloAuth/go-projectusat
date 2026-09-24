@@ -7,7 +7,6 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
-	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
@@ -80,78 +79,107 @@ func NewMatchingNomalizer() *Normalizer {
 	}
 }
 
-// Normalize applies the Normalizer's AddressNormalizationOptions to the Address
-func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
-	// The type is how the address formats; normalizing the fields does not
-	// change which kind of address they make.
-	out := address.Address{Type: a.Type}
+func NormalizeBusinessName(bname string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(bname, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("business name: %w", err)
+	}
+	return out, nil
+}
 
-	// if the address type is an AddressNormalizingType (it implements its own Normalization
-	// rules) employ that Normalization instead of the default.
-	if normalizing, ok := a.Type.(NormalizingAddressType); ok {
-		return normalizing.Normalize(a, n.Options)
+func NormalizeArea(area string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(area, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("area: %w", err)
 	}
+	return out, nil
+}
 
-	var err error
-	if out.BusinessName, err = textutil.FreeTextField(a.BusinessName, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("business name: %w", err)
+func NormalizeDetail(detail string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(detail, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("detail: %w", err)
 	}
-	if out.Area, err = textutil.FreeTextField(a.Area, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("area: %w", err)
+	return out, nil
+}
+
+func NormalizePrimaryNumber(number string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(number, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("primary number: %w", err)
 	}
-	if out.Detail, err = textutil.FreeTextField(a.Detail, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("detail: %w", err)
+	return out, nil
+}
+
+func NormalizeSecondaryNumber(number string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(number, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("secondary number: %w", err)
 	}
-	if out.PrimaryNumber, err = textutil.FreeTextField(a.PrimaryNumber, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("primary number: %w", err)
+	return out, nil
+}
+
+func NormalizeCity(city string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(city, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("city: %w", err)
 	}
-	if out.SecondaryNumber, err = textutil.FreeTextField(a.SecondaryNumber, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("secondary number: %w", err)
-	}
-	if out.City, err = textutil.FreeTextField(a.City, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("city: %w", err)
-	}
-	if out.City != "" {
+	if out != "" {
 		// Publication 28 §223 and Project US@ (p.20) both require a city name
 		// spelled out in its entirety: ST CLOUD must read SAINT CLOUD, not
 		// stay abbreviated (go-projectusat#115). The table states the
 		// position rule (addresstables/cityabbreviations): a word is spelled
 		// out only when another word follows it, so a lone or trailing ST
 		// is left as written rather than expanded.
-		cityparts := whitespace.Split(out.City, -1)
+		cityparts := whitespace.Split(out, -1)
 		for i := 0; i < len(cityparts)-1; i++ {
 			if full, err := cityabbreviations.Expand(cityparts[i]); err == nil {
 				cityparts[i] = full
 			}
 		}
-		out.City = strings.Join(cityparts, " ")
+		out = strings.Join(cityparts, " ")
 	}
-	if out.Country, err = textutil.FreeTextField(a.Country, n.Options.DiacriticMode); err != nil {
-		return nil, fmt.Errorf("country: %w", err)
-	}
-	if out.Postal, err = postalcode.Normalize(a.Postal); err != nil {
-		return nil, fmt.Errorf("postal code: %w", err)
-	}
+	return out, nil
+}
 
-	sn, err := textutil.FreeTextField(a.StreetName, n.Options.DiacriticMode)
+func NormalizeCountry(country string, o AddressNormalizationOptions) (string, error) {
+	out, err := textutil.FreeTextField(country, o.DiacriticMode)
 	if err != nil {
-		return nil, fmt.Errorf("street name: %w", err)
+		return "", fmt.Errorf("country: %w", err)
+	}
+	return out, nil
+}
+
+func NormalizePostal(postal string, o AddressNormalizationOptions) (string, error) {
+	out, err := postalcode.Normalize(postal)
+	if err != nil {
+		return "", fmt.Errorf("postal code: %w", err)
+	}
+	return out, nil
+}
+
+func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (string, error) {
+	sn, err := textutil.FreeTextField(streetname, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("street name: %w", err)
 	}
 
 	if sn != "" {
+		// TODO: move this in to pobox NormalizingAddressType.Normalize()
 		poboxsn, err := pobox.Normalize(sn)
 		if err == nil {
 			sn = poboxsn
 		}
 
-		// A Puerto Rico address uses only its own Spanish street-type
-		// vocabulary, never the English suffix table: AVE and BLVD collide
-		// between the two (go-projectusat#95), so a PR address run through
-		// the English table silently mistranslates (1234 AVE ASHFORD ->
-		// 1234 AVENUE ASHFORD instead of staying Spanish). Decided once,
-		// from the pre-normalization Region/Postal, since the loop below
-		// reads it more than once.
-		prDialect := puertorico.UsePRDialect(a.Region, a.Postal)
+		// TODO: move to puertorico NormalizingAddressType.Normalize()
+		// // A Puerto Rico address uses only its own Spanish street-type
+		// // vocabulary, never the English suffix table: AVE and BLVD collide
+		// // between the two (go-projectusat#95), so a PR address run through
+		// // the English table silently mistranslates (1234 AVE ASHFORD ->
+		// // 1234 AVENUE ASHFORD instead of staying Spanish). Decided once,
+		// // from the pre-normalization Region/Postal, since the loop below
+		// // reads it more than once.
+		// prDialect := puertorico.UsePRDialect(a.Region, a.Postal)
 
 		// if street name has only 1 word, run it through the streetsuffix normalizer;
 		// a directional street name is spelled out (NORTH AVE), as one inside a
@@ -168,10 +196,11 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 				}
 			} else if full, err := directionals.NormalizeDirectional(sn); err == nil {
 				sn = full
-			} else if prDialect {
-				if pr, err := puertorico.NormalizeStreetType(sn); err == nil {
-					sn = pr
-				}
+				// TODO: move to puertorico NormalizingAddressType.Normalize()
+				// } else if prDialect {
+				// 	if pr, err := puertorico.NormalizeStreetType(sn); err == nil {
+				// 		sn = pr
+				// 	}
 			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
 				sn = ss
 			}
@@ -232,15 +261,17 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 						}
 					}
 
-					// Street suffixes left inside the street name should be the full text
-					// Only replace street suffix abreviations if we have not already
-					// replaced this index with a state / region. A Puerto Rico address
-					// uses its own Spanish vocabulary instead (go-projectusat#95).
-					if prDialect {
-						if pr, err := puertorico.NormalizeStreetType(snp); err == nil {
-							snparts[i] = pr
-						}
-					} else if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
+					// TODO: move to puertorico NormalizingAddressType.Normalize()
+					// // Street suffixes left inside the street name should be the full text
+					// // Only replace street suffix abreviations if we have not already
+					// // replaced this index with a state / region. A Puerto Rico address
+					// // uses its own Spanish vocabulary instead (go-projectusat#95).
+					// if prDialect {
+					// 	if pr, err := puertorico.NormalizeStreetType(snp); err == nil {
+					// 		snparts[i] = pr
+					// 	}
+					// } else
+					if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
 						snparts[i] = fullss
 					}
 				}
@@ -253,66 +284,151 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		// TODO: check for an errantly parsed predirectional as well
 		hw, err := highways.NormalizeStreetName(sn)
 		if err == nil {
-			out.StreetName = hw
-		} else {
-			out.StreetName = sn
+			return hw, nil
 		}
 	}
+	return sn, nil
+}
 
-	if v := textutil.BaseField(a.Predirectional); v != "" {
-		abbr, err := directionals.AbbreviateDirectional(v)
-		if err != nil {
-			return nil, fmt.Errorf("predirectional: %w", err)
-		}
-		out.Predirectional = abbr
+func NormalizePredirectional(predirectional string, o AddressNormalizationOptions) (string, error) {
+	v := textutil.BaseField(predirectional)
+	if v == "" {
+		return "", nil
 	}
 
-	if v := textutil.BaseField(a.Postdirectional); v != "" {
-		abbr, err := directionals.AbbreviateDirectional(v)
-		if err != nil {
-			return nil, fmt.Errorf("postdirectional: %w", err)
-		}
-		out.Postdirectional = abbr
+	abbr, err := directionals.AbbreviateDirectional(v)
+	if err != nil {
+		return "", fmt.Errorf("predirectional: %w", err)
+	}
+	return abbr, nil
+}
+
+func NormalizePostdirectional(postdirectional string, o AddressNormalizationOptions) (string, error) {
+	v := textutil.BaseField(postdirectional)
+	if v == "" {
+		return "", nil
 	}
 
-	if v := textutil.BaseField(a.StreetSuffix); v != "" {
-		var abbr string
-		var err error
-		if n.Options.Fuzzy {
-			abbr, err = streetsuffixes.FuzzyNormalizeStreetSuffixAbreviation(v)
-		} else {
-			abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("street suffix: %w", err)
-		}
-		out.StreetSuffix = abbr
+	abbr, err := directionals.AbbreviateDirectional(v)
+	if err != nil {
+		return "", fmt.Errorf("postdirectional: %w", err)
+	}
+	return abbr, nil
+}
+
+func NormalizeStreetSuffix(suffix string, o AddressNormalizationOptions) (string, error) {
+	v := textutil.BaseField(suffix)
+	if v == "" {
+		return "", nil
 	}
 
-	if v := textutil.BaseField(a.SecondaryDesignator); v != "" {
-		abbr, err := secondaryunit.Normalize(v)
-		if err != nil {
-			return nil, fmt.Errorf("secondary designator: %w", err)
-		}
-		if n.Options.SecondaryAsHash {
-			out.SecondaryDesignator = "#"
-		} else {
-			out.SecondaryDesignator = abbr
-		}
+	var abbr string
+	var err error
+	if o.Fuzzy {
+		abbr, err = streetsuffixes.FuzzyNormalizeStreetSuffixAbreviation(v)
+	} else {
+		abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
+	}
+	if err != nil {
+		return "", fmt.Errorf("street suffix: %w", err)
+	}
+	return abbr, nil
+}
+
+func NormalizeSecondaryDesingator(designator string, o AddressNormalizationOptions) (string, error) {
+	v := textutil.BaseField(designator)
+	if v == "" {
+		return "", nil
+	}
+	info, err := secondaryunit.Info(v)
+	// if err != nil {
+	// 	return "", fmt.Errorf("secondary designator (info): %w", err)
+	// }
+
+	// Only use SecondaryAsHash for Numbered secondary designators
+	if o.SecondaryAsHash && info != nil && info.Numbered {
+		return "#", nil
+	}
+	abbr, err := secondaryunit.Normalize(v)
+	if err != nil {
+		return "", fmt.Errorf("secondary designator: %w", err)
+	}
+	return abbr, nil
+}
+
+func NormalizeRegion(r string, o AddressNormalizationOptions) (string, error) {
+	v := textutil.BaseField(r)
+	if v == "" {
+		return "", nil
 	}
 
-	if v := textutil.BaseField(a.Region); v != "" {
-		var abbr string
-		var err error
-		if n.Options.Fuzzy {
-			abbr, err = region.FuzzyNormalizeRegion(v)
-		} else {
-			abbr, err = region.NormalizeRegion(v)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("region: %w", err)
-		}
-		out.Region = abbr
+	var abbr string
+	var err error
+	if o.Fuzzy {
+		abbr, err = region.FuzzyNormalizeRegion(v)
+	} else {
+		abbr, err = region.NormalizeRegion(v)
+	}
+	if err != nil {
+		return "", fmt.Errorf("region: %w", err)
+	}
+	return abbr, nil
+}
+
+// Normalize applies the Normalizer's AddressNormalizationOptions to the Address
+func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
+	// The type is how the address formats; normalizing the fields does not
+	// change which kind of address they make.
+	out := address.Address{Type: a.Type}
+
+	// if the address type is an AddressNormalizingType (it implements its own Normalization
+	// rules) employ that Normalization instead of the default.
+	if normalizing, ok := a.Type.(NormalizingAddressType); ok {
+		return normalizing.Normalize(a, n.Options)
+	}
+
+	var err error
+	if out.BusinessName, err = NormalizeBusinessName(a.BusinessName, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Area, err = NormalizeArea(a.Area, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Detail, err = NormalizeDetail(a.Detail, n.Options); err != nil {
+		return nil, err
+	}
+	if out.PrimaryNumber, err = NormalizePrimaryNumber(a.PrimaryNumber, n.Options); err != nil {
+		return nil, err
+	}
+	if out.SecondaryNumber, err = NormalizeSecondaryNumber(a.SecondaryNumber, n.Options); err != nil {
+		return nil, err
+	}
+	if out.City, err = NormalizeCity(a.City, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Country, err = NormalizeCountry(a.Country, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Postal, err = NormalizePostal(a.Postal, n.Options); err != nil {
+		return nil, err
+	}
+	if out.StreetName, err = NormalizeStreetName(a.StreetName, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Predirectional, err = NormalizePredirectional(a.Predirectional, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Postdirectional, err = NormalizePostdirectional(a.Postdirectional, n.Options); err != nil {
+		return nil, err
+	}
+	if out.StreetSuffix, err = NormalizeStreetSuffix(a.StreetSuffix, n.Options); err != nil {
+		return nil, err
+	}
+	if out.SecondaryDesignator, err = NormalizeSecondaryDesingator(a.SecondaryDesignator, n.Options); err != nil {
+		return nil, err
+	}
+	if out.Region, err = NormalizeRegion(a.Region, n.Options); err != nil {
+		return nil, err
 	}
 
 	return &out, nil
