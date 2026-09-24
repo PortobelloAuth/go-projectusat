@@ -296,6 +296,58 @@ func TestNormalizeUrbanizationUnknown(t *testing.T) {
 	}
 }
 
+// pp.28-29 of the standard: these names "stand alone and MUST NOT require
+// the use of the abbreviation URB". NormalizeStandaloneUrbanization answers
+// only the closed-vocabulary question — is this word one of them, and what
+// is its abbreviation — the same question NormalizeUrbanization answers for
+// the ordinary designators.
+func TestNormalizeStandaloneUrbanization(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"Extension", "EXT"},
+		{"EXT", "EXT"},
+		{"Extensión", "EXT"},
+		{"EXTENSIÓN", "EXT"},
+		{"Altura", "ALT"},
+		{"ALT", "ALT"},
+		{"Alturas", "ALTS"},
+		{"ALTS", "ALTS"},
+		{"Villa", "VILLA"},
+		{"Villas", "VILLAS"},
+		{"Vista", "VISTA"},
+		{"Vistas", "VISTAS"},
+		{" jardines ", "JARD"},
+		{"JARD", "JARD"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			got, err := puertorico.NormalizeStandaloneUrbanization(tc.in)
+			if err != nil {
+				t.Fatalf("NormalizeStandaloneUrbanization(%q) unexpected error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Fatalf("NormalizeStandaloneUrbanization(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// The name is a closed vocabulary of 38 rows, so a word that is not one of
+// them is the answer to the question, not a failure. See CONTRIBUTING §1.6.
+func TestNormalizeStandaloneUrbanizationUnknown(t *testing.T) {
+	for _, in := range []string{"URB", "HIGHLAND", "GOLDEN", "COND", "Fake", ""} {
+		t.Run(in, func(t *testing.T) {
+			got, err := puertorico.NormalizeStandaloneUrbanization(in)
+			if err == nil {
+				t.Fatalf("NormalizeStandaloneUrbanization(%q) expected error", in)
+			}
+			if got != "" {
+				t.Fatalf("NormalizeStandaloneUrbanization(%q) = %q, want empty", in, got)
+			}
+		})
+	}
+}
+
 // The urbanization is carried in Address.Area, not as a secondary designator,
 // so it must not be readable as one. Two spellings of URB would be two sources
 // of truth for what URB means.

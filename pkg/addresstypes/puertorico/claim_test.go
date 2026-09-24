@@ -50,13 +50,67 @@ func TestEverySpellingOfTheDesignatorClaimsTheSameArea(t *testing.T) {
 
 // The name is free text of whatever length its developer chose, and the line
 // is the only thing that says where it ends.
+//
+// The name deliberately does not open with any of the pp.28-29 standalone
+// urbanization names (see TestStandaloneUrbanizationExceptions below) — a
+// name that did would be a different rule firing, not this one.
 func TestTheWholeLineAfterTheDesignatorIsTheName(t *testing.T) {
-	got, ok := area("URB JARDINES DE COUNTRY CLUB\n123 CALLE MAIN\nSAN JUAN PR 00926")
+	got, ok := area("URB LAS GLADIOLAS DE COUNTRY CLUB\n123 CALLE MAIN\nSAN JUAN PR 00926")
 	if !ok {
 		t.Fatal("a multi word development name is not claimed")
 	}
-	if got != "URB JARDINES DE COUNTRY CLUB" {
+	if got != "URB LAS GLADIOLAS DE COUNTRY CLUB" {
 		t.Errorf("area = %q, want the whole line", got)
+	}
+}
+
+// pp.28-29's Exceptions table: these 38 names stand alone and MUST NOT take a
+// URB in front, whether the input carried one or not. The standard's own two
+// worked examples, plus the Full-spelling and plural forms the table also
+// carries.
+func TestStandaloneUrbanizationExceptions(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "standard's example, no URB in the input",
+			input: "EXT VISTA BELLA",
+			want:  "EXT VISTA BELLA",
+		},
+		{
+			name:  "standard's example, URB stripped",
+			input: "URB EXT VISTA BELLA",
+			want:  "EXT VISTA BELLA",
+		},
+		{
+			name:  "second standard example, already abbreviated",
+			input: "URB ALTS DE CANA",
+			want:  "ALTS DE CANA",
+		},
+		{
+			name:  "Full spelling abbreviates the same as Short",
+			input: "URB EXTENSION VISTA BELLA",
+			want:  "EXT VISTA BELLA",
+		},
+		{
+			name:  "a plural (S) row that is unabbreviated in the table",
+			input: "URB VISTAS DEL MAR",
+			want:  "VISTAS DEL MAR",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := area(tc.input + "\n123 CALLE MAIN\nSAN JUAN PR 00926")
+			if !ok {
+				t.Fatalf("%q is not claimed as an urbanization", tc.input)
+			}
+			if got != tc.want {
+				t.Errorf("area(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
 	}
 }
 
