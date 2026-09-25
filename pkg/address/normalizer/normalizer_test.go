@@ -338,6 +338,41 @@ func TestNormalizerWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 }
 
+func TestNormalizerWithOptionsSecondaryAsHashNotNumbered(t *testing.T) {
+	in := &address.Address{
+		PrimaryNumber:       "123",
+		StreetName:          "Main",
+		StreetSuffix:        "Street",
+		SecondaryDesignator: "Basement",
+		SecondaryNumber:     "",
+		City:                "Springfield",
+		Region:              "Illinois",
+		Postal:              "62701",
+	}
+	// Content form keeps APT.
+	cn := normalizer.NewContentNomalizer()
+	content, err := cn.Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if content.SecondaryDesignator != "BSMT" {
+		t.Fatalf("content SecondaryDesignator = %q, want BSMT", content.SecondaryDesignator)
+	}
+
+	// Exchange/matching form rewrites to #.
+	n := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{SecondaryAsHash: true})
+	got, err := n.Normalize(in)
+	if err != nil {
+		t.Fatalf("NormalizeWithOptions: %v", err)
+	}
+	if got.SecondaryDesignator != "BSMT" {
+		t.Fatalf("SecondaryAsHash SecondaryDesignator = %q, want BSMT", got.SecondaryDesignator)
+	}
+	if got.SecondaryNumber != "" {
+		t.Errorf("SecondaryNumber = %q, should be empty", got.SecondaryNumber)
+	}
+}
+
 func TestNormalizerWithOptionsFuzzy(t *testing.T) {
 	// Mild typos: Californa → CA, Aveneu → AVE (Fuzzy* threshold 0.7).
 	// "Aveneu" is a real typo (not an alt form); "Avenu"/"AVENU" is a listed alt.

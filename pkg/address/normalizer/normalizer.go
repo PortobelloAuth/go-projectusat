@@ -334,7 +334,7 @@ func NormalizeStreetSuffix(suffix string, o AddressNormalizationOptions) (string
 	return abbr, nil
 }
 
-func NormalizeSecondaryDesingator(designator string, o AddressNormalizationOptions) (string, error) {
+func NormalizeSecondaryDesignator(designator string, o AddressNormalizationOptions) (string, error) {
 	v := textutil.BaseField(designator)
 	if v == "" {
 		return "", nil
@@ -423,7 +423,7 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	if out.StreetSuffix, err = NormalizeStreetSuffix(a.StreetSuffix, n.Options); err != nil {
 		return nil, err
 	}
-	if out.SecondaryDesignator, err = NormalizeSecondaryDesingator(a.SecondaryDesignator, n.Options); err != nil {
+	if out.SecondaryDesignator, err = NormalizeSecondaryDesignator(a.SecondaryDesignator, n.Options); err != nil {
 		return nil, err
 	}
 	if out.Region, err = NormalizeRegion(a.Region, n.Options); err != nil {
