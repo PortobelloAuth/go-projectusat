@@ -479,6 +479,36 @@ func TestNormalizerKeepsTypeAreaAndDetail(t *testing.T) {
 	}
 }
 
+func TestNormalizerNormalizesPOBoxStreetName(t *testing.T) {
+	in := &address.Address{
+		Type:          &pobox.POBoxAddress{},
+		PrimaryNumber: "8755",
+		StreetName:    "Post Office Box",
+		City:          "Provo",
+		Region:        "UT",
+		Postal:        "84604",
+	}
+	got, err := normalizer.NewContentNomalizer().Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.Type != in.Type {
+		t.Fatalf("Normalize dropped Type: got %v, want %T", got.Type, in.Type)
+	}
+	if got.StreetName != "PO BOX" {
+		t.Fatalf("PO Box StreetName not normalized = %q", got.StreetName)
+	}
+	if got.PrimaryNumber != "8755" {
+		t.Fatalf("PO Box PrimaryNumber not normalized = %q", got.PrimaryNumber)
+	}
+	if got.Area != "" || got.Detail != "" {
+		t.Fatalf("Non-empty values in Area = %q, Detail = %q", got.Area, got.Detail)
+	}
+	if want := "PO BOX 8755"; got.FormatStreetLine() != want {
+		t.Fatalf("FormatStreetLine = %q, want %q", got.FormatStreetLine(), want)
+	}
+}
+
 // go-projectusat#115: Publication 28 §223 and Project US@ (p.20) both
 // require a city name spelled out in its entirety, so ST/STE/MT/FT heading a
 // city name must expand. A lone or trailing abbreviation, with nothing

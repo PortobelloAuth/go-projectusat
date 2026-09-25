@@ -49,3 +49,42 @@ func TestNotPOBox(t *testing.T) {
 		t.Errorf("Expected error for non-po Box: %s got: %s", notpobox, out)
 	}
 }
+
+var streetnamecases = []struct {
+	In   string
+	Want string
+}{
+	{"Post Office Box", "PO BOX"},
+	{"PO Box", "PO BOX"},
+	{"POB", "PO BOX"},
+	{"Caller", "PO BOX"},
+	{"Firm Caller", "PO BOX"},
+	{"bin", "PO BOX"},
+	{"Lockbox", "PO BOX"},
+	{"Drawer", "PO BOX"},
+	{"POST OFFICE BOX", "PO BOX"},
+	{"PO BOX", "PO BOX"},
+	{"POB", "PO BOX"},
+	{"CALLER", "PO BOX"},
+	{"FIRM CALLER", "PO BOX"},
+	{"BIN", "PO BOX"},
+	{"LOCKBOX", "PO BOX"},
+	{"DRAWER", "PO BOX"},
+	{"Main", ""},
+}
+
+func TestNormalizeStreetName(t *testing.T) {
+	for _, tc := range streetnamecases {
+		out, err := pobox.NormalizeStreetName(tc.In)
+		if len(tc.Want) > 0 {
+			if err != nil {
+				t.Errorf("%s", err)
+			}
+			if out != tc.Want {
+				t.Errorf("Unexpected normalized PO Box text %q for %q. Expected: %q", out, tc.In, tc.Want)
+			}
+		} else if err == nil {
+			t.Errorf("Expected an error for street name: %q", tc.In)
+		}
+	}
+}

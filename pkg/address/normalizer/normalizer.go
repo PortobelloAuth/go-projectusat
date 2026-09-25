@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
@@ -166,10 +165,10 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 
 	if sn != "" {
 		// TODO: move this in to pobox NormalizingAddressType.Normalize()
-		poboxsn, err := pobox.Normalize(sn)
-		if err == nil {
-			sn = poboxsn
-		}
+		// poboxsn, err := pobox.Normalize(sn)
+		// if err == nil {
+		// 	sn = poboxsn
+		// }
 
 		// TODO: move to puertorico NormalizingAddressType.Normalize()
 		// // A Puerto Rico address uses only its own Spanish street-type
@@ -341,9 +340,9 @@ func NormalizeSecondaryDesingator(designator string, o AddressNormalizationOptio
 		return "", nil
 	}
 	info, err := secondaryunit.Info(v)
-	// if err != nil {
-	// 	return "", fmt.Errorf("secondary designator (info): %w", err)
-	// }
+	if err != nil {
+		return "", fmt.Errorf("secondary designator: %w", err)
+	}
 
 	// Only use SecondaryAsHash for Numbered secondary designators
 	if o.SecondaryAsHash && info != nil && info.Numbered {
@@ -377,15 +376,15 @@ func NormalizeRegion(r string, o AddressNormalizationOptions) (string, error) {
 
 // Normalize applies the Normalizer's AddressNormalizationOptions to the Address
 func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
-	// The type is how the address formats; normalizing the fields does not
-	// change which kind of address they make.
-	out := address.Address{Type: a.Type}
-
 	// if the address type is an AddressNormalizingType (it implements its own Normalization
 	// rules) employ that Normalization instead of the default.
 	if normalizing, ok := a.Type.(NormalizingAddressType); ok {
 		return normalizing.Normalize(a, n.Options)
 	}
+
+	// The type is how the address formats; normalizing the fields does not
+	// change which kind of address they make.
+	out := address.Address{Type: a.Type}
 
 	var err error
 	if out.BusinessName, err = NormalizeBusinessName(a.BusinessName, n.Options); err != nil {
