@@ -7,6 +7,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
@@ -584,6 +585,7 @@ func TestContentNormalizerPuertoRicoStreetTypeStaysSpanish(t *testing.T) {
 	// Spec p.25 example: abbreviated Spanish street type expands to its
 	// Spanish primary form, not the colliding English one.
 	got, err := n.Normalize(&address.Address{
+		Type:          &puertorico.PuertoRicoAddress{},
 		PrimaryNumber: "1234",
 		StreetName:    "AVE Ashford",
 		City:          "San Juan",
@@ -599,6 +601,7 @@ func TestContentNormalizerPuertoRicoStreetTypeStaysSpanish(t *testing.T) {
 
 	// Already-full Spanish form is left unchanged.
 	got, err = n.Normalize(&address.Address{
+		Type:          &puertorico.PuertoRicoAddress{},
 		PrimaryNumber: "1234",
 		StreetName:    "Avenida Ashford",
 		City:          "San Juan",

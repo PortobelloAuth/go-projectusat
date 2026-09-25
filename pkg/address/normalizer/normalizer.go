@@ -164,26 +164,10 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 	}
 
 	if sn != "" {
-		// TODO: move this in to pobox NormalizingAddressType.Normalize()
-		// poboxsn, err := pobox.Normalize(sn)
-		// if err == nil {
-		// 	sn = poboxsn
-		// }
-
-		// TODO: move to puertorico NormalizingAddressType.Normalize()
-		// // A Puerto Rico address uses only its own Spanish street-type
-		// // vocabulary, never the English suffix table: AVE and BLVD collide
-		// // between the two (go-projectusat#95), so a PR address run through
-		// // the English table silently mistranslates (1234 AVE ASHFORD ->
-		// // 1234 AVENUE ASHFORD instead of staying Spanish). Decided once,
-		// // from the pre-normalization Region/Postal, since the loop below
-		// // reads it more than once.
-		// prDialect := puertorico.UsePRDialect(a.Region, a.Postal)
-
 		// if street name has only 1 word, run it through the streetsuffix normalizer;
 		// a directional street name is spelled out (NORTH AVE), as one inside a
 		// longer name is below. A single letter is left as written instead: it
-		// may be an alphabet indicator (1000 AVENUE E), and the standard says
+		// may be an alphabet indicator (1000 G ST, 100 E ST), and the standard says
 		// directional letters SHOULD NOT be combined with alphabet indicators
 		// (p.17). Anything longer is a spelled-out or abbreviated direction,
 		// never an alphabet indicator, and is spelled out (p.18: BAY WEST DRIVE).
@@ -195,11 +179,6 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 				}
 			} else if full, err := directionals.NormalizeDirectional(sn); err == nil {
 				sn = full
-				// TODO: move to puertorico NormalizingAddressType.Normalize()
-				// } else if prDialect {
-				// 	if pr, err := puertorico.NormalizeStreetType(sn); err == nil {
-				// 		sn = pr
-				// 	}
 			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
 				sn = ss
 			}
@@ -209,7 +188,7 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 				// an alphabet indicator (AVENUE E), not a direction, and stays
 				// as written (p.17). BAY W, where the preceding word is not a
 				// suffix, is still a direction and is spelled out (p.18).
-				if i == len(snparts)-1 && len(snp) == 1 && isStreetSuffix(snparts[i-1]) {
+				if i == len(snparts)-1 && len(snp) == 1 && IsStreetSuffix(snparts[i-1]) {
 					continue
 				}
 
@@ -253,7 +232,7 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 					// is a suffix that was absorbed into the name rather than
 					// a saint — E ST NW in Washington is read that way by a
 					// parser that puts the direction in the name.
-					if i == 0 && !onlyDirectionsFollow(snparts) {
+					if i == 0 && !OnlyDirectionsFollow(snparts) {
 						if full, err := cityabbreviations.Expand(snp); err == nil {
 							snparts[i] = full
 							continue
@@ -376,10 +355,19 @@ func NormalizeRegion(r string, o AddressNormalizationOptions) (string, error) {
 
 // Normalize applies the Normalizer's AddressNormalizationOptions to the Address
 func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
-	// if the address type is an AddressNormalizingType (it implements its own Normalization
+	// TODO: how do we detect when the submitted address has the wrong address type?
+
+	// If the address type is an AddressNormalizingType (it implements its own Normalization
 	// rules) employ that Normalization instead of the default.
 	if normalizing, ok := a.Type.(NormalizingAddressType); ok {
-		return normalizing.Normalize(a, n.Options)
+		normalized, err := normalizing.Normalize(a, n.Options)
+		if err != nil {
+			return nil, err
+		}
+		if normalized.Type != a.Type {
+			return nil, fmt.Errorf("normalized address type does not match input type")
+		}
+		return normalized, nil
 	}
 
 	// The type is how the address formats; normalizing the fields does not
@@ -433,15 +421,15 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	return &out, nil
 }
 
-// isStreetSuffix reports whether s is a street suffix, abbreviated or spelled
+// IsStreetSuffix reports whether s is a street suffix, abbreviated or spelled
 // out, so a one-letter part right after it can be read as an alphabet
 // indicator rather than a directional (p.17).
-func isStreetSuffix(s string) bool {
+func IsStreetSuffix(s string) bool {
 	_, err := streetsuffixes.NormalizeStreetSuffix(s)
 	return err == nil
 }
 
-// onlyDirectionsFollow reports whether every part after the first is a
+// OnlyDirectionsFollow reports whether every part after the first is a
 // direction.
 //
 // It is what separates a saint from an absorbed suffix at the head of a street
@@ -450,7 +438,7 @@ func isStreetSuffix(s string) bool {
 // trailing direction that a reading put inside the name, and SAINT NORTHWEST
 // is not a street anyone lives on. A direction cannot be the name a saint is
 // named for, so what follows the abbreviation is enough to tell the two apart.
-func onlyDirectionsFollow(parts []string) bool {
+func OnlyDirectionsFollow(parts []string) bool {
 	if len(parts) < 2 {
 		return false
 	}
