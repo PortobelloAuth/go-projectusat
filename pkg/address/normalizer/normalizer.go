@@ -239,16 +239,6 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 						}
 					}
 
-					// TODO: move to puertorico NormalizingAddressType.Normalize()
-					// // Street suffixes left inside the street name should be the full text
-					// // Only replace street suffix abreviations if we have not already
-					// // replaced this index with a state / region. A Puerto Rico address
-					// // uses its own Spanish vocabulary instead (go-projectusat#95).
-					// if prDialect {
-					// 	if pr, err := puertorico.NormalizeStreetType(snp); err == nil {
-					// 		snparts[i] = pr
-					// 	}
-					// } else
 					if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
 						snparts[i] = fullss
 					}
@@ -259,7 +249,6 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 
 		// Highway forms normalize. An error means the name is not a highway, which
 		// is the ordinary case, so the already uppercased and collapsed name stands.
-		// TODO: check for an errantly parsed predirectional as well
 		hw, err := highways.NormalizeStreetName(sn)
 		if err == nil {
 			return hw, nil
