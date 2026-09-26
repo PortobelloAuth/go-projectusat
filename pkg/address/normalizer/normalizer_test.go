@@ -7,6 +7,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
@@ -338,6 +339,41 @@ func TestNormalizerWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 }
 
+func TestNormalizerWithOptionsSecondaryAsHashNotNumbered(t *testing.T) {
+	in := &address.Address{
+		PrimaryNumber:       "123",
+		StreetName:          "Main",
+		StreetSuffix:        "Street",
+		SecondaryDesignator: "Basement",
+		SecondaryNumber:     "",
+		City:                "Springfield",
+		Region:              "Illinois",
+		Postal:              "62701",
+	}
+	// Content form keeps APT.
+	cn := normalizer.NewContentNomalizer()
+	content, err := cn.Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if content.SecondaryDesignator != "BSMT" {
+		t.Fatalf("content SecondaryDesignator = %q, want BSMT", content.SecondaryDesignator)
+	}
+
+	// Exchange/matching form rewrites to #.
+	n := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{SecondaryAsHash: true})
+	got, err := n.Normalize(in)
+	if err != nil {
+		t.Fatalf("NormalizeWithOptions: %v", err)
+	}
+	if got.SecondaryDesignator != "BSMT" {
+		t.Fatalf("SecondaryAsHash SecondaryDesignator = %q, want BSMT", got.SecondaryDesignator)
+	}
+	if got.SecondaryNumber != "" {
+		t.Errorf("SecondaryNumber = %q, should be empty", got.SecondaryNumber)
+	}
+}
+
 func TestNormalizerWithOptionsFuzzy(t *testing.T) {
 	// Mild typos: Californa → CA, Aveneu → AVE (Fuzzy* threshold 0.7).
 	// "Aveneu" is a real typo (not an alt form); "Avenu"/"AVENU" is a listed alt.
@@ -479,6 +515,36 @@ func TestNormalizerKeepsTypeAreaAndDetail(t *testing.T) {
 	}
 }
 
+func TestNormalizerNormalizesPOBoxStreetName(t *testing.T) {
+	in := &address.Address{
+		Type:          &pobox.POBoxAddress{},
+		PrimaryNumber: "8755",
+		StreetName:    "Post Office Box",
+		City:          "Provo",
+		Region:        "UT",
+		Postal:        "84604",
+	}
+	got, err := normalizer.NewContentNomalizer().Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.Type != in.Type {
+		t.Fatalf("Normalize dropped Type: got %v, want %T", got.Type, in.Type)
+	}
+	if got.StreetName != "PO BOX" {
+		t.Fatalf("PO Box StreetName not normalized = %q", got.StreetName)
+	}
+	if got.PrimaryNumber != "8755" {
+		t.Fatalf("PO Box PrimaryNumber not normalized = %q", got.PrimaryNumber)
+	}
+	if got.Area != "" || got.Detail != "" {
+		t.Fatalf("Non-empty values in Area = %q, Detail = %q", got.Area, got.Detail)
+	}
+	if want := "PO BOX 8755"; got.FormatStreetLine() != want {
+		t.Fatalf("FormatStreetLine = %q, want %q", got.FormatStreetLine(), want)
+	}
+}
+
 // go-projectusat#115: Publication 28 §223 and Project US@ (p.20) both
 // require a city name spelled out in its entirety, so ST/STE/MT/FT heading a
 // city name must expand. A lone or trailing abbreviation, with nothing
@@ -519,6 +585,7 @@ func TestContentNormalizerPuertoRicoStreetTypeStaysSpanish(t *testing.T) {
 	// Spec p.25 example: abbreviated Spanish street type expands to its
 	// Spanish primary form, not the colliding English one.
 	got, err := n.Normalize(&address.Address{
+		Type:          &puertorico.PuertoRicoAddress{},
 		PrimaryNumber: "1234",
 		StreetName:    "AVE Ashford",
 		City:          "San Juan",
@@ -534,6 +601,7 @@ func TestContentNormalizerPuertoRicoStreetTypeStaysSpanish(t *testing.T) {
 
 	// Already-full Spanish form is left unchanged.
 	got, err = n.Normalize(&address.Address{
+		Type:          &puertorico.PuertoRicoAddress{},
 		PrimaryNumber: "1234",
 		StreetName:    "Avenida Ashford",
 		City:          "San Juan",

@@ -48,16 +48,40 @@ var poboxReplacements = slices.Collect(func(yield func(string) bool) {
 var poboxReplacer = strings.NewReplacer(poboxReplacements...)
 
 func Normalize(sn string) (string, error) {
+	// NOTE / FIXME?: Normalize is currently used by Claims to recognize a whole pobox
+	// street line, not just the different ways we can write PO BOX (the street name.)
+	// This means it cannot be used to normalize as street name, which does not have a
+	// primary number incorporated (as CheckStreetLine() and the regex it now wraps
+	// expect.) As a result, this code has some duplication in NormalizeStreetName()
+	// while we figure out what can or should change.
+
 	// capitalize
 	capitalized := strings.ToUpper(sn)
 	capitalized = hashPattern.ReplaceAllString(capitalized, " ")
 
 	replaced := poboxReplacer.Replace(capitalized)
 
-	// See if we replaced anything
-	if poboxPattern.MatchString(replaced) {
+	// See if we recognized a PO Box
+	if CheckStreetLine(replaced) {
 		return replaced, nil
 	}
 
 	return "", fmt.Errorf("Not a recognized PO Box")
+}
+
+func NormalizeStreetName(streetname string) (string, error) {
+	capitalized := strings.ToUpper(streetname)
+	capitalized = hashPattern.ReplaceAllString(capitalized, " ")
+
+	replaced := poboxReplacer.Replace(capitalized)
+
+	if replaced != "PO BOX" {
+		return "", fmt.Errorf("Not a recognized PO Box street name")
+	}
+
+	return replaced, nil
+}
+
+func CheckStreetLine(streetline string) bool {
+	return poboxPattern.MatchString(streetline)
 }

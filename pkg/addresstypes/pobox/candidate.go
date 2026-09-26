@@ -1,7 +1,10 @@
 package pobox
 
 import (
+	"fmt"
+
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
@@ -42,6 +45,63 @@ type POBoxAddress struct{}
 // because one output form per address is what makes two addresses comparable.
 func (p *POBoxAddress) FormatStreetLine(a *address.Address) string {
 	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber, a.Detail)
+}
+
+func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+	if _, ok := a.Type.(*POBoxAddress); !ok {
+		return nil, fmt.Errorf("address is not a *POBoxAddress")
+	}
+
+	// The type is how the address formats; normalizing the fields does not
+	// change which kind of address they make.
+	out := address.Address{Type: a.Type}
+
+	var err error
+	// NOTE: the old code in normalizer.Normalize() that called pobox.Normalize() just
+	// ignored errors because it didn't know if the address was supposed to be a PO Box.
+	// The unfortunate reality of that is that pobox.Normalize() was always being ignored
+	// because it only supplied the StreetName and not the PrimaryNumber, which Normalize
+	// requires in order to match it's pattern.
+	// This is a bit problematic because passing the primary number in to Normalize() will
+	// return it as part of the returned string as well, effectively duplicating it in to
+	// the StreetName, which isn't our intent.
+	if out.StreetName, err = NormalizeStreetName(a.StreetName); err != nil {
+		return nil, err
+	}
+
+	if out.PrimaryNumber, err = normalizer.NormalizePrimaryNumber(a.PrimaryNumber, o); err != nil {
+		return nil, err
+	}
+
+	// Make sure that the result of normalizing the street name and the primary number is a
+	// valid pobox street line (without worrying about Detail for now.)
+	if !CheckStreetLine(fmt.Sprintf("%s %s", out.StreetName, out.PrimaryNumber)) {
+		return nil, fmt.Errorf("Failed to normalize pobox street line")
+	}
+
+	if out.BusinessName, err = normalizer.NormalizeBusinessName(a.BusinessName, o); err != nil {
+		return nil, err
+	}
+	if out.Area, err = normalizer.NormalizeArea(a.Area, o); err != nil {
+		return nil, err
+	}
+	if out.Detail, err = normalizer.NormalizeDetail(a.Detail, o); err != nil {
+		return nil, err
+	}
+	if out.City, err = normalizer.NormalizeCity(a.City, o); err != nil {
+		return nil, err
+	}
+	if out.Country, err = normalizer.NormalizeCountry(a.Country, o); err != nil {
+		return nil, err
+	}
+	if out.Postal, err = normalizer.NormalizePostal(a.Postal, o); err != nil {
+		return nil, err
+	}
+	if out.Region, err = normalizer.NormalizeRegion(a.Region, o); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
 }
 
 // Candidates returns this package's readings of the address under the given
