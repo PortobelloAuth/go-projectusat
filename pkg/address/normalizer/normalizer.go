@@ -239,16 +239,6 @@ func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (stri
 						}
 					}
 
-					// TODO: move to puertorico NormalizingAddressType.Normalize()
-					// // Street suffixes left inside the street name should be the full text
-					// // Only replace street suffix abreviations if we have not already
-					// // replaced this index with a state / region. A Puerto Rico address
-					// // uses its own Spanish vocabulary instead (go-projectusat#95).
-					// if prDialect {
-					// 	if pr, err := puertorico.NormalizeStreetType(snp); err == nil {
-					// 		snparts[i] = pr
-					// 	}
-					// } else
 					if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
 						snparts[i] = fullss
 					}
