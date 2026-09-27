@@ -110,6 +110,32 @@ func (a *Address) Equals(other *Address) bool {
 		a.Country == other.Country
 }
 
+func (a *Address) Clone() *Address {
+	if a == nil {
+		return nil
+	}
+
+	out := &Address{
+		Type:                a.Type,
+		BusinessName:        a.BusinessName,
+		Area:                a.Area,
+		PrimaryNumber:       a.PrimaryNumber,
+		Predirectional:      a.Predirectional,
+		StreetName:          a.StreetName,
+		StreetSuffix:        a.StreetSuffix,
+		Postdirectional:     a.Postdirectional,
+		SecondaryDesignator: a.SecondaryDesignator,
+		SecondaryNumber:     a.SecondaryNumber,
+		Detail:              a.Detail,
+		City:                a.City,
+		Region:              a.Region,
+		Postal:              a.Postal,
+		Country:             a.Country,
+	}
+
+	return out
+}
+
 type FormatOptions struct {
 	SingleLine    bool
 	DiacriticMode diacritics.DiacriticMode

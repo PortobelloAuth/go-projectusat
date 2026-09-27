@@ -166,6 +166,58 @@ func normalizePRStreetName(streetname string, o normalizer.AddressNormalizationO
 	return sn, nil
 }
 
+func normalizePRStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+	if len(a.StreetName) > 0 {
+		// TODO: break NormalizeStreetName up in to composable
+		out, err := normalizePRStreetName(a.StreetName, o)
+		if err != nil {
+			return nil, &normalizer.NormalizationStatus{
+				// Error: fmt.Errorf("street name: %w", err),
+				Error: err,
+			}
+		}
+		a.StreetName = out
+	}
+	return a, nil
+}
+
+func normalizePRSecondaryDesignatorFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+	if len(a.SecondaryDesignator) > 0 {
+		out, err := NormalizeSecondary(a.SecondaryDesignator)
+		if err != nil {
+			return nil, &normalizer.NormalizationStatus{
+				// Error: fmt.Errorf("secondary designator: %w", err),
+				Error: err,
+			}
+		}
+		a.SecondaryDesignator = out
+	}
+	return a, nil
+}
+
+var normalizePRStreetLine = normalizer.ComposeNormalizationFn(
+	normalizer.NormalizePrimaryNumberFn,
+	// NOTE: most puerto rico addresses won't have a suffix. It is not how Spanish streets are
+	// named.
+	normalizer.NormalizeStreetSuffixFn,
+	normalizer.NormalizeSecondaryNumberFn,
+	normalizePRSecondaryDesignatorFn,
+	normalizer.NormalizeDirectionals,
+
+	// A Puerto Rico address uses only its own Spanish street-type
+	// vocabulary, never the English suffix table: AVE and BLVD collide
+	// between the two (go-projectusat#95), so a PR address run through
+	// the English table silently mistranslates (1234 AVE ASHFORD ->
+	// 1234 AVENUE ASHFORD instead of staying Spanish).
+	normalizePRStreetNameFn,
+)
+
+var normalizePRAddressFn = normalizer.ComposeNormalizationFn(
+	normalizer.NormalizeLastLine,
+	normalizer.NormalizeOtherParts,
+	normalizePRStreetLine,
+)
+
 func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if _, ok := a.Type.(*PuertoRicoAddress); !ok {
 		return nil, fmt.Errorf("address is not a *PuertoRicoAddress")
@@ -173,53 +225,14 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 
 	// The type is how the address formats; normalizing the fields does not
 	// change which kind of address they make.
-	out := address.Address{Type: a.Type}
+	out := a.Clone()
 
-	var err error
-	if out.Postal, err = normalizer.NormalizePostal(a.Postal, o); err != nil {
-		return nil, err
-	}
-	if out.Region, err = normalizer.NormalizeRegion(a.Region, o); err != nil {
-		return nil, err
+	var status *normalizer.NormalizationStatus
+	if out, status = normalizePRAddressFn(out, o); status != nil && status.Error != nil {
+		return nil, status.Error
 	}
 	if !UsePRDialect(out.Region, out.Postal) {
 		return nil, fmt.Errorf("Not a Puerto Rico address")
-	}
-
-	// A Puerto Rico address uses only its own Spanish street-type
-	// vocabulary, never the English suffix table: AVE and BLVD collide
-	// between the two (go-projectusat#95), so a PR address run through
-	// the English table silently mistranslates (1234 AVE ASHFORD ->
-	// 1234 AVENUE ASHFORD instead of staying Spanish).
-	if out.StreetName, err = normalizePRStreetName(a.StreetName, o); err != nil {
-		return nil, err
-	}
-
-	if out.PrimaryNumber, err = normalizer.NormalizePrimaryNumber(a.PrimaryNumber, o); err != nil {
-		return nil, err
-	}
-
-	// TODO: make sure that we should do this for puertorico addresses (most won't have a StreetSuffix)
-	if out.StreetSuffix, err = normalizer.NormalizeStreetSuffix(a.StreetSuffix, o); err != nil {
-		return nil, err
-	}
-
-	if len(a.SecondaryNumber) > 0 {
-		if out.SecondaryNumber, err = normalizer.NormalizeSecondaryNumber(a.SecondaryNumber, o); err != nil {
-			return nil, err
-		}
-	}
-	if len(a.SecondaryDesignator) > 0 {
-		if out.SecondaryDesignator, err = NormalizeSecondary(a.SecondaryDesignator); err != nil {
-			return nil, err
-		}
-	}
-
-	if out.Predirectional, err = normalizer.NormalizePredirectional(a.Predirectional, o); err != nil {
-		return nil, err
-	}
-	if out.Postdirectional, err = normalizer.NormalizePostdirectional(a.Postdirectional, o); err != nil {
-		return nil, err
 	}
 
 	// TODO: Make sure that the result of normalizing the street name and the primary number is a
@@ -228,23 +241,7 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 	// 	return nil, fmt.Errorf("Failed to normalize puertorico street line")
 	// }
 
-	if out.BusinessName, err = normalizer.NormalizeBusinessName(a.BusinessName, o); err != nil {
-		return nil, err
-	}
-	if out.Area, err = normalizer.NormalizeArea(a.Area, o); err != nil {
-		return nil, err
-	}
-	if out.Detail, err = normalizer.NormalizeDetail(a.Detail, o); err != nil {
-		return nil, err
-	}
-	if out.City, err = normalizer.NormalizeCity(a.City, o); err != nil {
-		return nil, err
-	}
-	if out.Country, err = normalizer.NormalizeCountry(a.Country, o); err != nil {
-		return nil, err
-	}
-
-	return &out, nil
+	return out, nil
 }
 
 // Candidates returns this package's reading of the address under the given

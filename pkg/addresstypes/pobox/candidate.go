@@ -54,23 +54,11 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormali
 
 	// The type is how the address formats; normalizing the fields does not
 	// change which kind of address they make.
-	out := address.Address{Type: a.Type}
+	out := a.Clone()
 
-	var err error
-	// NOTE: the old code in normalizer.Normalize() that called pobox.Normalize() just
-	// ignored errors because it didn't know if the address was supposed to be a PO Box.
-	// The unfortunate reality of that is that pobox.Normalize() was always being ignored
-	// because it only supplied the StreetName and not the PrimaryNumber, which Normalize
-	// requires in order to match it's pattern.
-	// This is a bit problematic because passing the primary number in to Normalize() will
-	// return it as part of the returned string as well, effectively duplicating it in to
-	// the StreetName, which isn't our intent.
-	if out.StreetName, err = NormalizeStreetName(a.StreetName); err != nil {
-		return nil, err
-	}
-
-	if out.PrimaryNumber, err = normalizer.NormalizePrimaryNumber(a.PrimaryNumber, o); err != nil {
-		return nil, err
+	var status *normalizer.NormalizationStatus
+	if out, status = normalizePOBoxAddressFn(out, o); status != nil && status.Error != nil {
+		return nil, status.Error
 	}
 
 	// Make sure that the result of normalizing the street name and the primary number is a
@@ -79,30 +67,33 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormali
 		return nil, fmt.Errorf("Failed to normalize pobox street line")
 	}
 
-	if out.BusinessName, err = normalizer.NormalizeBusinessName(a.BusinessName, o); err != nil {
-		return nil, err
-	}
-	if out.Area, err = normalizer.NormalizeArea(a.Area, o); err != nil {
-		return nil, err
-	}
-	if out.Detail, err = normalizer.NormalizeDetail(a.Detail, o); err != nil {
-		return nil, err
-	}
-	if out.City, err = normalizer.NormalizeCity(a.City, o); err != nil {
-		return nil, err
-	}
-	if out.Country, err = normalizer.NormalizeCountry(a.Country, o); err != nil {
-		return nil, err
-	}
-	if out.Postal, err = normalizer.NormalizePostal(a.Postal, o); err != nil {
-		return nil, err
-	}
-	if out.Region, err = normalizer.NormalizeRegion(a.Region, o); err != nil {
-		return nil, err
-	}
-
-	return &out, nil
+	return out, nil
 }
+
+func normalizePOBoxStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+	if len(a.StreetName) > 0 {
+		out, err := NormalizeStreetName(a.StreetName)
+		if err != nil {
+			return nil, &normalizer.NormalizationStatus{
+				// Error: fmt.Errorf("street name: %w", err),
+				Error: err,
+			}
+		}
+		a.StreetName = out
+	}
+	return a, nil
+}
+
+var normalizePOBoxStreetLine = normalizer.ComposeNormalizationFn(
+	normalizer.NormalizePrimaryNumberFn,
+	normalizePOBoxStreetNameFn,
+)
+
+var normalizePOBoxAddressFn = normalizer.ComposeNormalizationFn(
+	normalizer.NormalizeLastLine,
+	normalizer.NormalizeOtherParts,
+	normalizePOBoxStreetLine,
+)
 
 // Candidates returns this package's readings of the address under the given
 // last line.

@@ -101,7 +101,7 @@ func NormalizeSecondary(s string) (string, error) {
 		return capitalized, nil
 	}
 
-	return "", fmt.Errorf("Unrecognized secondary designator")
+	return "", fmt.Errorf("Unrecognized puertorico secondary designator")
 }
 
 // prPostalPrefixes are the three-digit ZIP prefixes assigned to Puerto Rico.
