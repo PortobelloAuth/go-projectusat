@@ -15,33 +15,29 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
-type NormalizationStatus struct {
-	Done  bool
-	Error error
-}
+// Done exists as a sentinel error to allow for early returns from complex compositions
+// of normalization functions without requiring a special status type. In that regard it
+// is somewhat analogous to EOF for IO streams.
+var Done = fmt.Errorf("normalization complete")
 
 // An AddressNormalizationFn takes an Address and normalizes some aspect of it
-type AddressNormalizationFn func(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus)
+type AddressNormalizationFn func(a *address.Address, o AddressNormalizationOptions) (*address.Address, error)
 
 func ComposeNormalizationFn(fns ...AddressNormalizationFn) AddressNormalizationFn {
-	return func(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+	return func(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 		out := a.Clone()
-		var status *NormalizationStatus
+		var err error
 		for _, fn := range fns {
-			out, status = fn(out, o)
-			if status != nil {
-				if status.Error != nil {
-					return nil, status
+			out, err = fn(out, o)
+			if err != nil {
+				if err != Done {
+					return nil, err
 				}
-				if status.Done {
-					return out, status
-				}
+				return out, nil
 			}
 		}
 
-		return out, &NormalizationStatus{
-			Done: false,
-		}
+		return out, nil
 	}
 }
 
@@ -92,14 +88,12 @@ var NormalizeStreetLine = ComposeNormalizationFn(
 	NormalizeDirectionals,
 )
 
-func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.BusinessName) > 0 {
 		out, err := textutil.FreeTextField(a.BusinessName, o.DiacriticMode)
 
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("business name: %w", err),
-			}
+			return nil, fmt.Errorf("business name: %w", err)
 		}
 
 		a.BusinessName = out
@@ -107,13 +101,11 @@ func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) 
 	return a, nil
 }
 
-func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Area) > 0 {
 		out, err := textutil.FreeTextField(a.Area, o.DiacriticMode)
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("area: %w", err),
-			}
+			return nil, fmt.Errorf("area: %w", err)
 		}
 
 		a.Area = out
@@ -121,48 +113,41 @@ func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*addres
 	return a, nil
 }
 
-func NormalizeDetailFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeDetailFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Detail) > 0 {
 		out, err := textutil.FreeTextField(a.Detail, o.DiacriticMode)
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("detail: %w", err),
-			}
+			return nil, fmt.Errorf("detail: %w", err)
 		}
 		a.Detail = out
 	}
 	return a, nil
 }
 
-func NormalizeStreetNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeStreetNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		// TODO: break NormalizeStreetName up in to composable
 		out, err := NormalizeStreetName(a.StreetName, o)
 		if err != nil {
-			return nil, &NormalizationStatus{
-				// Error: fmt.Errorf("street name: %w", err),
-				Error: err,
-			}
+			return nil, err
 		}
 		a.StreetName = out
 	}
 	return a, nil
 }
 
-func NormalizePrimaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizePrimaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.PrimaryNumber) > 0 {
 		out, err := textutil.FreeTextField(a.PrimaryNumber, o.DiacriticMode)
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("primary number: %w", err),
-			}
+			return nil, fmt.Errorf("primary number: %w", err)
 		}
 		a.PrimaryNumber = out
 	}
 	return a, nil
 }
 
-func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	out := a.Clone()
 	v := textutil.BaseField(a.SecondaryDesignator)
 	if v == "" {
@@ -172,9 +157,7 @@ func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOp
 
 	info, err := secondaryunit.Info(v)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("secondary designator: %w", err),
-		}
+		return nil, fmt.Errorf("secondary designator: %w", err)
 	}
 
 	// Only use SecondaryAsHash for Numbered secondary designators
@@ -185,16 +168,14 @@ func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOp
 
 	abbr, err := secondaryunit.Normalize(v)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("secondary designator: %w", err),
-		}
+		return nil, fmt.Errorf("secondary designator: %w", err)
 	}
 
 	out.SecondaryDesignator = abbr
 	return out, nil
 }
 
-func NormalizePredirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizePredirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Predirectional)
 	if v == "" {
 		a.Predirectional = v
@@ -203,16 +184,14 @@ func NormalizePredirectionalFn(a *address.Address, o AddressNormalizationOptions
 
 	abbr, err := directionals.AbbreviateDirectional(v)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("predirectional: %w", err),
-		}
+		return nil, fmt.Errorf("predirectional: %w", err)
 	}
 
 	a.Predirectional = abbr
 	return a, nil
 }
 
-func NormalizePostdirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizePostdirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Postdirectional)
 	if v == "" {
 		a.Postdirectional = v
@@ -221,16 +200,14 @@ func NormalizePostdirectionalFn(a *address.Address, o AddressNormalizationOption
 
 	abbr, err := directionals.AbbreviateDirectional(v)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("postdirectional: %w", err),
-		}
+		return nil, fmt.Errorf("postdirectional: %w", err)
 	}
 
 	a.Postdirectional = abbr
 	return a, nil
 }
 
-func NormalizeStreetSuffixFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeStreetSuffixFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.StreetSuffix)
 	if v == "" {
 		a.StreetSuffix = v
@@ -245,38 +222,32 @@ func NormalizeStreetSuffixFn(a *address.Address, o AddressNormalizationOptions) 
 		abbr, err = streetsuffixes.NormalizeStreetSuffixAbreviation(v)
 	}
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("street suffix: %w", err),
-		}
+		return nil, fmt.Errorf("street suffix: %w", err)
 	}
 
 	a.StreetSuffix = abbr
 	return a, nil
 }
 
-func NormalizeSecondaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeSecondaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.SecondaryNumber) > 0 {
 		out, err := textutil.FreeTextField(a.SecondaryNumber, o.DiacriticMode)
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("secondary number: %w", err),
-			}
+			return nil, fmt.Errorf("secondary number: %w", err)
 		}
 		a.SecondaryNumber = out
 	}
 	return a, nil
 }
 
-func NormalizeCityFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeCityFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.City) == 0 {
 		return a, nil
 	}
 
 	out, err := textutil.FreeTextField(a.City, o.DiacriticMode)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("city: %w", err),
-		}
+		return nil, fmt.Errorf("city: %w", err)
 	}
 	if out != "" {
 		// Publication 28 §223 and Project US@ (p.20) both require a city name
@@ -297,7 +268,7 @@ func NormalizeCityFn(a *address.Address, o AddressNormalizationOptions) (*addres
 	return a, nil
 }
 
-func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Region)
 	if v != "" {
 		var err error
@@ -307,9 +278,7 @@ func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*addr
 			v, err = region.NormalizeRegion(v)
 		}
 		if err != nil {
-			return nil, &NormalizationStatus{
-				Error: fmt.Errorf("region: %w", err),
-			}
+			return nil, fmt.Errorf("region: %w", err)
 		}
 	}
 
@@ -317,30 +286,26 @@ func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*addr
 	return a, nil
 }
 
-func NormalizePostalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizePostalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Postal) == 0 {
 		return a, nil
 	}
 	out, err := postalcode.Normalize(a.Postal)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("postal code: %w", err),
-		}
+		return nil, fmt.Errorf("postal code: %w", err)
 	}
 
 	a.Postal = out
 	return a, nil
 }
 
-func NormalizeCountryFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, *NormalizationStatus) {
+func NormalizeCountryFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Country) == 0 {
 		return a, nil
 	}
 	out, err := textutil.FreeTextField(a.Country, o.DiacriticMode)
 	if err != nil {
-		return nil, &NormalizationStatus{
-			Error: fmt.Errorf("country: %w", err),
-		}
+		return nil, fmt.Errorf("country: %w", err)
 	}
 	a.Country = out
 	return a, nil

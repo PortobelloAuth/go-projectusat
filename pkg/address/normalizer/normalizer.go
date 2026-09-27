@@ -86,9 +86,9 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		return normalized, nil
 	}
 
-	out, status := normalizeAddressFn(a, n.Options)
-	if status != nil && status.Error != nil {
-		return nil, status.Error
+	out, err := normalizeAddressFn(a, n.Options)
+	if err != nil && err != Done {
+		return nil, err
 	}
 
 	// The type is how the address formats; normalizing the fields does not

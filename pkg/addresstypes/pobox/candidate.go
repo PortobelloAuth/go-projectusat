@@ -56,9 +56,9 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormali
 	// change which kind of address they make.
 	out := a.Clone()
 
-	var status *normalizer.NormalizationStatus
-	if out, status = normalizePOBoxAddressFn(out, o); status != nil && status.Error != nil {
-		return nil, status.Error
+	var err error
+	if out, err = normalizePOBoxAddressFn(out, o); err != nil {
+		return nil, err
 	}
 
 	// Make sure that the result of normalizing the street name and the primary number is a
@@ -70,14 +70,11 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormali
 	return out, nil
 }
 
-func normalizePOBoxStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+func normalizePOBoxStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := NormalizeStreetName(a.StreetName)
 		if err != nil {
-			return nil, &normalizer.NormalizationStatus{
-				// Error: fmt.Errorf("street name: %w", err),
-				Error: err,
-			}
+			return nil, err
 		}
 		a.StreetName = out
 	}

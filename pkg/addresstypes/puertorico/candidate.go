@@ -166,29 +166,23 @@ func normalizePRStreetName(streetname string, o normalizer.AddressNormalizationO
 	return sn, nil
 }
 
-func normalizePRStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+func normalizePRStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		// TODO: break NormalizeStreetName up in to composable
 		out, err := normalizePRStreetName(a.StreetName, o)
 		if err != nil {
-			return nil, &normalizer.NormalizationStatus{
-				// Error: fmt.Errorf("street name: %w", err),
-				Error: err,
-			}
+			return nil, err
 		}
 		a.StreetName = out
 	}
 	return a, nil
 }
 
-func normalizePRSecondaryDesignatorFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, *normalizer.NormalizationStatus) {
+func normalizePRSecondaryDesignatorFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.SecondaryDesignator) > 0 {
 		out, err := NormalizeSecondary(a.SecondaryDesignator)
 		if err != nil {
-			return nil, &normalizer.NormalizationStatus{
-				// Error: fmt.Errorf("secondary designator: %w", err),
-				Error: err,
-			}
+			return nil, err
 		}
 		a.SecondaryDesignator = out
 	}
@@ -227,9 +221,9 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 	// change which kind of address they make.
 	out := a.Clone()
 
-	var status *normalizer.NormalizationStatus
-	if out, status = normalizePRAddressFn(out, o); status != nil && status.Error != nil {
-		return nil, status.Error
+	var err error
+	if out, err = normalizePRAddressFn(out, o); err != nil {
+		return nil, err
 	}
 	if !UsePRDialect(out.Region, out.Postal) {
 		return nil, fmt.Errorf("Not a Puerto Rico address")
