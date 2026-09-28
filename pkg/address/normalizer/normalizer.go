@@ -1,6 +1,7 @@
 package normalizer
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -87,7 +88,7 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	}
 
 	out, err := normalizeAddressFn(a, n.Options)
-	if err != nil && err != Done {
+	if err != nil && !errors.Is(err, Done) {
 		return nil, err
 	}
 

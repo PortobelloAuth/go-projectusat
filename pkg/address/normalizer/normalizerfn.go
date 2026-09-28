@@ -1,6 +1,7 @@
 package normalizer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -30,7 +31,7 @@ func ComposeNormalizationFn(fns ...AddressNormalizationFn) AddressNormalizationF
 		for _, fn := range fns {
 			out, err = fn(out, o)
 			if err != nil {
-				if err != Done {
+				if !errors.Is(err, Done) {
 					return nil, err
 				}
 				return out, nil
