@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 )
 
 /*
@@ -89,6 +90,10 @@ var maxSpan = slices.Max(slices.Collect(func(yield func(int) bool) {
 var punctuation = regexp.MustCompile(`[^0-9A-Z ]+`)
 var whitespace = regexp.MustCompile(`\s+`)
 
+// bareZip5 matches a plain five digit ZIP with no ZIP+4 add-on already
+// present and nothing else.
+var bareZip5 = regexp.MustCompile(`^\d{5}$`)
+
 // Normalize returns the standardized general delivery street line, or an error
 // when sn is not one.
 //
@@ -143,4 +148,60 @@ func (g *GeneralDeliveryAddress) FormatStreetLine(a *address.Address) string {
 	}
 
 	return standardForm
+}
+
+// Normalize implements normalizer.NormalizingAddressType.
+//
+// This address type has no number, suffix, directional or secondary unit —
+// see the comment atop this file — so those fields are left at their zero
+// value in the result rather than normalized, the same way pobox.Normalize
+// only touches the fields germane to a PO box.
+//
+// After the ordinary fields are normalized, a bare five digit ZIP gets the
+// -9999 add-on the standard asks every general delivery record to carry
+// (p.22, quoted above). An existing ZIP+4 is left alone, and an address with
+// no ZIP at all stays ZIP-less: this fills in what the address already has,
+// it does not invent a ZIP the caller never supplied.
+func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+	if _, ok := a.Type.(*GeneralDeliveryAddress); !ok {
+		return nil, fmt.Errorf("address is not a *GeneralDeliveryAddress")
+	}
+
+	out := address.Address{Type: a.Type}
+
+	var err error
+	if out.StreetName, err = Normalize(a.StreetName); err != nil {
+		return nil, err
+	}
+	if out.BusinessName, err = normalizer.NormalizeBusinessName(a.BusinessName, o); err != nil {
+		return nil, err
+	}
+	if out.Area, err = normalizer.NormalizeArea(a.Area, o); err != nil {
+		return nil, err
+	}
+	if out.Detail, err = normalizer.NormalizeDetail(a.Detail, o); err != nil {
+		return nil, err
+	}
+	if out.City, err = normalizer.NormalizeCity(a.City, o); err != nil {
+		return nil, err
+	}
+	if out.Country, err = normalizer.NormalizeCountry(a.Country, o); err != nil {
+		return nil, err
+	}
+	if out.Postal, err = normalizer.NormalizePostal(a.Postal, o); err != nil {
+		return nil, err
+	}
+	if out.Region, err = normalizer.NormalizeRegion(a.Region, o); err != nil {
+		return nil, err
+	}
+
+	// The standard (p.22) says each general delivery record SHOULD carry the
+	// -9999 add-on. Filling in a bare five digit ZIP completes what the
+	// address already has; an existing ZIP+4 is left alone, and an address
+	// with no ZIP at all stays ZIP-less — this does not invent a ZIP.
+	if bareZip5.MatchString(out.Postal) {
+		out.Postal += "-9999"
+	}
+
+	return &out, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/generaldelivery"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
@@ -542,6 +543,34 @@ func TestNormalizerNormalizesPOBoxStreetName(t *testing.T) {
 	}
 	if want := "PO BOX 8755"; got.FormatStreetLine() != want {
 		t.Fatalf("FormatStreetLine = %q, want %q", got.FormatStreetLine(), want)
+	}
+}
+
+// TestNormalizerDispatchesToGeneralDeliveryNormalize proves Normalizer.Normalize
+// defers to GeneralDeliveryAddress's own Normalize via the
+// NormalizingAddressType interface (go-projectusat#138), end to end: the
+// abbreviated street line comes back spelled out and a bare five digit ZIP
+// gets the -9999 add-on the standard asks a general delivery record to carry
+// (p.22). This is the go-projectusat side of the fix Aaron redirected away
+// from addressparsers PR#32.
+func TestNormalizerDispatchesToGeneralDeliveryNormalize(t *testing.T) {
+	in := &address.Address{
+		Type:       &generaldelivery.GeneralDeliveryAddress{},
+		StreetName: "GEN DEL",
+		Postal:     "33602",
+	}
+	got, err := normalizer.NewContentNomalizer().Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.Type != in.Type {
+		t.Fatalf("Normalize dropped Type: got %v, want %T", got.Type, in.Type)
+	}
+	if got.StreetName != "GENERAL DELIVERY" {
+		t.Fatalf("StreetName = %q, want %q", got.StreetName, "GENERAL DELIVERY")
+	}
+	if got.Postal != "33602-9999" {
+		t.Fatalf("Postal = %q, want %q", got.Postal, "33602-9999")
 	}
 }
 
