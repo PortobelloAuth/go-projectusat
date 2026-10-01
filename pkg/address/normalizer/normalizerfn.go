@@ -477,8 +477,14 @@ func AbbreviateRegionInStreetNameFn(sn string, o AddressNormalizationOptions) (s
 				snp = regioninfo.Short
 				changed = true
 
-				// jump to j so we don't re-replace what we just replaced
-				i = j
+				// jump to j - 1 so we don't re-replace what we just
+				// replaced, and so the loop's own i++ lands on the part
+				// after the phrase rather than past it. Jumping to j
+				// dropped the part following a one-word region: ALTS DE
+				// CANA replaced DE at i=1, j=2, and CANA was never
+				// appended. ExpandDirectionalsInStreetNameFn below steps
+				// the same way.
+				i = j - 1
 				break
 			}
 		}

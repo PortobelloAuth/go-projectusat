@@ -715,3 +715,44 @@ func TestContentNormalizerSpellsOutCityAbbreviationHeadingAStreetName(t *testing
 		t.Errorf("StreetName = %q, want no SAINT in it (ST here is the suffix word)", got.StreetName)
 	}
 }
+
+// go-projectusat#149: abbreviating a region word inside a street name must
+// not swallow the word after it. The spec's p.29 Puerto Rico example ALTS DE
+// CANA was truncated to ALTS DE, because DE matched Delaware at i=1, j=2 and
+// the loop resumed past CANA instead of at it. A multi-word region still
+// consumes exactly its own words.
+func TestContentNormalizerKeepsTheWordAfterAnAbbreviatedRegion(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, tc := range []struct {
+		streetName string
+		want       string
+	}{
+		{"ALTS DE CANA", "ALTS DE CANA"},
+		{"OLD NEW YORK ROAD", "OLD NY ROAD"},
+		{"NEW YORK", "NEW YORK"}, // whole name is a region, left spelled out
+	} {
+		got, err := n.Normalize(&address.Address{PrimaryNumber: "1", StreetName: tc.streetName, City: "Toledo", Region: "OH", Postal: "43601"})
+		if err != nil {
+			t.Fatalf("Normalize(streetName=%q): unexpected error: %v", tc.streetName, err)
+		}
+		if got.StreetName != tc.want {
+			t.Errorf("StreetName for %q = %q, want %q", tc.streetName, got.StreetName, tc.want)
+		}
+	}
+
+	// The same name on a Puerto Rico address, which composes its own street
+	// name chain around the shared region step.
+	got, err := n.Normalize(&address.Address{
+		Type:       &puertorico.PuertoRicoAddress{},
+		StreetName: "ALTS DE CANA",
+		City:       "San Juan",
+		Region:     "PR",
+		Postal:     "00907",
+	})
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	if got.StreetName != "ALTS DE CANA" {
+		t.Errorf("StreetName = %q, want ALTS DE CANA", got.StreetName)
+	}
+}
