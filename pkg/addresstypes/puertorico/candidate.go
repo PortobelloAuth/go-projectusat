@@ -29,6 +29,8 @@ var whitespace = regexp.MustCompile(`\s+`)
 // street line.
 type PuertoRicoAddress struct{}
 
+func (o *PuertoRicoAddress) IsCivicAddressType() bool { return true }
+
 // FormatStreetLine renders "A17 CALLE AMAPOLA", or "1 COND MIRAFLOR APT 104"
 // where a secondary designator follows the name.
 //

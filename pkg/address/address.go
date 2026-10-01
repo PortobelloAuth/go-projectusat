@@ -17,6 +17,11 @@ type AddressType interface {
 	FormatStreetLine(a *Address) string
 }
 
+type DataDependentAddressType interface {
+	AddressType
+	IsCivicAddressType() bool
+}
+
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
 //
