@@ -391,7 +391,6 @@ func OnlySingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (str
 func PrefixAndSingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
 	// - “suffix-first” single letter preference (AVENUE D)
 	parts := strings.Split(sn, " ")
-	fmt.Printf("PrefixAndSingleLetterStreetNameFn(%s) %v\n", sn, parts)
 	if len(parts) == 2 && len(parts[1]) == 1 {
 		fullprefix, err := streetsuffixes.NormalizeStreetSuffix(parts[0])
 		if err == nil {
@@ -513,7 +512,6 @@ func ExpandDirectionalsInStreetNameFn(sn string, o AddressNormalizationOptions) 
 		for j := len(parts); j > i; j-- {
 			set := parts[i:j]
 			snphrase := strings.Join(set, " ")
-			fmt.Printf("ExpandDirectionalsInStreetNameFn | Trying street name phrase %q\n", snphrase)
 
 			full, err := directionals.NormalizeDirectional(snphrase)
 			if err == nil && len(full) > 0 {
