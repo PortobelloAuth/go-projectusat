@@ -441,15 +441,6 @@ func ExpandStreetTypeInStreetNameFn(sn string, o AddressNormalizationOptions) (s
 	parts := strings.Split(sn, " ")
 	changed := false
 	for i, snp := range parts {
-		if i == len(parts)-1 {
-			// Don't expand a suffix that is the last element of the street name
-			// because it might have been absorbed?!?!?
-			// TODO: this is implemented strictly to satify a test case that may have been errantly
-			// added. It is quite possible to have a street suffix as the last element of a street
-			// name in an address that _also_ has a street suffix. This clause will prevent it from
-			// being expanded as it should be.
-			continue
-		}
 		fullsuffix, err := streetsuffixes.NormalizeStreetSuffix(snp)
 		if err == nil {
 			parts[i] = fullsuffix
