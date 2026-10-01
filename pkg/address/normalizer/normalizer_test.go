@@ -699,8 +699,8 @@ func TestContentNormalizerSpellsOutCityAbbreviationHeadingAStreetName(t *testing
 	if err != nil {
 		t.Fatalf("Normalize: unexpected error: %v", err)
 	}
-	if got.StreetName != "MAIN ST" {
-		t.Errorf("StreetName = %q, want MAIN ST (trailing ST must not expand)", got.StreetName)
+	if got.StreetName != "MAIN STREET" {
+		t.Errorf("StreetName = %q, want MAIN STREET (trailing ST must not expand as SAINT)", got.StreetName)
 	}
 
 	// And a ST inside the name with words after it is still the suffix word,
