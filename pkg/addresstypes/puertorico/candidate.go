@@ -217,6 +217,10 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 		return nil, fmt.Errorf("address is not a *PuertoRicoAddress")
 	}
 
+	if !UsePRDialect(a.Region, a.Postal) {
+		return nil, fmt.Errorf("Not a Puerto Rico address")
+	}
+
 	// The type is how the address formats; normalizing the fields does not
 	// change which kind of address they make.
 	out := a.Clone()
@@ -224,9 +228,6 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 	var err error
 	if out, err = normalizePRAddressFn(out, o); err != nil {
 		return nil, err
-	}
-	if !UsePRDialect(out.Region, out.Postal) {
-		return nil, fmt.Errorf("Not a Puerto Rico address")
 	}
 
 	// TODO: Make sure that the result of normalizing the street name and the primary number is a
