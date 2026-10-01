@@ -312,106 +312,256 @@ func NormalizeCountryFn(a *address.Address, o AddressNormalizationOptions) (*add
 	return a, nil
 }
 
-func NormalizeStreetName(streetname string, o AddressNormalizationOptions) (string, error) {
-	// TODO: refactor NormalizeStreetName in to composable functions
-	sn, err := textutil.FreeTextField(streetname, o.DiacriticMode)
+// Steps for street name normalization
+// - uppercase
+// - diacritic fold
+// - UNKNOWN removal
+// - excess whitespace removal
+// - early return for empty street name (after whitespace & unknown removal)
+// - single-word region replacement (prefers full state names)
+// - early return for single letter street name
+// - single word directional abbreviation expansion (within street name, not directional fields)
+// - street suffix expansion (within street name, not street suffix field)
+// - “suffix-first” single letter preference (AVENUE D)
+// - directional abbreviation expansion (within street name, not directional fields)
+// - region name abbreviation (when other words are also present)
+// - city name expansion (Saint, Sainte, Fort, Mount)
+// - street suffix expansion (within street name, not street suffix field)
+// - highway street name normalization
+
+type StringNormalizationFn func(sn string, o AddressNormalizationOptions) (string, error)
+type StreetNameNormalizationFn StringNormalizationFn
+
+func ComposeStreetNameNormalizationFn(fns ...StreetNameNormalizationFn) StreetNameNormalizationFn {
+	return func(sn string, o AddressNormalizationOptions) (string, error) {
+		out := sn[:]
+		var err error
+		for _, fn := range fns {
+			out, err = fn(out, o)
+			if err != nil {
+				if !errors.Is(err, Done) {
+					return "", err
+				}
+				return out, nil
+			}
+		}
+
+		return out, nil
+	}
+}
+
+func NormalizeTextFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - uppercase
+	// - diacritic fold
+	// - UNKNOWN removal
+	// - excess whitespace removal
+
+	out, err := textutil.FreeTextField(sn, o.DiacriticMode)
 	if err != nil {
-		return "", fmt.Errorf("street name: %w", err)
+		return "", err
 	}
 
-	if sn != "" {
-		// if street name has only 1 word, run it through the streetsuffix normalizer;
-		// a directional street name is spelled out (NORTH AVE), as one inside a
-		// longer name is below. A single letter is left as written instead: it
-		// may be an alphabet indicator (1000 G ST, 100 E ST), and the standard says
-		// directional letters SHOULD NOT be combined with alphabet indicators
-		// (p.17). Anything longer is a spelled-out or abbreviated direction,
-		// never an alphabet indicator, and is spelled out (p.18: BAY WEST DRIVE).
-		snparts := whitespace.Split(sn, -1)
-		if snparts[0] == sn {
-			if len(sn) == 1 {
-				if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
-					sn = ss
-				}
-			} else if full, err := directionals.NormalizeDirectional(sn); err == nil {
-				sn = full
-			} else if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
-				sn = ss
-			}
-		} else {
-			for i, snp := range snparts {
-				// A one-letter final part that follows a street suffix word is
-				// an alphabet indicator (AVENUE E), not a direction, and stays
-				// as written (p.17). BAY W, where the preceding word is not a
-				// suffix, is still a direction and is spelled out (p.18).
-				if i == len(snparts)-1 && len(snp) == 1 && IsStreetSuffix(snparts[i-1]) {
-					continue
-				}
-
-				// directionals left in the street name should be the full text
-				full, err := directionals.NormalizeDirectional(snp)
-				if err == nil {
-					// replace the part
-					snparts[i] = full
-				}
-
-				if i < len(snparts)-1 {
-					// state names in the street name should be full text if there are not
-					// other, non-suffix elements in the street name.
-					regioninfo, _ := region.Info(snp, false)
-					if regioninfo != nil && regioninfo.PossibleStreetName {
-						if i == 0 && len(snparts) <= 2 {
-							// replace the part with the full state name
-							snparts[i] = regioninfo.Primary
-						} else {
-							snparts[i] = regioninfo.Short
-						}
-						continue
-					}
-
-					// ST/STE/MT/FT heading the name is read as
-					// SAINT/SAINTE/MOUNT/FORT from the city table
-					// (addresstables/cityabbreviations), not as the STREET
-					// suffix word: no street is named STREET CLAIR, and
-					// SAINT CLAIR is common (#114). This is checked ahead of
-					// the suffix table so it wins the collision.
-					//
-					// Only at the head. The table's position rule — spelled
-					// out when another word follows — is a rule about city
-					// names, where ST can only be SAINT. Inside a street name
-					// a word follows it routinely without that being true:
-					// MAIN THING ST NORTH EAST is a suffix and a trailing
-					// direction, not a saint.
-					// And only where a word that is not a direction follows
-					// it. SAINT CLAIR is a name; SAINT NORTHWEST is not
-					// anything, and a name of nothing but ST and a direction
-					// is a suffix that was absorbed into the name rather than
-					// a saint — E ST NW in Washington is read that way by a
-					// parser that puts the direction in the name.
-					if i == 0 && !OnlyDirectionsFollow(snparts) {
-						if full, err := cityabbreviations.Expand(snp); err == nil {
-							snparts[i] = full
-							continue
-						}
-					}
-
-					if fullss, err := streetsuffixes.NormalizeStreetSuffix(snp); err == nil {
-						snparts[i] = fullss
-					}
-				}
-			}
-			sn = strings.Join(snparts, " ")
-		}
-
-		// Highway forms normalize. An error means the name is not a highway, which
-		// is the ordinary case, so the already uppercased and collapsed name stands.
-		hw, err := highways.NormalizeStreetName(sn)
-		if err == nil {
-			return hw, nil
-		}
+	// - early return for empty street name (after whitespace & unknown removal)
+	if out == "" {
+		return "", Done
 	}
+	return out, nil
+}
+
+func OnlyRegionStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - single-word region replacement (prefers full state names)
+	regioninfo, _ := region.Info(sn, false)
+	if regioninfo != nil && regioninfo.PossibleStreetName {
+		// If we substitute the whole street name with the full region name, we're done
+		return regioninfo.Primary, Done
+	}
+
 	return sn, nil
 }
+
+func OnlySingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - early return for single letter street name
+	if len(sn) == 1 {
+		return sn, Done
+	}
+
+	return sn, nil
+}
+
+func PrefixAndSingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - “suffix-first” single letter preference (AVENUE D)
+	parts := strings.Split(sn, " ")
+	fmt.Printf("PrefixAndSingleLetterStreetNameFn(%s) %v\n", sn, parts)
+	if len(parts) == 2 && len(parts[1]) == 1 {
+		fullprefix, err := streetsuffixes.NormalizeStreetSuffix(parts[0])
+		if err == nil {
+			return fmt.Sprintf("%s %s", strings.ToUpper(fullprefix), parts[1]), Done
+		}
+	}
+
+	return sn, nil
+}
+
+func ExpandCityInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - city name expansion (Saint, Sainte, Fort, Mount)
+	parts := strings.Split(sn, " ")
+
+	// ST/STE/MT/FT heading the name is read as
+	// SAINT/SAINTE/MOUNT/FORT from the city table
+	// (addresstables/cityabbreviations), not as the STREET
+	// suffix word: no street is named STREET CLAIR, and
+	// SAINT CLAIR is common (#114). This is checked ahead of
+	// the suffix table so it wins the collision.
+	//
+	// Only at the head. The table's position rule — spelled
+	// out when another word follows — is a rule about city
+	// names, where ST can only be SAINT. Inside a street name
+	// a word follows it routinely without that being true:
+	// MAIN THING ST NORTH EAST is a suffix and a trailing
+	// direction, not a saint.
+	// And only where a word that is not a direction follows
+	// it. SAINT CLAIR is a name; SAINT NORTHWEST is not
+	// anything, and a name of nothing but ST and a direction
+	// is a suffix that was absorbed into the name rather than
+	// a saint — E ST NW in Washington is read that way by a
+	// parser that puts the direction in the name.
+	// TODO: adjust this hueristic is to allow MT ST HELENS ST to become
+	// MOUNT SAINT HELENS ST
+	if !OnlyDirectionsFollow(parts) {
+		if full, err := cityabbreviations.Expand(parts[0]); err == nil {
+			parts[0] = full
+			return strings.Join(parts, " "), nil
+		}
+	}
+
+	return sn, nil
+}
+
+func ExpandStreetTypeInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - street suffix expansion (within street name, not street suffix field)
+	parts := strings.Split(sn, " ")
+	changed := false
+	for i, snp := range parts {
+		if i == len(parts)-1 {
+			// Don't expand a suffix that is the last element of the street name
+			// because it might have been absorbed?!?!?
+			// TODO: this is implemented strictly to satify a test case that may have been errantly
+			// added. It is quite possible to have a street suffix as the last element of a street
+			// name in an address that _also_ has a street suffix. This clause will prevent it from
+			// being expanded as it should be.
+			continue
+		}
+		fullsuffix, err := streetsuffixes.NormalizeStreetSuffix(snp)
+		if err == nil {
+			parts[i] = fullsuffix
+			changed = true
+		}
+	}
+
+	if changed {
+		return strings.Join(parts, " "), nil
+	}
+
+	return sn, nil
+}
+
+func AbbreviateRegionInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - region name abbreviation (when other words are also present)
+	regioninfo, _ := region.Info(sn, false)
+	if regioninfo != nil && regioninfo.PossibleStreetName {
+		// If the whole street name is substitutable with the full region name, we should not abbreviate it
+		return sn, nil
+	}
+
+	parts := strings.Split(sn, " ")
+	newparts := make([]string, 0)
+	changed := false
+	for i := 0; i < len(parts); i++ {
+		snp := parts[i]
+		for j := len(parts); j > i; j-- {
+			set := parts[i:j]
+			snphrase := strings.Join(set, " ")
+
+			regioninfo, _ := region.Info(snphrase, false)
+			if regioninfo != nil && regioninfo.PossibleStreetName {
+				snp = regioninfo.Short
+				changed = true
+
+				// jump to j so we don't re-replace what we just replaced
+				i = j
+				break
+			}
+		}
+		newparts = append(newparts, snp)
+	}
+
+	if changed {
+		return strings.Join(newparts, " "), nil
+	}
+
+	return sn, nil
+}
+
+func ExpandDirectionalsInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - single word directional abbreviation expansion (within street name, not directional fields)
+	// - directional abbreviation expansion (within street name, not directional fields)
+	parts := strings.Split(sn, " ")
+	newparts := make([]string, 0)
+	changed := false
+	for i := 0; i < len(parts); i++ {
+		snp := parts[i]
+		for j := len(parts); j > i; j-- {
+			set := parts[i:j]
+			snphrase := strings.Join(set, " ")
+			fmt.Printf("ExpandDirectionalsInStreetNameFn | Trying street name phrase %q\n", snphrase)
+
+			full, err := directionals.NormalizeDirectional(snphrase)
+			if err == nil && len(full) > 0 {
+				snp = full
+				changed = true
+
+				// jump to j - 1 so we don't re-replace what we just replaced
+				i = j - 1
+				break
+			}
+		}
+		newparts = append(newparts, snp)
+	}
+
+	if changed {
+		return strings.Join(newparts, " "), nil
+	}
+
+	return sn, nil
+}
+
+func NormailzeHighwayStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+	// - highway street name normalization
+	// An error means the name is not a highway, which is common.
+	hw, err := highways.NormalizeStreetName(sn)
+	if err == nil {
+		// highway normalization takes the whole street name and handles it - including abbreviating
+		// state and region names. No further normalization should be required.
+		return hw, Done
+	}
+
+	return sn, nil
+}
+
+var NormalizeStreetName = ComposeStreetNameNormalizationFn(
+	NormalizeTextFn,
+	OnlySingleLetterStreetNameFn,
+	PrefixAndSingleLetterStreetNameFn,
+	OnlyRegionStreetNameFn,
+	NormailzeHighwayStreetNameFn,
+
+	ExpandDirectionalsInStreetNameFn,
+	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
+	// converted to NORTHEAST
+	AbbreviateRegionInStreetNameFn,
+	ExpandCityInStreetNameFn,
+	ExpandStreetTypeInStreetNameFn,
+)
 
 // Support functions for NormalizeStreetName()
 
