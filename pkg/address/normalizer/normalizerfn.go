@@ -533,7 +533,7 @@ func ExpandDirectionalsInStreetNameFn(sn string, o AddressNormalizationOptions) 
 	return sn, nil
 }
 
-func NormailzeHighwayStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func NormalizeHighwayStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
 	// - highway street name normalization
 	// An error means the name is not a highway, which is common.
 	hw, err := highways.NormalizeStreetName(sn)
@@ -551,7 +551,7 @@ var NormalizeStreetName = ComposeStreetNameNormalizationFn(
 	OnlySingleLetterStreetNameFn,
 	PrefixAndSingleLetterStreetNameFn,
 	OnlyRegionStreetNameFn,
-	NormailzeHighwayStreetNameFn,
+	NormalizeHighwayStreetNameFn,
 
 	ExpandDirectionalsInStreetNameFn,
 	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get

@@ -10,13 +10,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico/ruralroute"
-	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
-	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
-	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
-	"github.com/PortobelloAuth/go-projectusat/pkg/region"
-	"github.com/PortobelloAuth/go-projectusat/pkg/streetsuffixes"
-	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 var whitespace = regexp.MustCompile(`\s+`)
@@ -50,126 +44,56 @@ func (p *PuertoRicoAddress) FormatStreetLine(a *address.Address) string {
 	return ordinary.FormatStreetLine()
 }
 
-func normalizePRStreetName(streetname string, o normalizer.AddressNormalizationOptions) (string, error) {
-	sn, err := textutil.FreeTextField(streetname, o.DiacriticMode)
-	if err != nil {
-		return "", fmt.Errorf("puertorico street name: %w", err)
-	}
-
-	if sn == "" {
-		return "", nil
-	}
-
-	regioninfo, _ := region.Info(sn, false)
-	if regioninfo != nil && regioninfo.PossibleStreetName {
-		// if a region is the whole street name, replace it with the full state name
-		return regioninfo.Primary, nil
-	}
-
-	// if street name has only 1 word, run it through the streetsuffix normalizer;
-	// a directional street name is spelled out (NORTH AVE), as one inside a
-	// longer name is below. A single letter is left as written instead: it
-	// may be an alphabet indicator (1000 G ST, 100 E ST), and the standard says
-	// directional letters SHOULD NOT be combined with alphabet indicators
-	// (p.17). Anything longer is a spelled-out or abbreviated direction,
-	// never an alphabet indicator, and is spelled out (p.18: BAY WEST DRIVE).
-	snparts := whitespace.Split(sn, -1)
-	if snparts[0] == sn {
-		if len(sn) > 1 {
-			// Single letter street names are probably alphabetical(?)
-			// TODO: figure out a better way to differentiate E ST from EAST ST
-			// (or at least to make sure we check the zip/city street data.)
-			if full, err := directionals.NormalizeDirectional(sn); err == nil {
-				return full, nil
-			}
-		}
-
-		if ss, err := streetsuffixes.NormalizeStreetSuffix(sn); err == nil {
-			return ss, nil
-		}
-		// TODO: figure out if we actually need to also substitute via highways.NormalizeStreetName()
-		return sn, nil
-	}
-
-	for i, snp := range snparts {
-		// A one-letter final part that follows a street suffix word is
-		// an alphabet indicator (AVENUE E), not a direction, and stays
-		// as written (p.17). BAY W, where the preceding word is not a
-		// suffix, is still a direction and is spelled out (p.18).
-		if i == len(snparts)-1 && len(snp) == 1 && normalizer.IsStreetSuffix(snparts[i-1]) {
-			continue
-		}
-
-		// directionals left in the street name should be the full text
-		full, err := directionals.NormalizeDirectional(snp)
+func PrefixAndSingleLetterStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
+	// - “suffix-first” single letter preference (AVENIDA D, CALLE C)
+	parts := strings.Split(sn, " ")
+	if len(parts) == 2 && len(parts[1]) == 1 {
+		fullprefix, err := NormalizeStreetType(parts[0])
 		if err == nil {
-			// replace the part
-			snparts[i] = full
+			return fmt.Sprintf("%s %s", strings.ToUpper(fullprefix), parts[1]), normalizer.Done
 		}
-
-		if i < len(snparts)-1 {
-			// state names in the street name should only be full text if there are not
-			// other, non-suffix elements in the street name. We took care of that
-			// earlier, so we substitute the abbreviation instead.
-			// TODO: fix this to support multi-word region names or abbreviations
-			regioninfo, _ := region.Info(snp, false)
-			if regioninfo != nil && regioninfo.PossibleStreetName {
-				snparts[i] = regioninfo.Short
-				continue
-			}
-
-			// ST/STE/MT/FT heading the name is read as
-			// SAINT/SAINTE/MOUNT/FORT from the city table
-			// (addresstables/cityabbreviations), not as the STREET
-			// suffix word: no street is named STREET CLAIR, and
-			// SAINT CLAIR is common (#114). This is checked ahead of
-			// the suffix table so it wins the collision.
-			//
-			// Only at the head. The table's position rule — spelled
-			// out when another word follows — is a rule about city
-			// names, where ST can only be SAINT. Inside a street name
-			// a word follows it routinely without that being true:
-			// MAIN THING ST NORTH EAST is a suffix and a trailing
-			// direction, not a saint.
-			// And only where a word that is not a direction follows
-			// it. SAINT CLAIR is a name; SAINT NORTHWEST is not
-			// anything, and a name of nothing but ST and a direction
-			// is a suffix that was absorbed into the name rather than
-			// a saint — E ST NW in Washington is read that way by a
-			// parser that puts the direction in the name.
-			if i == 0 && !normalizer.OnlyDirectionsFollow(snparts) {
-				if full, err := cityabbreviations.Expand(snp); err == nil {
-					snparts[i] = full
-					continue
-				}
-			}
-
-			// Street suffixes left inside the street name should be the full text
-			// Only replace street suffix abreviations if we have not already
-			// replaced this index with a state / region. A Puerto Rico address
-			// uses its own Spanish vocabulary instead of the more general one (see
-			// go-projectusat#95).
-			if pr, err := NormalizeStreetType(snp); err == nil {
-				snparts[i] = pr
-			}
-		}
-	}
-	sn = strings.Join(snparts, " ")
-
-	// Highway forms normalize. An error means the name is not a highway, which
-	// is the ordinary case, so the already uppercased and collapsed name stands.
-	hw, err := highways.NormalizeStreetName(sn)
-	if err == nil {
-		return hw, nil
 	}
 
 	return sn, nil
 }
 
+func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
+	// - street suffix expansion (within street name, not street suffix field)
+	parts := strings.Split(sn, " ")
+	changed := false
+	for i, snp := range parts {
+		fullsuffix, err := NormalizeStreetType(snp)
+		if err == nil {
+			parts[i] = fullsuffix
+			changed = true
+		}
+	}
+
+	if changed {
+		return strings.Join(parts, " "), nil
+	}
+
+	return sn, nil
+}
+
+var NormalizePuertoRicoStreetName = normalizer.ComposeStreetNameNormalizationFn(
+	normalizer.NormalizeTextFn,
+	normalizer.OnlySingleLetterStreetNameFn,
+	PrefixAndSingleLetterStreetNameFn,
+	normalizer.OnlyRegionStreetNameFn,
+	normalizer.NormalizeHighwayStreetNameFn,
+
+	normalizer.ExpandDirectionalsInStreetNameFn,
+	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
+	// converted to NORTHEAST
+	normalizer.AbbreviateRegionInStreetNameFn,
+	normalizer.ExpandCityInStreetNameFn,
+	ExpandPuertoRicoStreetTypeInStreetNameFn,
+)
+
 func normalizePRStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
-		// TODO: break NormalizeStreetName up in to composable
-		out, err := normalizePRStreetName(a.StreetName, o)
+		out, err := NormalizePuertoRicoStreetName(a.StreetName, o)
 		if err != nil {
 			return nil, err
 		}
