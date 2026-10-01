@@ -51,3 +51,5 @@ func (o *OrdinaryStreetAddress) FormatStreetLine(a *address.Address) string {
 
 	return ordinary.FormatStreetLine()
 }
+
+func (o *OrdinaryStreetAddress) IsCivicAddressType() bool { return true }

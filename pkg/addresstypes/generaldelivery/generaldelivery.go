@@ -167,31 +167,10 @@ func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizer.Addr
 		return nil, fmt.Errorf("address is not a *GeneralDeliveryAddress")
 	}
 
-	out := address.Address{Type: a.Type}
+	out := a.Clone()
 
 	var err error
-	if out.StreetName, err = Normalize(a.StreetName); err != nil {
-		return nil, err
-	}
-	if out.BusinessName, err = normalizer.NormalizeBusinessName(a.BusinessName, o); err != nil {
-		return nil, err
-	}
-	if out.Area, err = normalizer.NormalizeArea(a.Area, o); err != nil {
-		return nil, err
-	}
-	if out.Detail, err = normalizer.NormalizeDetail(a.Detail, o); err != nil {
-		return nil, err
-	}
-	if out.City, err = normalizer.NormalizeCity(a.City, o); err != nil {
-		return nil, err
-	}
-	if out.Country, err = normalizer.NormalizeCountry(a.Country, o); err != nil {
-		return nil, err
-	}
-	if out.Postal, err = normalizer.NormalizePostal(a.Postal, o); err != nil {
-		return nil, err
-	}
-	if out.Region, err = normalizer.NormalizeRegion(a.Region, o); err != nil {
+	if out, err = normalizeGeneralDeliveryAddressFn(out, o); err != nil {
 		return nil, err
 	}
 
@@ -203,5 +182,24 @@ func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizer.Addr
 		out.Postal += "-9999"
 	}
 
-	return &out, nil
+	// TODO: ensure other values are zero values
+
+	return out, nil
 }
+
+func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+	if len(a.StreetName) > 0 {
+		out, err := Normalize(a.StreetName)
+		if err != nil {
+			return nil, err
+		}
+		a.StreetName = out
+	}
+	return a, nil
+}
+
+var normalizeGeneralDeliveryAddressFn = normalizer.ComposeNormalizationFn(
+	normalizer.NormalizeLastLine,
+	normalizer.NormalizeOtherParts,
+	normalizeGeneralDeliveryStreetNameFn,
+)
