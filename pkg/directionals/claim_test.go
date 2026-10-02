@@ -66,6 +66,22 @@ func TestClaims(t *testing.T) {
 			},
 		},
 		{
+			name: "compound direction with punctuation to remove",
+			in:   "SOUTH-WEST",
+			want: []reading{
+				{"SOUTH-WEST", claim.PartPredirectional, claim.ConfidenceStrong, "SW"},
+				{"SOUTH-WEST", claim.PartPostdirectional, claim.ConfidenceStrong, "SW"},
+			},
+		},
+		{
+			name: "compound direction with punctuation to remove",
+			in:   "N/W",
+			want: []reading{
+				{"N/W", claim.PartPredirectional, claim.ConfidenceExact, "NW"},
+				{"N/W", claim.PartPostdirectional, claim.ConfidenceExact, "NW"},
+			},
+		},
+		{
 			// The compound reading and the two separate readings are both
 			// offered. The compound ranks lower: the standard spells it as one
 			// word, so two tokens is the less expected form.

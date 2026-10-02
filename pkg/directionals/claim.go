@@ -111,7 +111,11 @@ func abbreviateSpan(tokens []token.Token) (string, bool) {
 func spanConfidence(tokens []token.Token) claim.Confidence {
 	spelledOut := false
 	for _, t := range tokens {
-		if _, isFullWord := directionMap[strings.ToUpper(t.Text)]; isFullWord {
+		clean := textutil.StripPunctuation(t.Text, textutil.StripOptions{
+			KeepHyphen: false,
+			KeepSlash:  false,
+		})
+		if _, isFullWord := directionMap[strings.ToUpper(clean)]; isFullWord {
 			spelledOut = true
 		}
 	}
