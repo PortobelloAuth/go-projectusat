@@ -78,7 +78,11 @@ var puertoRico = []specExample{
 	{25, "VISTA SUITES III APT 104", "3 VISTA SUITES APT 104"},
 	// Puerto Rico: house number before the street name
 	{26, "CALLE 1 A17", "A17 CALLE 1"},
-	{26, "CALLE 191 B113", "13 CALLE 191"},
+	// NOTE: the Project US@ spec example says the correct form is "13 CALLE 191",
+	// but provides no indication of why the "B1" should be removed.
+	// https://pe.usps.com/text/pub28/pub28c2_045.htm corrects the example to
+	// "B113 CALLE 191" as shown here.
+	{26, "CALLE 191 B113", "B113 CALLE 191"},
 	{27, "CALLE 125 C-19", "C19 CALLE 125"},
 	{27, "A-17 CALLE AMAPOLA", "A17 CALLE AMAPOLA"},
 	{27, "B-17A CALLE 1", "B17A CALLE 1"},
