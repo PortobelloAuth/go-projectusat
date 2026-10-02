@@ -409,6 +409,38 @@ func TestACountryOnItsOwnLineDoesNotHideTheCity(t *testing.T) {
 	}
 }
 
+// A postal code on its own line makes the last line two physical lines, the
+// same way a country on its own line does: the city and region are on the line
+// above. Anchoring the city to the postal's line left it nothing ahead of the
+// region to read, so no complete reading was offered and the parser dropped the
+// street lines along with it (go-projectusat#157).
+func TestAPostalCodeOnItsOwnLineDoesNotHideTheCity(t *testing.T) {
+	_, lines := read("12 MAIN ST\nKRYTON,TN\n38188-0002")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	if best.Claim.Confidence != claim.ConfidenceExact {
+		t.Errorf("best reading is %d, want ConfidenceExact", best.Claim.Confidence)
+	}
+
+	for part, want := range map[claim.Part]string{
+		claim.PartCity:   "KRYTON",
+		claim.PartRegion: "TN",
+		claim.PartPostal: "38188-0002",
+	} {
+		got, ok := valueOf(best, part)
+		if !ok {
+			t.Errorf("best reading assigns no %s", part)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s = %q, want %q", part, got, want)
+		}
+	}
+}
+
 // Candidate assigns each claim part to the field of the same name, so a part
 // added to claim.Part without a case in assign fails here rather than being
 // silently dropped from every address that carries it. See assign: claim.Part

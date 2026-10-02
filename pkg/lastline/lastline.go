@@ -158,8 +158,13 @@ func LineClaims(tokens []token.Token, claims []claim.Claim) []LineClaim {
 			for _, region := range byPartEndingAt(claims, claim.PartRegion, postalStart) {
 				regionStart := claims[region.index].Start()
 
+				// A postal code on a line of its own makes the last line two
+				// physical lines, and the city sits on the line the region
+				// does, not the postal's.
+				cityLine := min(lineStart, startOfLineContaining(tokens, regionStart))
+
 				lines = append(lines, cityReadings(tokens, claims, patternCityRegionPostal,
-					lineStart, regionStart, []indexedClaim{region, postal, country})...)
+					cityLine, regionStart, []indexedClaim{region, postal, country})...)
 
 				// {Region} {Postal Code}, with no city at all. The tokens ahead
 				// of the region are not leftovers here: this reading says the
