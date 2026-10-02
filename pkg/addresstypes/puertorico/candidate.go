@@ -201,6 +201,19 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 	street, ok := streetLine(tokens, line)
 	if !ok {
+		if start, end, boundsOK := streetLineBounds(tokens, line); boundsOK {
+			if name, secondary, hasSecondary, primaryNumber, condoOK := condominiumStreetLine(tokens, claims, start, end); condoOK {
+				parts := []claim.Claim{name}
+				if hasSecondary {
+					parts = append(parts, secondary)
+				}
+
+				candidate := line.Candidate(&PuertoRicoAddress{}, len(tokens), parts)
+				candidate.Address.PrimaryNumber = primaryNumber
+				candidates = append(candidates, candidate)
+			}
+		}
+
 		return candidates
 	}
 
@@ -276,14 +289,9 @@ func isPuertoRicoLastLine(line lastline.LineClaim) bool {
 // recognizer is asked, not a preference between readings: the two shapes do
 // not overlap, so at most one of them answers.
 func streetLine(tokens []token.Token, line lastline.LineClaim) (claim.Claim, bool) {
-	end := line.Span.Start
-	if end <= 0 || end > len(tokens) {
+	start, end, ok := streetLineBounds(tokens, line)
+	if !ok {
 		return claim.Claim{}, false
-	}
-
-	start := end - 1
-	for start > 0 && tokens[start-1].Line == tokens[end-1].Line {
-		start--
 	}
 
 	text := token.Join(tokens[start:end])
@@ -317,6 +325,122 @@ func streetLine(tokens []token.Token, line lastline.LineClaim) (claim.Claim, boo
 // other way.
 func streetClaim(parts ...claim.ClaimPart) claim.Claim {
 	return claim.Claim{Confidence: claim.ConfidenceExact, Parts: parts}
+}
+
+// streetLineBounds finds the extent of the delivery line immediately above the
+// last line, the span streetLine and condominiumStreetLine both read from.
+//
+// end is where the last line begins; start walks back from there to the
+// beginning of that physical line, so a line break — where one exists — is
+// what bounds it, and its absence (a single-line address) still leaves end
+// itself as the boundary.
+func streetLineBounds(tokens []token.Token, line lastline.LineClaim) (start, end int, ok bool) {
+	end = line.Span.Start
+	if end <= 0 || end > len(tokens) {
+		return 0, 0, false
+	}
+
+	start = end - 1
+	for start > 0 && tokens[start-1].Line == tokens[end-1].Line {
+		start--
+	}
+
+	return start, end, true
+}
+
+// isSecondaryUnit reports whether a claim is a secondaryunit reading: a
+// designator, or a designator and its number, and nothing else. Mirrors
+// isUrbanization below, which does the same test for a different vocabulary's
+// part.
+func isSecondaryUnit(c claim.Claim) bool {
+	for _, p := range c.Parts {
+		if p.Part != claim.PartSecondaryDesignator && p.Part != claim.PartSecondaryNumber {
+			return false
+		}
+	}
+
+	return len(c.Parts) > 0
+}
+
+// trailingSecondaryUnit finds the secondary-unit claim sitting flush against
+// the end of a condominium street line — "APT 1120" in "COND VERDE APT 1120" —
+// so condominiumStreetLine knows where the building name ends.
+//
+// Flush against end, not merely inside [start, end), because a secondary unit
+// anywhere else in the line is not this pattern: p. 25's fallback is for a
+// line that ends in a secondary designator with nothing after it, not for one
+// that happens to contain one.
+func trailingSecondaryUnit(claims []claim.Claim, start, end int) (claim.Claim, bool) {
+	for _, c := range claims {
+		if isSecondaryUnit(c) && c.Start() >= start && c.End() == end {
+			return c, true
+		}
+	}
+
+	return claim.Claim{}, false
+}
+
+// condominiumStreetLine reads the one shape streetLine's two recognizers both
+// miss: a building name with a secondary unit but no primary address number at
+// all, such as "COND VERDE APT 1120" or "VISTA SUITES III APT 104".
+//
+// p. 25 gives two rules for this case. Where no building number exists, the
+// primary number defaults to "1" (go-projectusat#158). Where the building name
+// ends in a number — "Where there are multiple buildings (or towers) with the
+// same name, the building number SHOULD become the primary number" — that
+// number becomes the primary number instead (go-projectusat#159), and this
+// package only recognizes that building number when it is spelled as a
+// closed-vocabulary roman numeral (see romannumeral.go); an arabic building
+// number is already read by NormalizeStreetLine's ordinary shape.
+//
+// Either way the primary number is never a ClaimPart: claim.ClaimPart.Length
+// must cover at least one real token (see its doc comment), and in the "1"
+// case there is no token to attribute "1" to at all — it is pure default, not
+// a reading of anything on the line. So the caller writes it directly onto
+// the assembled *address.CandidateAddress instead of into a claim part, the
+// same way streetLine's numbered-street branch already absorbs tokens into a
+// Value without covering them with their own part (see the comment above its
+// NormalizeNumberedStreetLine branch for that precedent). That absorption
+// happens here too: when the trailing token is a roman numeral, the
+// street-name claim's Length still covers it, even though the numeral
+// contributes nothing to the Value.
+//
+// This fallback only fires when a secondary-unit claim sits flush at the end
+// of the line. A bare unrecognized line with no secondary unit at all is not
+// this pattern — that would be a much broader change than either #158 or #159
+// asked for — so ok is false whenever trailingSecondaryUnit finds nothing.
+func condominiumStreetLine(tokens []token.Token, claims []claim.Claim, start, end int) (name claim.Claim, secondary claim.Claim, hasSecondary bool, primaryNumber string, ok bool) {
+	secondary, hasSecondary = trailingSecondaryUnit(claims, start, end)
+	if !hasSecondary {
+		return claim.Claim{}, claim.Claim{}, false, "", false
+	}
+
+	leadingEnd := secondary.Start()
+	leading := tokens[start:leadingEnd]
+	if len(leading) == 0 {
+		return claim.Claim{}, claim.Claim{}, false, "", false
+	}
+
+	var nameTokens []token.Token
+	if number, numeralOK := romanNumeral(leading[len(leading)-1].Text); numeralOK {
+		nameTokens = leading[:len(leading)-1]
+		if len(nameTokens) == 0 {
+			return claim.Claim{}, claim.Claim{}, false, "", false
+		}
+		primaryNumber = number
+	} else {
+		nameTokens = leading
+		primaryNumber = "1"
+	}
+
+	name = claim.Claim{
+		Confidence: claim.ConfidenceLikely,
+		Parts: []claim.ClaimPart{
+			{Start: start, Length: leadingEnd - start, Part: claim.PartStreetName, Value: token.Join(nameTokens)},
+		},
+	}
+
+	return name, secondary, true, primaryNumber, true
 }
 
 // isUrbanization reports whether a claim is the urbanization line this package

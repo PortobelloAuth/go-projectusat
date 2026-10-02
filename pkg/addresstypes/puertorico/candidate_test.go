@@ -184,6 +184,52 @@ func TestANumberedStreetPutsItsHouseNumberFirst(t *testing.T) {
 	}
 }
 
+// p. 25's fallback for a condominium line with no primary address number at
+// all: the primary number defaults to "1" (#158), or, where the building name
+// ends in a roman numeral building number, that number is promoted to the
+// primary number and converted to arabic (#159). Both are the issues' own
+// examples.
+func TestCondominiumLineSynthesizesAPrimaryNumber(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		source string
+		street string
+	}{
+		{
+			"no building number defaults to 1",
+			"COND VERDE APT 1120\nSAN JUAN PR 00907",
+			"1 COND VERDE APT 1120",
+		},
+		{
+			"trailing roman numeral becomes the primary number",
+			"VISTA SUITES III APT 104\nSAN JUAN PR 00907",
+			"3 VISTA SUITES APT 104",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, ok := street(t, c.source)
+			if !ok {
+				t.Fatal("no reading")
+			}
+			if got != c.street {
+				t.Errorf("street line = %q, want %q", got, c.street)
+			}
+		})
+	}
+}
+
+// Without a secondary-unit claim sitting flush at the end of the line, the
+// condominium fallback must not fire: an unrecognized line is still just
+// unrecognized, not an invitation to default a primary number onto any random
+// text. This is the same shape TestTheStandardsPuertoRicoAddress and
+// TestANumberedStreetPutsItsHouseNumberFirst already read correctly; this
+// checks the negative space around #158/#159 specifically.
+func TestNoSecondaryUnitMeansNoCondominiumFallback(t *testing.T) {
+	if _, ok := street(t, "SOME UNRECOGNIZABLE WORDS HERE\nSAN JUAN PR 00907"); ok {
+		t.Error("a line with no secondary unit and no primary number was read anyway")
+	}
+}
+
 // Every candidate names this package as the address type, which is how the
 // parser tells one type's reading from another's.
 func TestEveryCandidateNamesThisAddressType(t *testing.T) {
