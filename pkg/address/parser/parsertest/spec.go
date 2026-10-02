@@ -24,16 +24,28 @@ type specExample struct {
 // Puerto Rico address type these examples are not illustrating.
 var mainland = []specExample{
 	// Predirectional
-	{16, "NORTH BAY STREET", "N BAY STREET"},
+	// NOTE: the Project US@ spec example says the correct form is "N BAY STREET",
+	// but this contradicts guidance elsewhere to abbreviate street suffixes.
+	// https://pe.usps.com/text/pub28/pub28c2_014.htm corrects the example to
+	// "N BAY ST" as shown here.
+	{16, "NORTH BAY STREET", "N BAY ST"},
 	{16, "EAST END AVE", "E END AVE"},
 	// Postdirectional
-	{16, "BAY DRIVE WEST", "BAY DRIVE W"},
+	// NOTE: the Project US@ spec example says the correct form is "BAY DRIVE W",
+	// but this contradicts guidance elsewhere to abbreviate street suffixes.
+	// https://pe.usps.com/text/pub28/pub28c2_014.htm corrects the example to
+	// "BAY DR W" as shown here.
+	{16, "BAY DRIVE WEST", "BAY DR W"},
 	// Two directionals
 	{16, "NORTH E MAIN STREET", "NE MAIN ST"},
 	{16, "SOUTHEAST FREEWAY NORTH", "SOUTHEAST FWY N"},
 	{17, "COUNTY ROAD N EAST", "COUNTY ROAD NE"},
 	// Directional as part of street name
-	{17, "BAY W DRIVE", "BAY WEST DRIVE"},
+	// NOTE: the Project US@ spec example says the correct form is "BAY WEST DRIVE",
+	// but this contradicts guidance elsewhere to abbreviate street suffixes.
+	// https://pe.usps.com/text/pub28/pub28c2_014.htm corrects the example to
+	// "BAY WEST DR" as shown here.
+	{17, "BAY W DRIVE", "BAY WEST DR"},
 	{17, "NORTH AVENUE", "NORTH AVE"},
 	// Street suffix as part of the name
 	{19, "789 MAIN AVENUE DRIVE", "789 MAIN AVENUE DR"},
