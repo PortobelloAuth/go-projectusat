@@ -9,6 +9,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 // Candidates returns this package's readings of the address under the given
@@ -415,12 +416,17 @@ func nameReadings(tokens []token.Token, claims []claim.Claim, from, to int) []na
 		return corroborated
 	}
 
+	clean := textutil.StripPunctuation(token.Join(tokens[from:to]), textutil.StripOptions{
+		KeepHyphen: false,
+		KeepSlash:  false,
+	})
+
 	return []nameReading{{
 		part: claim.ClaimPart{
 			Start:  from,
 			Length: to - from,
 			Part:   claim.PartStreetName,
-			Value:  strings.ToUpper(token.Join(tokens[from:to])),
+			Value:  strings.ToUpper(clean),
 		},
 	}}
 }

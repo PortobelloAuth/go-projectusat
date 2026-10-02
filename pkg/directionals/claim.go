@@ -5,6 +5,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 // Claims returns every reading of tokens this package can support.
@@ -71,7 +72,13 @@ const maxSpan = 2
 func abbreviateSpan(tokens []token.Token) (string, bool) {
 	var combined strings.Builder
 	for _, t := range tokens {
-		abbreviation, err := AbbreviateDirectional(t.Text)
+		// There should not be any punctuation in directionals
+		clean := textutil.StripPunctuation(t.Text, textutil.StripOptions{
+			KeepHyphen: false,
+			KeepSlash:  false,
+		})
+
+		abbreviation, err := AbbreviateDirectional(clean)
 		if err != nil {
 			return "", false
 		}
