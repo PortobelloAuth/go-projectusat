@@ -551,11 +551,20 @@ var NormalizeStreetName = ComposeStreetNameNormalizationFn(
 	NormalizeHighwayStreetNameFn,
 
 	ExpandDirectionalsInStreetNameFn,
-	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
-	// converted to NORTHEAST
-	AbbreviateRegionInStreetNameFn,
+	// Both of these can turn an abbreviation they recognize back into a full
+	// word: ExpandCityInStreetNameFn reads a head-position ST/STE/MT/FT as
+	// SAINT/SAINTE/MOUNT/FORT (#114), and ExpandStreetTypeInStreetNameFn reads
+	// MT itself as the MOUNT street-suffix word. AbbreviateRegionInStreetNameFn
+	// runs after both for the same reason it already ran after
+	// ExpandDirectionalsInStreetNameFn (NEBRASKA must not become NORTHEAST):
+	// MT is also the abbreviation this step produces for MONTANA, and MONTANA
+	// TREASURE AVENUE must settle on MT TREASURE AVE rather than round-trip
+	// through either expansion back to MOUNT TREASURE AVE (#165). Letting
+	// AbbreviateRegionInStreetNameFn go last means its output is never handed
+	// to a step that might reinterpret it.
 	ExpandCityInStreetNameFn,
 	ExpandStreetTypeInStreetNameFn,
+	AbbreviateRegionInStreetNameFn,
 )
 
 // Support functions for NormalizeStreetName()

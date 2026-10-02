@@ -756,3 +756,41 @@ func TestContentNormalizerKeepsTheWordAfterAnAbbreviatedRegion(t *testing.T) {
 		t.Errorf("StreetName = %q, want ALTS DE CANA", got.StreetName)
 	}
 }
+
+// go-projectusat#165: MT is both the region abbreviation AbbreviateRegionInStreetNameFn
+// produces for MONTANA and a literal city abbreviation ExpandCityInStreetNameFn expands
+// to MOUNT. Running the city-abbreviation step before the region-abbreviation step means
+// it only ever sees a literal MT typed by the sender; the spec's p.17-style example
+// (the standard's own NE/NEBRASKA and ST/STREET collisions, p.16-17) is a MONTANA
+// street name that must stop at MT rather than round-tripping to MOUNT.
+func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, tc := range []struct {
+		streetName   string
+		streetSuffix string
+		wantName     string
+		wantSuffix   string
+	}{
+		{"MONTANA TREASURE", "AVENUE", "MT TREASURE", "AVE"},
+		// A literal MT (not derived from a region) still expands to MOUNT.
+		{"MT VERNON", "", "MOUNT VERNON", ""},
+	} {
+		got, err := n.Normalize(&address.Address{
+			PrimaryNumber: "8100",
+			StreetName:    tc.streetName,
+			StreetSuffix:  tc.streetSuffix,
+			City:          "Tampa",
+			Region:        "FL",
+			Postal:        "33602",
+		})
+		if err != nil {
+			t.Fatalf("Normalize(streetName=%q): unexpected error: %v", tc.streetName, err)
+		}
+		if got.StreetName != tc.wantName {
+			t.Errorf("StreetName for %q = %q, want %q", tc.streetName, got.StreetName, tc.wantName)
+		}
+		if got.StreetSuffix != tc.wantSuffix {
+			t.Errorf("StreetSuffix for %q = %q, want %q", tc.streetName, got.StreetSuffix, tc.wantSuffix)
+		}
+	}
+}
