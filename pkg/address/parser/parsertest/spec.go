@@ -64,7 +64,11 @@ var mainland = []specExample{
 	{22, "POST OFFICE BOX 11890", "PO BOX 11890"},
 	{22, "POST OFFICE BOX G", "PO BOX G"},
 	// Business addresses
-	{35, "BIG BUSINESS INCORPORATED\n12 EAST BUSINESS LANE, SUITE-209\nKRYTON,TN\n38188-0002", "BIG BUSINESS INC\n12 E BUSINESS LN STE 209\nKRYTON, TN 38188-0022"},
+	// NOTE: the Project US@ spec example (p. 33) gives the correct last line as
+	// "KRYTON, TN 38188-0022", which contradicts itself: the input ZIP+4 is
+	// 38188-0002, and the spec's own p. 34 example of the same address shows
+	// "KRYTON TN 38188-0002" (no comma, 0002). The p. 34 form is used here.
+	{35, "BIG BUSINESS INCORPORATED\n12 EAST BUSINESS LANE, SUITE-209\nKRYTON,TN\n38188-0002", "BIG BUSINESS INC\n12 E BUSINESS LN STE 209\nKRYTON TN 38188-0002"},
 	{35, "PIZZA DELIVERY COMPANY\n61-20 EAST RIVER DRIVE\nNEW YORK, NY 10021-0905", "PIZZA DELIVERY COMPANY\n61-20 E RIVER DR\nNEW YORK NY 10021-0905"},
 }
 

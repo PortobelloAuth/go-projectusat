@@ -221,3 +221,31 @@ func TestUnnumberedDesignatorStandsAlone(t *testing.T) {
 		})
 	}
 }
+
+// SUITE-209 is the numbered designator reading over one glued token, the same
+// shape as #234, and the values are the standard abbreviation and the number.
+func TestGluedHyphenIsOneClaim(t *testing.T) {
+	tokens := token.Tokenize("SUITE-209")
+	claims := secondaryunit.Claims(tokens)
+
+	if len(claims) != 1 || len(claims[0].Parts) != 2 {
+		t.Fatalf("expected one designator and number claim, got %+v", claims)
+	}
+	if claims[0].Start() != 0 || claims[0].End() != 1 {
+		t.Errorf("claim covers [%d,%d), want [0,1)", claims[0].Start(), claims[0].End())
+	}
+	if claims[0].Parts[0].Value != "STE" || claims[0].Parts[1].Value != "209" {
+		t.Errorf("values = %q %q, want STE 209", claims[0].Parts[0].Value, claims[0].Parts[1].Value)
+	}
+}
+
+// A hyphen after something that is not a numbered designator is not a unit.
+func TestGluedHyphenNeedsANumberedDesignator(t *testing.T) {
+	for _, in := range []string{"61-20", "SUITE-WEST", "REAR-209", "WEST-209"} {
+		t.Run(in, func(t *testing.T) {
+			if claims := secondaryunit.Claims(token.Tokenize(in)); len(claims) != 0 {
+				t.Errorf("expected no claims, got %+v", claims)
+			}
+		})
+	}
+}

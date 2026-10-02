@@ -40,7 +40,9 @@ func Claims(tokens []token.Token) []claim.Claim {
 		info, err := Info(t.Text)
 		if err != nil {
 			if number, ok := gluedHashNumber(t.Text); ok {
-				claims = append(claims, gluedHashClaim(i, number))
+				claims = append(claims, gluedClaim(i, hashUnit.Short, number, claim.ConfidenceExact))
+			} else if c, ok := gluedHyphenClaim(i, t.Text); ok {
+				claims = append(claims, c)
 			}
 			continue
 		}
@@ -99,17 +101,41 @@ func gluedHashNumber(text string) (string, bool) {
 	return number, true
 }
 
-// gluedHashClaim is the numbered-hash reading over one token. Both parts
-// cover that token: Value is what the part says, the token is what it covers.
-func gluedHashClaim(i int, number string) claim.Claim {
+// gluedHyphenClaim is the numbered reading over one token of the shape
+// designator + "-" + number, as in SUITE-209. Project US@ writes the business
+// address example that way (p. 33) and expects STE 209. Only a designator the
+// standard marks as numbered is read, so a hyphenated street number like 61-20
+// is left alone.
+func gluedHyphenClaim(i int, text string) (claim.Claim, bool) {
+	word, number, ok := strings.Cut(text, "-")
+	if !ok {
+		return claim.Claim{}, false
+	}
+
+	info, err := Info(word)
+	if err != nil || !info.Numbered {
+		return claim.Claim{}, false
+	}
+
+	number = strings.ToUpper(number)
+	if !looksLikeUnitNumber(number) {
+		return claim.Claim{}, false
+	}
+
+	return gluedClaim(i, info.Short, number, designatorConfidence(word, info)), true
+}
+
+// gluedClaim is the numbered reading over one glued token. Both parts cover
+// that token: Value is what the part says, the token is what it covers.
+func gluedClaim(i int, short, number string, confidence claim.Confidence) claim.Claim {
 	return claim.Claim{
-		Confidence: claim.ConfidenceExact,
+		Confidence: confidence,
 		Parts: []claim.ClaimPart{
 			{
 				Start:  i,
 				Length: 1,
 				Part:   claim.PartSecondaryDesignator,
-				Value:  hashUnit.Short,
+				Value:  short,
 			},
 			{
 				Start:  i,
