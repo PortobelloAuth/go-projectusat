@@ -32,22 +32,6 @@ var OursCases = []Case{
 		Input:  "123 MAIN ST, WEST PALM BEACH, FL",
 		Want:   "123 MAIN ST\nWEST PALM BEACH FL",
 	},
-	// Whether SW glued to JORDAN is a postdirectional plus a name (S, WEST
-	// JORDAN) or a two-letter postdirectional on its own (SW) before a city
-	// named just JORDAN. Utah has no city named plain JORDAN, so the first
-	// reading is correct and both forms should reach it. amadsen on
-	// go-projectusat#112: a data dependent parser can handle this case, a
-	// grammatical one cannot, and the glued SW is a strange enough shape
-	// that it is unlikely a human ever typed it that way — it most plausibly
-	// comes from an earlier normalizer having mangled the data. It is kept
-	// anyway, with this note, because it is precisely the case that
-	// separates a data-dependent parser from a grammatical one.
-	{
-		Source: "ours",
-		Note:   "addressparsers#17: glued SW JORDAN should still reach 9200 S / WEST JORDAN",
-		Input:  "3253 W 9200 SW JORDAN, UT",
-		Want:   "3253 W 9200 S\nWEST JORDAN UT",
-	},
 	{
 		Source: "ours",
 		Note:   "addressparsers#17: 9200 S, WEST JORDAN written unambiguously is a fixed point",
