@@ -27,6 +27,11 @@ func TestJoin(t *testing.T) {
 			in:   "400 @ 9TH S | WEST JORDAN, UT",
 			want: "400 9TH S WEST JORDAN UT",
 		},
+		{
+			name: "unexpected standalone parentheses are removed",
+			in:   "400 ( 9TH S ) WEST JORDAN, UT",
+			want: "400 9TH S WEST JORDAN UT",
+		},
 		{"no tokens", "", ""},
 	}
 

@@ -15,7 +15,7 @@ type Token struct {
 
 var bycommaspace = regexp.MustCompile(`([^,\s]+|[,\s]+)`)
 var whitespace = regexp.MustCompile(`\s`)
-var punctuationalone = regexp.MustCompile(`^(\||\*|\.|(|)|"|:|;|@|&|'|\x{2019})$`)
+var punctuationalone = regexp.MustCompile(`^(\||\*|\.|\(|\)|"|:|;|@|&|'|\x{2019})$`)
 
 func Tokenize(source string) []Token {
 	tokens := make([]Token, 0)
