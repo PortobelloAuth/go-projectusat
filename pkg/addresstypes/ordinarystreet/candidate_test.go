@@ -236,6 +236,20 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// Two directionals after the name are one compound postdirectional,
+			// and COUNTY ROAD is a highway used as a street name, so it is not
+			// abbreviated (p.17, #155). COUNTY RD NE splits the name highways
+			// claims whole and ranks below it; COUNTY ROAD N with E after it
+			// takes the first half of the compound as a route letter.
+			name:   "a compound directional after a county road is its postdirectional",
+			source: "COUNTY ROAD N EAST\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceLikely,
+				name:       "COUNTY ROAD", post: "NE",
+				formatted: "COUNTY ROAD NE",
+			},
+		},
+		{
 			// The delivery address written across two lines. Reading the unit
 			// line as the street line discarded 123 MAIN ST and reported a
 			// street named APT 4.

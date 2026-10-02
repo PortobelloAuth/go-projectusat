@@ -66,7 +66,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 				accepted := make([]claim.Claim, 0, len(h.claims)+len(t.claims)+1)
 				accepted = append(accepted, h.claims...)
 				accepted = append(accepted, t.claims...)
-				accepted = append(accepted, streetClaim(placed, h, t, name))
+				accepted = append(accepted, streetClaim(claims, placed, h, t, name))
 
 				candidates = append(candidates,
 					line.Candidate(&OrdinaryStreetAddress{}, len(tokens), accepted))
@@ -434,14 +434,14 @@ func nameReadings(tokens []token.Token, claims []claim.Claim, from, to int) []na
 // opened the line. A parser that took one and rejected the other would hold a
 // reading this package never offered, which is the same reason a rural route
 // claims its route and box together.
-func streetClaim(placed []claim.Claim, h head, t tail, name nameReading) claim.Claim {
+func streetClaim(claims, placed []claim.Claim, h head, t tail, name nameReading) claim.Claim {
 	parts := make([]claim.ClaimPart, 0, 2)
 	if h.number != nil {
 		parts = append(parts, *h.number)
 	}
 	parts = append(parts, name.part)
 
-	return claim.Claim{Confidence: streetConfidence(placed, h, t, name), Parts: parts}
+	return claim.Claim{Confidence: streetConfidence(claims, placed, h, t, name), Parts: parts}
 }
 
 // streetConfidence rates the number and name reading.
@@ -482,13 +482,21 @@ func streetClaim(placed []claim.Claim, h head, t tail, name nameReading) claim.C
 // knowledge this package does not have. "123 STATE ROUTE 9" is the case:
 // ROUTE is a Pub 28 suffix, so the name absorbs one, and highways nonetheless
 // knows the whole run is the name of the street.
-func streetConfidence(placed []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
+//
+// The same knowledge cuts the other way. A reading that takes its suffix off
+// the end of a run a vocabulary claims whole as a street name has split a name
+// the library knows, and drops the same one step. COUNTY ROAD is a highway
+// used as a street name, so COUNTY with the suffix RD is the weaker reading of
+// it (p.17, #155). See splitsName.
+func streetConfidence(claims, placed []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
 	confidence := claim.ConfidenceLikely
 	if h.number != nil {
 		confidence = claim.ConfidenceStrong
 	}
 
-	if name.corroborated || isDirectional(placed, name.part) || !absorbs(placed, unplaced(h, t), name.part.Start, name.part.End()) {
+	swallows := !name.corroborated && !isDirectional(placed, name.part) &&
+		absorbs(placed, unplaced(h, t), name.part.Start, name.part.End())
+	if !swallows && !splitsName(claims, t, name) {
 		return confidence
 	}
 
@@ -497,6 +505,30 @@ func streetConfidence(placed []claim.Claim, h head, t tail, name nameReading) cl
 	}
 
 	return claim.ConfidenceWeak
+}
+
+// splitsName reports whether the reading's suffix closes a run that some
+// vocabulary claims, from where this name begins, as one street name.
+//
+// A corroborated name is never charged: it is that vocabulary's own reading.
+func splitsName(claims []claim.Claim, t tail, name nameReading) bool {
+	if name.corroborated {
+		return false
+	}
+
+	for _, suffix := range t.claims {
+		if !assigns(suffix, claim.PartStreetSuffix) {
+			continue
+		}
+
+		for _, c := range claims {
+			if c.Start() == name.part.Start && c.End() == suffix.End() && assigns(c, claim.PartStreetName) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // unplaced returns the elements this package offers a place for that the

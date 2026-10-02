@@ -242,6 +242,19 @@ func normalizeTokens(tokens []string) (string, bool) {
 	if core, ok := matchHighwayCore(tokens); ok {
 		return join(core), true
 	}
+
+	// COUNTY|CNTY (HWY|HIGHWAY|RD|ROAD) with no route. The standard's own
+	// example is COUNTY ROAD N EAST, read as COUNTY ROAD with the
+	// postdirectional NE (p.17): the county road is the name, and it is not
+	// abbreviated any more than one with a number is. Only the bare form is
+	// taken; a state in front of a county road with no route is not a form
+	// the standard gives.
+	if len(tokens) == 2 && isCounty(tokens[0]) {
+		if kind := highwayKind(tokens[1]); kind != "" {
+			return join([]string{"COUNTY", kind}), true
+		}
+	}
+
 	return "", false
 }
 

@@ -112,6 +112,35 @@ func TestClaimsSpansIncludeAndExcludeTheStatePrefix(t *testing.T) {
 	}
 }
 
+// A letter route that forms a compound directional with the token after it is
+// the directional, not the route. The standard reads COUNTY ROAD N EAST as
+// COUNTY ROAD with the postdirectional NE (p.17), so neither COUNTY ROAD N nor
+// COUNTY ROAD N EAST is claimed as a highway; COUNTY ROAD alone still is.
+func TestClaimsDoNotTakeACompoundDirectionalAsTheRoute(t *testing.T) {
+	tokens := token.Tokenize("COUNTY ROAD N EAST")
+	got := flatten(tokens, highways.Claims(tokens))
+
+	want := []reading{{"COUNTY ROAD", claim.PartStreetName, claim.ConfidenceStrong, "COUNTY ROAD"}}
+	if len(got) != len(want) || got[0] != want[0] {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+// A letter route with no directional after it to combine with is still a route:
+// lettered county roads are real, and COUNTY ROAD N stays a highway name.
+func TestClaimsKeepALetterRouteThatFormsNoCompound(t *testing.T) {
+	for _, source := range []string{"COUNTY ROAD N", "COUNTY ROAD N\nEAST LANSING MI"} {
+		tokens := token.Tokenize(source)
+		found := false
+		for _, r := range flatten(tokens, highways.Claims(tokens)) {
+			found = found || r.value == "COUNTY ROAD N"
+		}
+		if !found {
+			t.Errorf("%q: expected COUNTY ROAD N to be claimed as a highway", source)
+		}
+	}
+}
+
 // Longest first, so a caller walking the slice sees the most complete reading
 // of a given start position before the shorter ones.
 func TestClaimsAreOrderedLongestFirst(t *testing.T) {

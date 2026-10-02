@@ -61,6 +61,12 @@ func TestNormalizeStreetName(t *testing.T) {
 		{"KY ST HWY 1", "KY STATE HIGHWAY 1"},
 		{"KENTUCKY STATE HIGHWAY 625", "KY STATE HIGHWAY 625"},
 
+		// A county road named without a route is still a county road, and the
+		// standard does not abbreviate a highway used as a street name: COUNTY
+		// ROAD N EAST is COUNTY ROAD NE (p.17), not COUNTY RD NE.
+		{"COUNTY RD", "COUNTY ROAD"},
+		{"CNTY HWY", "COUNTY HIGHWAY"},
+
 		// Whitespace / case normalization
 		{"  county   hwy  60e  ", "COUNTY HIGHWAY 60E"},
 		{"farm to market 1200", "FM 1200"},
