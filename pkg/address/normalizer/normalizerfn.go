@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/businesswords"
 	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/highways"
@@ -97,9 +98,44 @@ func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) 
 			return nil, fmt.Errorf("business name: %w", err)
 		}
 
-		a.BusinessName = out
+		a.BusinessName = AbbreviateBusinessWords(out)
 	}
 	return a, nil
+}
+
+// AbbreviateBusinessWords abbreviates the trailing Publication 28 Appendix G
+// business word(s) in a business name (#157), e.g. INCORPORATED -> INC.
+//
+// Matching is anchored to the end of the name rather than scanned across
+// every position, unlike AbbreviateRegionInStreetNameFn below. Appendix G
+// turned out to hold two kinds of words once it was loaded in full: legal-
+// entity suffixes (INCORPORATED, COMPANY) the issue is actually about, and
+// ordinary descriptive words that happen to double as entries (BUSINESS ->
+// BUS, DELIVERY -> DLVRY, PIZZA -> PZ). A whole-string scan abbreviates both
+// alike and turns "BIG BUSINESS INCORPORATED" into "BIG BUS INC" and "PIZZA
+// DELIVERY COMPANY" into "PZ DLVRY CO" - neither of which matches either
+// fixture this issue is graded against (the standard's own p.35 "BIG
+// BUSINESS INC", and "PIZZA DELIVERY CO" per Aaron's ruling to abbreviate
+// COMPANY). Trying the longest trailing window first and only ever matching
+// at the end reproduces both: INCORPORATED and COMPANY are both the last
+// word, so both fixtures resolve correctly, while BUSINESS, DELIVERY and
+// PIZZA are never in trailing position and are left alone. Appendix G also
+// has multi-word Primaries (UNITED STATES OF AMERICA, MAILSTOP CODE), so the
+// window still shrinks one word at a time rather than only ever trying the
+// single last word.
+func AbbreviateBusinessWords(bn string) string {
+	parts := strings.Split(bn, " ")
+	for i := 0; i < len(parts); i++ {
+		phrase := strings.Join(parts[i:], " ")
+
+		short, err := businesswords.NormalizeBusinessWordAbbreviation(phrase)
+		if err == nil {
+			newparts := append(append([]string{}, parts[:i]...), short)
+			return strings.Join(newparts, " ")
+		}
+	}
+
+	return bn
 }
 
 func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {

@@ -69,7 +69,14 @@ var mainland = []specExample{
 	// 38188-0002, and the spec's own p. 34 example of the same address shows
 	// "KRYTON TN 38188-0002" (no comma, 0002). The p. 34 form is used here.
 	{35, "BIG BUSINESS INCORPORATED\n12 EAST BUSINESS LANE, SUITE-209\nKRYTON,TN\n38188-0002", "BIG BUSINESS INC\n12 E BUSINESS LN STE 209\nKRYTON TN 38188-0002"},
-	{35, "PIZZA DELIVERY COMPANY\n61-20 EAST RIVER DRIVE\nNEW YORK, NY 10021-0905", "PIZZA DELIVERY COMPANY\n61-20 E RIVER DR\nNEW YORK NY 10021-0905"},
+	// NOTE: the Project US@ spec example (p. 35) gives the correct form as
+	// "PIZZA DELIVERY COMPANY" (unabbreviated), but COMPANY -> CO is a real
+	// row in USPS Pub 28 Appendix G
+	// (https://pe.usps.com/text/pub28/28apg.htm). Per go-projectusat#157,
+	// Aaron ruled to hold to the real table rather than the spec's own
+	// illustrative example when the two disagree, so the expected form here
+	// is corrected to "PIZZA DELIVERY CO".
+	{35, "PIZZA DELIVERY COMPANY\n61-20 EAST RIVER DRIVE\nNEW YORK, NY 10021-0905", "PIZZA DELIVERY CO\n61-20 E RIVER DR\nNEW YORK NY 10021-0905"},
 }
 
 // puertoRico is every example from the standard's Puerto Rico tables (p.25-
@@ -99,8 +106,15 @@ var puertoRico = []specExample{
 	{29, "URB EXT VISTA BELLA", "EXT VISTA BELLA"},
 	{29, "URB ALTS DE CANÁ", "ALTS DE CANA"},
 	// Puerto Rico: post office box
-	{29, "XYZ COMPANY\nAPARTADO 2018", "XYZ COMPANY\nPO BOX 2018"},
-	{29, "ABC COMPANY\nGPO BOX 1118", "ABC COMPANY\nPO BOX 1118"},
+	// NOTE: same correction as the p.35 PIZZA DELIVERY COMPANY case above and
+	// for the same reason (go-projectusat#157, Aaron's ruling to hold to the
+	// real USPS Pub 28 Appendix G table over an example's literal text):
+	// COMPANY -> CO is a real Appendix G row, and these p.29 examples are not
+	// about business-name abbreviation, but once the table is wired in it
+	// applies uniformly rather than only on the page that originally raised
+	// the question.
+	{29, "XYZ COMPANY\nAPARTADO 2018", "XYZ CO\nPO BOX 2018"},
+	{29, "ABC COMPANY\nGPO BOX 1118", "ABC CO\nPO BOX 1118"},
 	// Puerto Rico: postal station above the delivery line
 	{30, "PO BOX 1190\nOLD SAN JUAN STA\nSAN JUAN PR 00902-1190", "OLD SAN JUAN STA\nPO BOX 1190\nSAN JUAN PR 00902-1190"},
 	// Puerto Rico: rural route
