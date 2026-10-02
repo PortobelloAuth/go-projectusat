@@ -321,6 +321,26 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// Punctuation in a street name should be removed.
+			name:   "punctuation should be removed from a street line",
+			source: "4000 12TH. Street\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "4000", name: "12TH", suffix: "ST",
+				formatted: "4000 12TH ST",
+			},
+		},
+		{
+			// Punctuation should be removed from a street line
+			name:   "punctuation should be removed from a street line",
+			source: "4007 West Main' rd\nHERNDON VA 22071",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "4007", pre: "W", name: "MAIN", suffix: "RD",
+				formatted: "4007 W MAIN RD",
+			},
+		},
+		{
 			// # is a secondary unit of unspecified type unless a unit is
 			// already placed (#78). Here STE 11 is, and the standard forbids
 			// a second one, so the # is the patient's mailbox. secondaryunit

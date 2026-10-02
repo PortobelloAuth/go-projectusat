@@ -416,6 +416,7 @@ func nameReadings(tokens []token.Token, claims []claim.Claim, from, to int) []na
 		return corroborated
 	}
 
+	// Make sure that we don't leave punctuation that doesn't belong in the street name
 	clean := textutil.StripPunctuation(token.Join(tokens[from:to]), textutil.StripOptions{
 		KeepHyphen: false,
 		KeepSlash:  false,
