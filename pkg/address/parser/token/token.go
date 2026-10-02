@@ -15,6 +15,7 @@ type Token struct {
 
 var bycommaspace = regexp.MustCompile(`([^,\s]+|[,\s]+)`)
 var whitespace = regexp.MustCompile(`\s`)
+var punctuationalone = regexp.MustCompile(`^(\||\*|\.|(|)|"|:|;|@|&|'|\x{2019})$`)
 
 func Tokenize(source string) []Token {
 	tokens := make([]Token, 0)
@@ -25,7 +26,11 @@ func Tokenize(source string) []Token {
 		pcomma := -1
 		pos := 0
 		for _, txt := range texts {
-			txt = whitespace.ReplaceAllString(txt, "")
+			// if the token is only punctuation, remove it
+			clean := punctuationalone.ReplaceAllString(txt, "")
+
+			// clean up excess whitespace
+			txt = whitespace.ReplaceAllString(clean, "")
 			if len(txt) > 0 {
 				if txt[0] == ',' {
 					pcomma += len(txt) // there might be more than one comma

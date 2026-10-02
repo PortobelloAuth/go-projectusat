@@ -21,6 +21,12 @@ func TestJoin(t *testing.T) {
 			in:   "WEST JORDAN,  UT",
 			want: "WEST JORDAN UT",
 		},
+		{
+			// Tokenize also drops unexpected punctuation-only tokens
+			name: "unexpected standalone punctuation is removed",
+			in:   "400 @ 9TH S | WEST JORDAN, UT",
+			want: "400 9TH S WEST JORDAN UT",
+		},
 		{"no tokens", "", ""},
 	}
 
