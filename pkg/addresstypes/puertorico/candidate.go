@@ -78,6 +78,44 @@ func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizer.AddressNor
 	return sn, nil
 }
 
+// ExpandPuertoRicoDirectionalsInStreetNameFn expands a Spanish directional
+// abbreviation or word found anywhere in the free-text street name to its
+// full Spanish word. It replaces normalizer.ExpandDirectionalsInStreetNameFn
+// in NormalizePuertoRicoStreetName the same way PrefixAndSingleLetterStreetNameFn
+// and ExpandPuertoRicoStreetTypeInStreetNameFn already replace their generic
+// counterparts (PR #175 review): the generic step reads English only, so it
+// would leave NOROESTE unrecognized, and p.25 forbids expanding a Spanish
+// directional to its English row anyway.
+func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
+	parts := strings.Split(sn, " ")
+	newparts := make([]string, 0)
+	changed := false
+	for i := 0; i < len(parts); i++ {
+		snp := parts[i]
+		for j := len(parts); j > i; j-- {
+			set := parts[i:j]
+			snphrase := strings.Join(set, " ")
+
+			full, err := normalizeSpanishDirectional(snphrase)
+			if err == nil && len(full) > 0 {
+				snp = full
+				changed = true
+
+				// jump to j - 1 so we don't re-replace what we just replaced
+				i = j - 1
+				break
+			}
+		}
+		newparts = append(newparts, snp)
+	}
+
+	if changed {
+		return strings.Join(newparts, " "), nil
+	}
+
+	return sn, nil
+}
+
 var NormalizePuertoRicoStreetName = normalizer.ComposeStreetNameNormalizationFn(
 	normalizer.NormalizeTextFn,
 	normalizer.OnlySingleLetterStreetNameFn,
@@ -85,7 +123,7 @@ var NormalizePuertoRicoStreetName = normalizer.ComposeStreetNameNormalizationFn(
 	normalizer.OnlyRegionStreetNameFn,
 	normalizer.NormalizeHighwayStreetNameFn,
 
-	normalizer.ExpandDirectionalsInStreetNameFn,
+	ExpandPuertoRicoDirectionalsInStreetNameFn,
 	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
 	// converted to NORTHEAST
 	normalizer.AbbreviateRegionInStreetNameFn,

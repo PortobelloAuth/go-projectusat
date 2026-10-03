@@ -3,6 +3,7 @@ package puertorico_test
 import (
 	"testing"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
@@ -150,5 +151,53 @@ func TestSpanishDirectionalClaimsBothParts(t *testing.T) {
 
 	if !pre || !post {
 		t.Errorf("Claims(%q) = %+v, want both a PartPredirectional and a PartPostdirectional reading", "NOROESTE", got)
+	}
+}
+
+// TestExpandPuertoRicoDirectionalsInStreetName pins PR #175's review
+// (go-projectusat#154): NormalizePuertoRicoStreetName must call a
+// Puerto-Rico-local directional expansion rather than the generic English
+// one, so a Spanish directional left inside the free-text street name
+// expands to its own Spanish spelling (p.25's "developers MUST NOT translate
+// directionals") instead of passing through unrecognized or translating to
+// English.
+func TestExpandPuertoRicoDirectionalsInStreetName(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "a Spanish abbreviation expands to its own Spanish word",
+			in:   "CALLE NO 3",
+			want: "CALLE NOROESTE 3",
+		},
+		{
+			name: "a spelled out Spanish directional is left as-is, not translated to English",
+			in:   "CALLE NOROESTE 3",
+			want: "CALLE NOROESTE 3",
+		},
+		{
+			name: "a compound abbreviation expands to its one-word Spanish spelling",
+			in:   "CALLE NE 3",
+			want: "CALLE NORESTE 3",
+		},
+		{
+			name: "no directional present leaves the name untouched",
+			in:   "CALLE AMAPOLA",
+			want: "CALLE AMAPOLA",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizer.AddressNormalizationOptions{})
+			if err != nil && err != normalizer.Done {
+				t.Fatalf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) returned error %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Errorf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
 	}
 }
