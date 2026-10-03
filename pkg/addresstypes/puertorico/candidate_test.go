@@ -230,6 +230,79 @@ func TestNoSecondaryUnitMeansNoCondominiumFallback(t *testing.T) {
 	}
 }
 
+// pp.28-29: where an urbanization line is the entire street-equivalent
+// content — there is no ordinary street line below it, only the last line —
+// the urbanization itself has to stand in for the street line in the
+// formatted address. go-projectusat#162's five FAIL cases are pinned here
+// directly against Address.Format, since that is what the issue's "want"
+// column actually asserts: the two-line shape for a bare urbanization name,
+// and the single combined line where a primary number precedes the
+// designator (p.28's own "A17 URB JARDINES FAGOTA" example).
+func TestUrbanizationStandsAloneAsTheStreetLine(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ordinary designator with no standalone exception",
+			"URBANIZATION GOLDEN GATE\nSAN JUAN PR 00907",
+			"URB GOLDEN GATE\nSAN JUAN PR 00907",
+		},
+		{
+			"primary number precedes an ordinary designator",
+			"A17 URB JARDINES FAGOTA\nPONCE PR 00731",
+			"A17 JARD FAGOTA\nPONCE PR 00731",
+		},
+		{
+			"standalone exception with no URB prefix",
+			"EXT VISTA BELLA\nSAN JUAN PR 00907",
+			"EXT VISTA BELLA\nSAN JUAN PR 00907",
+		},
+		{
+			"standalone exception strips a leading URB",
+			"URB EXT VISTA BELLA\nSAN JUAN PR 00907",
+			"EXT VISTA BELLA\nSAN JUAN PR 00907",
+		},
+		{
+			"standalone exception folds diacritics",
+			"URB ALTS DE CANÁ\nSAN JUAN PR 00907",
+			"ALTS DE CANA\nSAN JUAN PR 00907",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			var top *address.CandidateAddress
+			for _, cand := range candidates(c.source) {
+				if top == nil || cand.Confidence > top.Confidence {
+					top = cand
+				}
+			}
+			if top == nil {
+				t.Fatal("no reading")
+			}
+			if got := top.Address.Format(); got != c.want {
+				t.Errorf("Format() = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// The VISTA regression #162's fix nearly introduced: "VISTA" is itself a
+// pp.28-29 standalone-exception word, so a condominium building name that
+// happens to start with it ("VISTA SUITES III APT 104") must still be read
+// as a condominium line, not mistaken for a standalone urbanization line —
+// the trailing APT secondary unit is what tells them apart, see
+// condominiumStreetLine and the guard in Candidates ahead of it.
+func TestUrbanizationDoesNotShadowACondominiumLine(t *testing.T) {
+	got, ok := street(t, "VISTA SUITES III APT 104\nSAN JUAN PR 00907")
+	if !ok {
+		t.Fatal("no reading")
+	}
+	if got != "3 VISTA SUITES APT 104" {
+		t.Errorf("street line = %q, want %q", got, "3 VISTA SUITES APT 104")
+	}
+}
+
 // Every candidate names this package as the address type, which is how the
 // parser tells one type's reading from another's.
 func TestEveryCandidateNamesThisAddressType(t *testing.T) {

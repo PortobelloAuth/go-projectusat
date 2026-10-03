@@ -5,6 +5,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 // Claims returns every reading of tokens this package can support.
@@ -97,7 +98,7 @@ func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 		nameStart = start + 1
 	}
 	if short, err := NormalizeStandaloneUrbanization(tokens[nameStart].Text); err == nil {
-		rest := strings.ToUpper(token.Join(tokens[nameStart+1 : end]))
+		rest := foldUpper(token.Join(tokens[nameStart+1 : end]))
 		value := short
 		if rest != "" {
 			value += " " + rest
@@ -120,7 +121,7 @@ func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 		return claim.Claim{}, false
 	}
 
-	name := strings.ToUpper(token.Join(tokens[start+1 : end]))
+	name := foldUpper(token.Join(tokens[start+1 : end]))
 
 	return claim.Claim{
 		Confidence: claim.ConfidenceExact,
@@ -133,6 +134,22 @@ func urbanizationClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 			},
 		},
 	}, true
+}
+
+// foldUpper applies the standard's Appendix A diacritic substitution and then
+// uppercases, so a free-text urbanization name comes out in the same ASCII
+// shape the designator itself already does via NormalizeUrbanization — p.28's
+// own worked example renders "URB ALTS DE CANA" with no accent, never "ALTS
+// DE CANÁ". Substitute only errors when the transform itself fails, which
+// ordinary text does not do; falling back to the unfolded text rather than
+// losing the name keeps that failure mode non-fatal.
+func foldUpper(s string) string {
+	folded, err := diacritics.Substitute(s)
+	if err != nil {
+		folded = s
+	}
+
+	return strings.ToUpper(folded)
 }
 
 // precededOnlyByPrimaryNumber reports whether the token immediately before

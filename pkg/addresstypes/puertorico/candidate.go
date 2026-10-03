@@ -202,6 +202,28 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	street, ok := streetLine(tokens, line)
 	if !ok {
 		if start, end, boundsOK := streetLineBounds(tokens, line); boundsOK {
+			// The two urbanization-only shapes below and the condominium
+			// fallback can both match the same bounds when a word that
+			// happens to sit in the pp.28-29 standalone-exceptions table
+			// (e.g. "VISTA") opens a building name: condominiumStreetLine's
+			// own precondition — a secondary-unit claim flush at the end of
+			// the line, see its comment — is the stronger, unambiguous
+			// signal in that case, so the urbanization shapes defer to it
+			// rather than compete with it. A true standalone urbanization
+			// line, per the issue, never carries a secondary designator of
+			// its own; it is the line above one, not the line with one.
+			if _, hasTrailingSecondary := trailingSecondaryUnit(claims, start, end); !hasTrailingSecondary {
+				if urb, urbOK := standaloneUrbanizationStreetLine(claims, start, end); urbOK {
+					candidates = append(candidates,
+						line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{urb}))
+				}
+
+				if combined, combinedOK := primaryNumberedUrbanizationStreetLine(tokens, claims, start, end); combinedOK {
+					candidates = append(candidates,
+						line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{combined}))
+				}
+			}
+
 			if name, secondary, hasSecondary, primaryNumber, condoOK := condominiumStreetLine(tokens, claims, start, end); condoOK {
 				parts := []claim.Claim{name}
 				if hasSecondary {
@@ -453,4 +475,87 @@ func isUrbanization(c claim.Claim) bool {
 	}
 
 	return len(c.Parts) > 0
+}
+
+// areaValue returns the Area value an urbanization claim carries.
+// isUrbanization guarantees a claim with that shape has exactly one kind of
+// part, so this just unwraps it under a name that says what it holds rather
+// than reindexing Parts[0] at each call site.
+func areaValue(c claim.Claim) string {
+	for _, p := range c.Parts {
+		if p.Part == claim.PartArea {
+			return p.Value
+		}
+	}
+
+	return ""
+}
+
+// standaloneUrbanizationStreetLine finds an urbanization claim that is, by
+// itself, the entire delivery line streetLine failed to read: no primary
+// number, and no separate street name below it.
+//
+// pp.28-29's own worked examples take this shape — "URB GOLDEN GATE" on a
+// line by itself, or one of the standalone exceptions such as "EXT VISTA
+// BELLA" — where the urbanization is the whole of the street-equivalent
+// content rather than a line sitting above an ordinary one. streetLine has
+// nothing to read there (there is no primary number or street type on the
+// line at all), which is why this is checked only once streetLine has
+// already failed, not as an alternative to it.
+//
+// The claim this returns carries only a PartArea part, so the candidate it
+// builds leaves PrimaryNumber and StreetName empty. address.Address.Format
+// renders Area on its own line and FormatStreetLine on an empty one is
+// omitted entirely (see textutil.JoinNonEmpty), which is exactly these
+// examples' expected output: the urbanization line and the last line, with
+// nothing in between.
+func standaloneUrbanizationStreetLine(claims []claim.Claim, start, end int) (claim.Claim, bool) {
+	for _, c := range claims {
+		if isUrbanization(c) && c.Start() == start && c.End() == end {
+			return c, true
+		}
+	}
+
+	return claim.Claim{}, false
+}
+
+// primaryNumberedUrbanizationStreetLine finds the one shape
+// standaloneUrbanizationStreetLine does not cover: a primary address number
+// opening the line, immediately followed by an urbanization name that runs to
+// the end of it.
+//
+// p.28's own example is exactly this: "A17 URB JARDINES FAGOTA" ->
+// "A17 JARD FAGOTA", the standalone urbanization name standing in as the
+// street name, with the primary number that always leads a Puerto Rico
+// street line still in front of it. urbanizationClaim already restricts which
+// claims admit a number ahead of the designator at all (see
+// precededOnlyByPrimaryNumber on that type) — this is the candidate.go side
+// of the same rule, reassembling that claim's Area value as a street name
+// rather than leaving it a reading nothing ever reads back out, which is what
+// the ordinary PrimaryNumber-and-StreetName claim shape asks for.
+func primaryNumberedUrbanizationStreetLine(tokens []token.Token, claims []claim.Claim, start, end int) (claim.Claim, bool) {
+	if start >= end {
+		return claim.Claim{}, false
+	}
+
+	number, ok := normalizePrimaryNumber(strings.ToUpper(tokens[start].Text))
+	if !ok {
+		return claim.Claim{}, false
+	}
+
+	for _, c := range claims {
+		if !isUrbanization(c) || c.Start() != start+1 || c.End() != end {
+			continue
+		}
+
+		return claim.Claim{
+			Confidence: claim.ConfidenceExact,
+			Parts: []claim.ClaimPart{
+				{Start: start, Length: 1, Part: claim.PartPrimaryNumber, Value: number},
+				{Start: c.Start(), Length: c.Length(), Part: claim.PartStreetName, Value: areaValue(c)},
+			},
+		}, true
+	}
+
+	return claim.Claim{}, false
 }
