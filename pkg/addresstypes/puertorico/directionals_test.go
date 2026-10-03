@@ -83,7 +83,7 @@ func TestSpanishDirectionalClaims(t *testing.T) {
 			},
 		},
 		{
-			name: "a plain Northwest spelling does not leak the West discrepancy onto an English reading",
+			name: "a plain West spelling abbreviates to its own Spanish form, not the English one",
 			in:   "OESTE",
 			want: []reading{
 				{"OESTE", claim.PartPredirectional, claim.ConfidenceStrong, "O"},
