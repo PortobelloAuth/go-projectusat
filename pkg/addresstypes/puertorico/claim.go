@@ -39,6 +39,12 @@ func Claims(tokens []token.Token) []claim.Claim {
 		}
 	}
 
+	// Spanish directionals (go-projectusat#154): NORTE, SUR, ESTE, OESTE,
+	// NORESTE, SUDESTE, NOROESTE, SUDOESTE, and their abbreviations. See
+	// directionals.go for why this is a Puerto-Rico-local vocabulary rather
+	// than an addition to pkg/directionals.
+	claims = append(claims, directionalClaims(tokens)...)
+
 	return claims
 }
 

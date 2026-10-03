@@ -199,7 +199,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 	candidates := routeCandidates(tokens, line)
 
-	street, ok := streetLine(tokens, line)
+	street, ok := streetLine(tokens, claims, line)
 	if !ok {
 		if start, end, boundsOK := streetLineBounds(tokens, line); boundsOK {
 			// The two urbanization-only shapes below and the condominium
@@ -310,13 +310,20 @@ func isPuertoRicoLastLine(line lastline.LineClaim) bool {
 // A17", and NormalizeNumberedStreetLine reads that. The order is which
 // recognizer is asked, not a preference between readings: the two shapes do
 // not overlap, so at most one of them answers.
-func streetLine(tokens []token.Token, line lastline.LineClaim) (claim.Claim, bool) {
+//
+// Before either recognizer sees the line, a spelled-out Spanish directional
+// claimed within [start, end) is substituted for its abbreviation (p.26's
+// NOROESTE -> NO, go-projectusat#154). Both recognizers otherwise pass the
+// root name through as literal text — see NormalizeStreetLine's doc comment
+// — so this is the only point where a directional spelled as a word rather
+// than already abbreviated gets recognized at all.
+func streetLine(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
 	start, end, ok := streetLineBounds(tokens, line)
 	if !ok {
 		return claim.Claim{}, false
 	}
 
-	text := token.Join(tokens[start:end])
+	text := token.Join(substituteSpanishDirectionals(tokens, claims, start, end))
 
 	if number, name, err := NormalizeStreetLine(text); err == nil {
 		return streetClaim(

@@ -163,7 +163,7 @@ func fieldMismatch(fields []parsertest.FieldResult, name, want, got string) bool
 // deliberate, reviewed number change here, not a silent drift.
 func TestCasesComposition(t *testing.T) {
 	const (
-		wantSpec       = 46 * 2     // one fixed-point and one reaches case per Incorrect/Correct pair
+		wantSpec       = 49 * 2     // one fixed-point and one reaches case per Incorrect/Correct pair
 		wantHistorical = 55 + 3 + 4 // csharpParity + gridHistorical + saintHistorical
 		wantOurs       = 10
 	)

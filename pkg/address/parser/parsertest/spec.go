@@ -94,6 +94,20 @@ var puertoRico = []specExample{
 	// https://pe.usps.com/text/pub28/pub28c2_045.htm corrects the example to
 	// "B113 CALLE 191" as shown here.
 	{26, "CALLE 191 B113", "B113 CALLE 191"},
+	// Puerto Rico directionals: p.26's own worked examples are given as
+	// already-correct output, with no incorrect form shown — "developers MUST
+	// NOT translate directionals" (p.25), so the Spanish abbreviation NO/SO
+	// is a fixed point rather than something that reaches an English form.
+	// go-projectusat#154.
+	{26, "1510 CALLE 3 NO", "1510 CALLE 3 NO"},
+	{26, "1620 CALLE 17 SO", "1620 CALLE 17 SO"},
+	// A spelled-out Spanish directional is the actual gap #154 opened: the
+	// two fixed points above round-trip even with no directional recognition
+	// at all, because NormalizeStreetLine passes the root name through as
+	// literal text. NOROESTE only abbreviates to NO once a recognizer reads
+	// it, so this is the case that exercises the fix rather than merely
+	// re-confirming the literal examples.
+	{26, "1510 CALLE 3 NOROESTE", "1510 CALLE 3 NO"},
 	{27, "CALLE 125 C-19", "C19 CALLE 125"},
 	{27, "A-17 CALLE AMAPOLA", "A17 CALLE AMAPOLA"},
 	{27, "B-17A CALLE 1", "B17A CALLE 1"},
