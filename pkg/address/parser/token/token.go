@@ -13,7 +13,7 @@ type Token struct {
 	FollowsComma int // -1 means no, 0+ is the ordinal of the comma it follows on the line
 }
 
-var bycommaspace = regexp.MustCompile(`([^,\s]+|[,\s]+)`)
+var bycommaspace = regexp.MustCompile(`([^,\s#]+|#[^,\s#]*|[,\s]+)`)
 var whitespace = regexp.MustCompile(`\s`)
 var punctuationalone = regexp.MustCompile(`^(\||\*|\.|\(|\)|"|:|;|@|&|'|\x{2019})$`)
 

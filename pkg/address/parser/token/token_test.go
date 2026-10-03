@@ -32,6 +32,11 @@ func TestJoin(t *testing.T) {
 			in:   "400 ( 9TH S ) WEST JORDAN, UT",
 			want: "400 9TH S WEST JORDAN UT",
 		},
+		{
+			name: "split at before #",
+			in:   "RR006#87b",
+			want: "RR006 #87b",
+		},
 		{"no tokens", "", ""},
 	}
 
