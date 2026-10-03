@@ -1,5 +1,7 @@
 package parsertest
 
+import "github.com/PortobelloAuth/go-projectusat/pkg/address"
+
 // OursCases are hard cases the address stack found on its own, rather than
 // transcribed from the standard: addresses whose comma placement or
 // abbreviation puts two real readings within one edit of each other, so a
@@ -98,11 +100,11 @@ var OursCases = []Case{
 	// https://pe.usps.com/text/pub28/28c2_008.htm, city names are spelled
 	// in their entirety, so the city renders SAINT PAUL, not ST PAUL. The
 	// street half still rests on addressparsers#24 (whether NORTH PARK
-	// decomposes into a directional plus a suffix) and on the rule settled
-	// above for EAST ST — a valid directional street name stays written
-	// out — which is why NORTH PARK is written out here rather than
-	// abbreviated to N PARK. Measured today: the comma'd form returns
-	// "123 N PARK ST\nPAUL MN" and the unmarked form returns "123 NORTH
+	// decomposes into a directional street name plus a suffix) and on the
+	// rule settled above for EAST ST — a valid directional street name
+	// stays written out — which is why NORTH PARK is written out here
+	// rather than abbreviated to N PARK. Measured today: the comma'd form
+	// returns "123 N PARK ST\nPAUL MN" and the unmarked form returns "123 NORTH
 	// PARK\nST PAUL MN"; both are expected to fail until step 2
 	// (addressparsers#17) and the street window land.
 	{
@@ -116,6 +118,26 @@ var OursCases = []Case{
 		Note:   "addressparsers#19: ST PAUL renders SAINT PAUL per USPS Pub 28 (spell city names in their entirety)",
 		Input:  "123 NORTH PARK, ST PAUL, MN",
 		Want:   "123 NORTH PARK\nSAINT PAUL MN",
+	},
+	{
+		Source: "ours",
+		Note:   "addressparsers#19: ST PAUL renders SAINT PAUL per USPS Pub 28 (spell city names in their entirety)",
+		Input:  "123 NORTH PARK ST PAUL MN",
+		Want:   "123 NORTH PARK\nSAINT PAUL MN",
+	},
+	{
+		Source: "ours",
+		Note:   "addressparsers#19: ST PAUL renders SAINT PAUL per USPS Pub 28 (spell city names in their entirety)",
+		Input:  "123 NORTH PARK ST PAUL MN",
+		WantFields: &address.Address{
+			PrimaryNumber:   "123",
+			Predirectional:  "",
+			StreetName:      "NORTH",
+			StreetSuffix:    "PARK",
+			Postdirectional: "",
+			City:            "SAINT PAUL",
+			Region:          "MN",
+		},
 	},
 	// The standard prints 585 AVE FD ROOSEVELT as a Correct Form (p. 26), so
 	// pinning Want to AVENIDA here means this library is not a fixed point of
