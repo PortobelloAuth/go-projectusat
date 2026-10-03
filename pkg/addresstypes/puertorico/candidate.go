@@ -78,15 +78,16 @@ func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizer.AddressNor
 	return sn, nil
 }
 
-// ExpandPuertoRicoDirectionalsInStreetNameFn expands a Spanish directional
-// abbreviation or word found anywhere in the free-text street name to its
-// full Spanish word. It replaces normalizer.ExpandDirectionalsInStreetNameFn
-// in NormalizePuertoRicoStreetName the same way PrefixAndSingleLetterStreetNameFn
-// and ExpandPuertoRicoStreetTypeInStreetNameFn already replace their generic
-// counterparts (PR #175 review): the generic step reads English only, so it
-// would leave NOROESTE unrecognized, and p.25 forbids expanding a Spanish
-// directional to its English row anyway.
-func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
+// AbbreviatePuertoRicoDirectionalsInStreetNameFn abbreviates a Spanish
+// directional word found anywhere in the free-text street name to its Pub 28
+// abbreviation, and leaves an abbreviation as it is. It replaces
+// normalizer.ExpandDirectionalsInStreetNameFn in NormalizePuertoRicoStreetName
+// the same way PrefixAndSingleLetterStreetNameFn and
+// ExpandPuertoRicoStreetTypeInStreetNameFn already replace their generic
+// counterparts (PR #175 review). Direction matters: Project US@ p.26 keeps
+// "1510 CALLE 3 NO" as NO, so expanding NO to NOROESTE is a regression, and
+// the generic step reads English only, so it would leave NOROESTE unrecognized.
+func AbbreviatePuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
 	parts := strings.Split(sn, " ")
 	newparts := make([]string, 0)
 	changed := false
@@ -96,9 +97,9 @@ func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressN
 			set := parts[i:j]
 			snphrase := strings.Join(set, " ")
 
-			full, err := normalizeSpanishDirectional(snphrase)
-			if err == nil && len(full) > 0 {
-				snp = full
+			abbrev, err := abbreviateSpanishDirectional(snphrase)
+			if err == nil && len(abbrev) > 0 {
+				snp = abbrev
 				changed = true
 
 				// jump to j - 1 so we don't re-replace what we just replaced
@@ -123,7 +124,7 @@ var NormalizePuertoRicoStreetName = normalizer.ComposeStreetNameNormalizationFn(
 	normalizer.OnlyRegionStreetNameFn,
 	normalizer.NormalizeHighwayStreetNameFn,
 
-	ExpandPuertoRicoDirectionalsInStreetNameFn,
+	AbbreviatePuertoRicoDirectionalsInStreetNameFn,
 	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
 	// converted to NORTHEAST
 	normalizer.AbbreviateRegionInStreetNameFn,

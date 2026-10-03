@@ -58,26 +58,6 @@ func abbreviateSpanishDirectional(d string) (string, error) {
 	return "", fmt.Errorf("unrecognized Spanish directional")
 }
 
-// normalizeSpanishDirectional expands a Spanish directional abbreviation to
-// its full Spanish word, or confirms a full Spanish word unchanged. This
-// mirrors pkg/directionals.NormalizeDirectional against Spanish data only,
-// for the same reason abbreviateSpanishDirectional does: p.25's "developers
-// MUST NOT translate directionals" means NO must expand to NOROESTE, never
-// to the English word its row's English field names.
-func normalizeSpanishDirectional(d string) (string, error) {
-	capitalized := strings.ToUpper(d)
-
-	if full, ok := spanishDirectionShortMap[capitalized]; ok {
-		return full, nil
-	}
-
-	if _, ok := spanishDirectionMap[capitalized]; ok {
-		return capitalized, nil
-	}
-
-	return "", fmt.Errorf("unrecognized Spanish directional")
-}
-
 // directionalMaxSpan is the longest Spanish directional in the vocabulary,
 // measured in tokens: a compound spelled as two words, e.g. NORTE ESTE.
 const directionalMaxSpan = 2
