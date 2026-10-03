@@ -10,7 +10,9 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico/ruralroute"
+	endirectionals "github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 var whitespace = regexp.MustCompile(`\s+`)
@@ -36,9 +38,11 @@ func (o *PuertoRicoAddress) IsCivicAddressType() bool { return true }
 //
 // The field order is the one address.Address.FormatStreetLine already owns for
 // an address with no special format, so this reaches that branch rather than
-// restating it. There is no suffix and no trailing directional to place: a
-// Puerto Rico street type leads the name and stays inside it, per p. 26. See
-// CONTRIBUTING §1.2, and ordinarystreet, which delegates the same way.
+// restating it. There is no suffix to place: a Puerto Rico street type leads
+// the name and stays inside it, per p. 26. A pre- or postdirectional, where
+// there is one, sits in its own field and renders in the ordinary position,
+// "1510 CALLE 3 NO" (p. 26, go-projectusat#154). See CONTRIBUTING §1.2, and
+// ordinarystreet, which delegates the same way.
 func (p *PuertoRicoAddress) FormatStreetLine(a *address.Address) string {
 	ordinary := *a
 	ordinary.Type = nil
@@ -78,16 +82,15 @@ func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizer.AddressNor
 	return sn, nil
 }
 
-// AbbreviatePuertoRicoDirectionalsInStreetNameFn abbreviates a Spanish
-// directional word found anywhere in the free-text street name to its Pub 28
-// abbreviation, and leaves an abbreviation as it is. It replaces
-// normalizer.ExpandDirectionalsInStreetNameFn in NormalizePuertoRicoStreetName
-// the same way PrefixAndSingleLetterStreetNameFn and
-// ExpandPuertoRicoStreetTypeInStreetNameFn already replace their generic
-// counterparts (PR #175 review). Direction matters: Project US@ p.26 keeps
-// "1510 CALLE 3 NO" as NO, so expanding NO to NOROESTE is a regression, and
-// the generic step reads English only, so it would leave NOROESTE unrecognized.
-func AbbreviatePuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
+// ExpandPuertoRicoDirectionalsInStreetNameFn expands a Spanish directional
+// abbreviation or word found anywhere in the free-text street name to its
+// full Spanish word. It replaces normalizer.ExpandDirectionalsInStreetNameFn
+// in NormalizePuertoRicoStreetName the same way PrefixAndSingleLetterStreetNameFn
+// and ExpandPuertoRicoStreetTypeInStreetNameFn already replace their generic
+// counterparts (PR #175 review): the generic step reads English only, so it
+// would leave NOROESTE unrecognized, and p.25 forbids expanding a Spanish
+// directional to its English row anyway.
+func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.AddressNormalizationOptions) (string, error) {
 	parts := strings.Split(sn, " ")
 	newparts := make([]string, 0)
 	changed := false
@@ -97,9 +100,9 @@ func AbbreviatePuertoRicoDirectionalsInStreetNameFn(sn string, o normalizer.Addr
 			set := parts[i:j]
 			snphrase := strings.Join(set, " ")
 
-			abbrev, err := abbreviateSpanishDirectional(snphrase)
-			if err == nil && len(abbrev) > 0 {
-				snp = abbrev
+			full, err := normalizeSpanishDirectional(snphrase)
+			if err == nil && len(full) > 0 {
+				snp = full
 				changed = true
 
 				// jump to j - 1 so we don't re-replace what we just replaced
@@ -124,13 +127,64 @@ var NormalizePuertoRicoStreetName = normalizer.ComposeStreetNameNormalizationFn(
 	normalizer.OnlyRegionStreetNameFn,
 	normalizer.NormalizeHighwayStreetNameFn,
 
-	AbbreviatePuertoRicoDirectionalsInStreetNameFn,
-	// Abbreviate region AFTER expanding directionals so that NEBRASKA doesn't get
-	// converted to NORTHEAST
-	normalizer.AbbreviateRegionInStreetNameFn,
+	// A directional INSIDE the street name is expanded (Pub 28 / Project US@);
+	// one that is a pre- or postdirectional is not in StreetName at all —
+	// Candidates places it in Predirectional/Postdirectional, and
+	// normalizePRDirectionals abbreviates it there (go-projectusat#154).
+	ExpandPuertoRicoDirectionalsInStreetNameFn,
 	normalizer.ExpandCityInStreetNameFn,
 	ExpandPuertoRicoStreetTypeInStreetNameFn,
+	// Abbreviate region LAST, after every step that can expand an
+	// abbreviation: NEBRASKA must not become NORTHEAST, and MONTANA's MT must
+	// not be read back as MOUNT by ExpandCityInStreetNameFn. Same ordering,
+	// for the same reason, as normalizer.NormalizeStreetName (#165, fab3c94).
+	normalizer.AbbreviateRegionInStreetNameFn,
 )
+
+// abbreviatePRDirectional abbreviates a pre- or postdirectional on a Puerto
+// Rico address. A Spanish directional keeps its own Spanish abbreviation
+// (NOROESTE -> NO, never NW: p.25 "developers MUST NOT translate
+// directionals"); anything else falls back to the shared English vocabulary,
+// so EAST -> E still works on a PR address.
+func abbreviatePRDirectional(field, v string) (string, error) {
+	v = textutil.BaseField(v)
+	if v == "" {
+		return "", nil
+	}
+
+	if abbr, err := abbreviateSpanishDirectional(v); err == nil {
+		return abbr, nil
+	}
+
+	abbr, err := endirectionals.AbbreviateDirectional(v)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", field, err)
+	}
+
+	return abbr, nil
+}
+
+// normalizePRDirectionals replaces normalizer.NormalizeDirectionals for a
+// Puerto Rico address, the same way PrefixAndSingleLetterStreetNameFn and
+// ExpandPuertoRicoStreetTypeInStreetNameFn replace their generic
+// counterparts: the generic step reads English only, so it rejects NO and SO
+// outright. Pre- and postdirectionals are ABBREVIATED (go-projectusat#154).
+func normalizePRDirectionals(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+	pre, err := abbreviatePRDirectional("predirectional", a.Predirectional)
+	if err != nil {
+		return nil, err
+	}
+
+	post, err := abbreviatePRDirectional("postdirectional", a.Postdirectional)
+	if err != nil {
+		return nil, err
+	}
+
+	a.Predirectional = pre
+	a.Postdirectional = post
+
+	return a, nil
+}
 
 func normalizePRStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
@@ -161,7 +215,7 @@ var normalizePRStreetLine = normalizer.ComposeNormalizationFn(
 	normalizer.NormalizeStreetSuffixFn,
 	normalizer.NormalizeSecondaryNumberFn,
 	normalizePRSecondaryDesignatorFn,
-	normalizer.NormalizeDirectionals,
+	normalizePRDirectionals,
 
 	// A Puerto Rico address uses only its own Spanish street-type
 	// vocabulary, never the English suffix table: AVE and BLVD collide
@@ -279,15 +333,15 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	}
 
 	candidates = append(candidates,
-		line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{street}))
+		line.Candidate(&PuertoRicoAddress{}, len(tokens), street))
 
 	for _, c := range claims {
-		if !isUrbanization(c) || c.End() > street.Start() {
+		if !isUrbanization(c) || c.End() > street[0].Start() {
 			continue
 		}
 
 		candidates = append(candidates,
-			line.Candidate(&PuertoRicoAddress{}, len(tokens), []claim.Claim{c, street}))
+			line.Candidate(&PuertoRicoAddress{}, len(tokens), append([]claim.Claim{c}, street...)))
 	}
 
 	return candidates
@@ -350,25 +404,55 @@ func isPuertoRicoLastLine(line lastline.LineClaim) bool {
 // recognizer is asked, not a preference between readings: the two shapes do
 // not overlap, so at most one of them answers.
 //
-// Before either recognizer sees the line, a spelled-out Spanish directional
-// claimed within [start, end) is substituted for its abbreviation (p.26's
-// NOROESTE -> NO, go-projectusat#154). Both recognizers otherwise pass the
-// root name through as literal text — see NormalizeStreetLine's doc comment
-// — so this is the only point where a directional spelled as a word rather
-// than already abbreviated gets recognized at all.
-func streetLine(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
+// A directional flush against the end of the line is a postdirectional, and
+// one immediately after the primary number is a predirectional: either is
+// read as its own claim, so Candidates places it in Postdirectional or
+// Predirectional rather than leaving it inside StreetName
+// (go-projectusat#154). That is what keeps p. 26's "1510 CALLE 3 NO" NO: a
+// directional left inside the street name is expanded by
+// NormalizePuertoRicoStreetName, which is right for a directional that is part
+// of the name and wrong for one that is not. A directional is only split off
+// where the rest of the line is still a street line on its own, so "150 CALLE
+// O" keeps O as its root name. The first slice element is always the street
+// claim itself; a directional claim, where there is one, follows it.
+func streetLine(tokens []token.Token, claims []claim.Claim, line lastline.LineClaim) ([]claim.Claim, bool) {
 	start, end, ok := streetLineBounds(tokens, line)
 	if !ok {
-		return claim.Claim{}, false
+		return nil, false
 	}
 
-	text := token.Join(substituteSpanishDirectionals(tokens, claims, start, end))
+	if post, ok := directionalClaim(claims, claim.PartPostdirectional, func(p claim.ClaimPart) bool {
+		return p.End() == end && p.Start > start+2
+	}); ok {
+		nameEnd := post.Start()
+		if number, name, err := NormalizeStreetLine(token.Join(tokens[start:nameEnd])); err == nil {
+			return []claim.Claim{streetClaim(
+				claim.ClaimPart{Start: start, Length: 1, Part: claim.PartPrimaryNumber, Value: number},
+				claim.ClaimPart{Start: start + 1, Length: nameEnd - start - 1, Part: claim.PartStreetName, Value: name},
+			), post}, true
+		}
+	}
+
+	if pre, ok := directionalClaim(claims, claim.PartPredirectional, func(p claim.ClaimPart) bool {
+		return p.Start == start+1 && p.End() < end-1
+	}); ok {
+		nameStart := pre.End()
+		text := token.Join(append([]token.Token{tokens[start]}, tokens[nameStart:end]...))
+		if number, name, err := NormalizeStreetLine(text); err == nil {
+			return []claim.Claim{streetClaim(
+				claim.ClaimPart{Start: start, Length: 1, Part: claim.PartPrimaryNumber, Value: number},
+				claim.ClaimPart{Start: nameStart, Length: end - nameStart, Part: claim.PartStreetName, Value: name},
+			), pre}, true
+		}
+	}
+
+	text := token.Join(tokens[start:end])
 
 	if number, name, err := NormalizeStreetLine(text); err == nil {
-		return streetClaim(
+		return []claim.Claim{streetClaim(
 			claim.ClaimPart{Start: start, Length: 1, Part: claim.PartPrimaryNumber, Value: number},
 			claim.ClaimPart{Start: start + 1, Length: end - start - 1, Part: claim.PartStreetName, Value: name},
-		), true
+		)}, true
 	}
 
 	// The number covers everything after the street name, identifiers
@@ -378,13 +462,41 @@ func streetLine(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	if number, name, err := NormalizeNumberedStreetLine(text); err == nil {
 		nameEnd := start + numberedStreetNameFields
 
-		return streetClaim(
+		return []claim.Claim{streetClaim(
 			claim.ClaimPart{Start: start, Length: numberedStreetNameFields, Part: claim.PartStreetName, Value: name},
 			claim.ClaimPart{Start: nameEnd, Length: end - nameEnd, Part: claim.PartPrimaryNumber, Value: number},
-		), true
+		)}, true
 	}
 
-	return claim.Claim{}, false
+	return nil, false
+}
+
+// directionalClaim finds the directional claim of the given part that match
+// accepts, preferring the longer span (a compound such as NORTE ESTE over the
+// ESTE it ends in, the preference pkg/directionals.Claims documents) and then
+// the stronger claim. Both this package's Spanish vocabulary and the shared
+// English one (pkg/directionals) contribute candidates; a single-part claim
+// is all either offers.
+func directionalClaim(claims []claim.Claim, part claim.Part, match func(claim.ClaimPart) bool) (claim.Claim, bool) {
+	var best claim.Claim
+	found := false
+
+	for _, c := range claims {
+		if len(c.Parts) != 1 || c.Parts[0].Part != part || !match(c.Parts[0]) {
+			continue
+		}
+
+		if found {
+			p, b := c.Parts[0], best.Parts[0]
+			if p.Length < b.Length || (p.Length == b.Length && c.Confidence <= best.Confidence) {
+				continue
+			}
+		}
+
+		best, found = c, true
+	}
+
+	return best, found
 }
 
 // streetClaim holds the confidence a street line reading is offered at, so the

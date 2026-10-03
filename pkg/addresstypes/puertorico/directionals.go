@@ -58,6 +58,26 @@ func abbreviateSpanishDirectional(d string) (string, error) {
 	return "", fmt.Errorf("unrecognized Spanish directional")
 }
 
+// normalizeSpanishDirectional expands a Spanish directional abbreviation to
+// its full Spanish word, or confirms a full Spanish word unchanged. This
+// mirrors pkg/directionals.NormalizeDirectional against Spanish data only,
+// for the same reason abbreviateSpanishDirectional does: p.25's "developers
+// MUST NOT translate directionals" means NO must expand to NOROESTE, never
+// to the English word its row's English field names.
+func normalizeSpanishDirectional(d string) (string, error) {
+	capitalized := strings.ToUpper(d)
+
+	if full, ok := spanishDirectionShortMap[capitalized]; ok {
+		return full, nil
+	}
+
+	if _, ok := spanishDirectionMap[capitalized]; ok {
+		return capitalized, nil
+	}
+
+	return "", fmt.Errorf("unrecognized Spanish directional")
+}
+
 // directionalMaxSpan is the longest Spanish directional in the vocabulary,
 // measured in tokens: a compound spelled as two words, e.g. NORTE ESTE.
 const directionalMaxSpan = 2
@@ -136,51 +156,6 @@ func abbreviateSpanishSpan(tokens []token.Token) (string, bool) {
 	}
 
 	return combined.String(), true
-}
-
-// substituteSpanishDirectionals returns tokens[start:end] with any
-// Spanish-directional claim entirely inside that range replaced by a single
-// token holding the claimed abbreviation, so a recognizer downstream (e.g.
-// NormalizeStreetLine) sees "NO" wherever the line spelled out NOROESTE.
-//
-// Only PartPredirectional/PartPostdirectional claims are considered — the
-// same two parts directionalClaims always claims together — and only those
-// whose span falls entirely within [start, end); one reaching outside it is
-// not a reading of this line. Where more than one length matches at the same
-// starting token (a single word, and, where it also opens a compound, two),
-// the longest wins, the same preference pkg/directionals.Claims documents
-// for a compound over the two directionals it is made of.
-func substituteSpanishDirectionals(tokens []token.Token, claims []claim.Claim, start, end int) []token.Token {
-	best := map[int]claim.ClaimPart{}
-	for _, c := range claims {
-		for _, p := range c.Parts {
-			if p.Part != claim.PartPredirectional && p.Part != claim.PartPostdirectional {
-				continue
-			}
-			if p.Start < start || p.End() > end {
-				continue
-			}
-			if cur, ok := best[p.Start]; !ok || p.Length > cur.Length {
-				best[p.Start] = p
-			}
-		}
-	}
-
-	out := make([]token.Token, 0, end-start)
-	for i := start; i < end; {
-		if p, ok := best[i]; ok {
-			substituted := tokens[i]
-			substituted.Text = p.Value
-			out = append(out, substituted)
-			i += p.Length
-			continue
-		}
-
-		out = append(out, tokens[i])
-		i++
-	}
-
-	return out
 }
 
 // spanishSpanConfidence rates a matched run of tokens. See

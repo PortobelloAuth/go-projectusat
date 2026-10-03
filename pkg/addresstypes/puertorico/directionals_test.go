@@ -154,32 +154,33 @@ func TestSpanishDirectionalClaimsBothParts(t *testing.T) {
 	}
 }
 
-// TestAbbreviatePuertoRicoDirectionalsInStreetName pins PR #175's review
+// TestExpandPuertoRicoDirectionalsInStreetName pins PR #175's review
 // (go-projectusat#154): NormalizePuertoRicoStreetName must call a
-// Puerto-Rico-local directional step rather than the generic English one, and
-// that step abbreviates a Spanish directional to its Pub 28 form. Project US@
-// p.26 keeps "1510 CALLE 3 NO" as NO, so expanding it to NOROESTE is the
-// regression this test guards against.
-func TestAbbreviatePuertoRicoDirectionalsInStreetName(t *testing.T) {
+// Puerto-Rico-local directional expansion rather than the generic English
+// one, so a Spanish directional left inside the free-text street name
+// expands to its own Spanish spelling (p.25's "developers MUST NOT translate
+// directionals") instead of passing through unrecognized or translating to
+// English.
+func TestExpandPuertoRicoDirectionalsInStreetName(t *testing.T) {
 	cases := []struct {
 		name string
 		in   string
 		want string
 	}{
 		{
-			name: "a Spanish abbreviation is left as-is, not expanded",
+			name: "a Spanish abbreviation expands to its own Spanish word",
 			in:   "CALLE NO 3",
-			want: "CALLE NO 3",
+			want: "CALLE NOROESTE 3",
 		},
 		{
-			name: "a spelled out Spanish directional abbreviates to its own Spanish abbreviation",
+			name: "a spelled out Spanish directional is left as-is, not translated to English",
 			in:   "CALLE NOROESTE 3",
-			want: "CALLE NO 3",
+			want: "CALLE NOROESTE 3",
 		},
 		{
-			name: "a spelled out compound abbreviates to its Spanish abbreviation",
-			in:   "CALLE NORESTE 3",
-			want: "CALLE NE 3",
+			name: "a compound abbreviation expands to its one-word Spanish spelling",
+			in:   "CALLE NE 3",
+			want: "CALLE NORESTE 3",
 		},
 		{
 			name: "no directional present leaves the name untouched",
@@ -190,12 +191,12 @@ func TestAbbreviatePuertoRicoDirectionalsInStreetName(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := puertorico.AbbreviatePuertoRicoDirectionalsInStreetNameFn(tc.in, normalizer.AddressNormalizationOptions{})
+			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizer.AddressNormalizationOptions{})
 			if err != nil && err != normalizer.Done {
-				t.Fatalf("AbbreviatePuertoRicoDirectionalsInStreetNameFn(%q) returned error %v", tc.in, err)
+				t.Fatalf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) returned error %v", tc.in, err)
 			}
 			if got != tc.want {
-				t.Errorf("AbbreviatePuertoRicoDirectionalsInStreetNameFn(%q) = %q, want %q", tc.in, got, tc.want)
+				t.Errorf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
 	}

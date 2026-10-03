@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
@@ -314,5 +315,100 @@ func TestEveryCandidateNamesThisAddressType(t *testing.T) {
 		if _, ok := c.Address.Type.(*puertorico.PuertoRicoAddress); !ok {
 			t.Errorf("address type = %T, want *puertorico.PuertoRicoAddress", c.Address.Type)
 		}
+	}
+}
+
+// normalizedStreet is street, run through the address type's own Normalize
+// first: the street line as the parser finally prints it.
+func normalizedStreet(t *testing.T, source string) (*address.Address, string) {
+	t.Helper()
+
+	var top *address.CandidateAddress
+	for _, c := range candidates(source) {
+		if top == nil || c.Confidence > top.Confidence {
+			top = c
+		}
+	}
+	if top == nil {
+		t.Fatalf("%q: no reading", source)
+	}
+
+	out, err := (&puertorico.PuertoRicoAddress{}).Normalize(top.Address, normalizer.AddressNormalizationOptions{})
+	if err != nil {
+		t.Fatalf("%q: Normalize: %v", source, err)
+	}
+
+	return out, out.FormatStreetLine()
+}
+
+// go-projectusat#154 / PR #175 review: a Spanish directional that is a pre- or
+// postdirectional goes in Predirectional/Postdirectional and is ABBREVIATED;
+// one inside the street name stays in StreetName and is expanded there. The
+// first two rows are p. 26's own examples.
+func TestADirectionalIsPlacedInItsOwnFieldAndAbbreviated(t *testing.T) {
+	for _, tc := range []struct {
+		source, wantPre, wantName, wantPost, wantLine string
+	}{
+		{"1510 CALLE 3 NO\nSAN JUAN PR 00926", "", "CALLE 3", "NO", "1510 CALLE 3 NO"},
+		{"1620 CALLE 17 SO\nSAN JUAN PR 00926", "", "CALLE 17", "SO", "1620 CALLE 17 SO"},
+		{"1510 CALLE 3 NOROESTE\nSAN JUAN PR 00926", "", "CALLE 3", "NO", "1510 CALLE 3 NO"},
+		{"1620 CALLE 17 SUDOESTE\nSAN JUAN PR 00926", "", "CALLE 17", "SO", "1620 CALLE 17 SO"},
+		{"1620 CALLE 17 SUR\nSAN JUAN PR 00926", "", "CALLE 17", "S", "1620 CALLE 17 S"},
+		{"1620 CALLE 17 NORTE ESTE\nSAN JUAN PR 00926", "", "CALLE 17", "NE", "1620 CALLE 17 NE"},
+		// The English analogue of p.35's "12 E BUSINESS LN": a predirectional
+		// stays abbreviated rather than being expanded inside the name.
+		{"12 E CALLE LUNA\nSAN JUAN PR 00926", "E", "CALLE LUNA", "", "12 E CALLE LUNA"},
+		{"12 EAST CALLE LUNA\nSAN JUAN PR 00926", "E", "CALLE LUNA", "", "12 E CALLE LUNA"},
+		{"12 ESTE CALLE LUNA\nSAN JUAN PR 00926", "E", "CALLE LUNA", "", "12 E CALLE LUNA"},
+		// Inside the street name: not a directional field, so expanded.
+		{"123 CALLE SO 5\nSAN JUAN PR 00926", "", "CALLE SUDOESTE 5", "", "123 CALLE SUDOESTE 5"},
+		{"123 CALLE NORTE 5\nSAN JUAN PR 00926", "", "CALLE NORTE 5", "", "123 CALLE NORTE 5"},
+		// A directional that is the whole root name is the name, not a
+		// postdirectional.
+		{"150 CALLE O\nSAN JUAN PR 00926", "", "CALLE O", "", "150 CALLE O"},
+	} {
+		t.Run(tc.source, func(t *testing.T) {
+			got, line := normalizedStreet(t, tc.source)
+			if got.Predirectional != tc.wantPre || got.StreetName != tc.wantName || got.Postdirectional != tc.wantPost {
+				t.Errorf("pre/name/post = %q/%q/%q, want %q/%q/%q",
+					got.Predirectional, got.StreetName, got.Postdirectional, tc.wantPre, tc.wantName, tc.wantPost)
+			}
+			if line != tc.wantLine {
+				t.Errorf("street line = %q, want %q", line, tc.wantLine)
+			}
+		})
+	}
+}
+
+// The postdirectional is a claim of its own, placed by Candidates — not a
+// word the street-name normalizer happens to leave alone. This is the claim
+// to field wiring Aaron asked to see on PR #175.
+func TestTheDirectionalClaimLandsInTheField(t *testing.T) {
+	whole := false
+	for _, c := range candidates("1510 CALLE 3 NOROESTE\nSAN JUAN PR 00926") {
+		if c.Address.Postdirectional != "NO" || c.Address.StreetName != "CALLE 3" {
+			t.Errorf("candidate postdirectional/name = %q/%q, want NO/CALLE 3", c.Address.Postdirectional, c.Address.StreetName)
+		}
+		// Some last-line readings strand a token; the one that reads the
+		// whole last line must leave nothing over.
+		if len(c.Leftover) == 0 {
+			whole = true
+		}
+	}
+	if !whole {
+		t.Error("no candidate accounts for every token")
+	}
+}
+
+// Region abbreviation runs last in NormalizePuertoRicoStreetName, as in the
+// generic normalizer (#165): MONTANA abbreviates to MT and must not then be
+// read back as MOUNT by ExpandCityInStreetNameFn.
+func TestRegionAbbreviationRunsLast(t *testing.T) {
+	got, err := puertorico.NormalizePuertoRicoStreetName("MONTANA TREASURE", normalizer.AddressNormalizationOptions{})
+	if err != nil && err != normalizer.Done {
+		t.Fatalf("NormalizePuertoRicoStreetName: %v", err)
+	}
+	if got != "MT TREASURE" {
+		t.Errorf("NormalizePuertoRicoStreetName(MONTANA TREASURE) = %q, want MT TREASURE", got)
 	}
 }
