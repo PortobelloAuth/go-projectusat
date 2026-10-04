@@ -745,7 +745,7 @@ func TestContentNormalizerKeepsTheWordAfterAnAbbreviatedRegion(t *testing.T) {
 	got, err := n.Normalize(&address.Address{
 		Type:          &puertorico.PuertoRicoAddress{},
 		PrimaryNumber: "1",
-		StreetName:    "ALTS DE CANA",
+		StreetName:    "CALLE ALTS DE CANA",
 		City:          "San Juan",
 		Region:        "PR",
 		Postal:        "00907",
