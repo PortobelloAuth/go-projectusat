@@ -291,6 +291,7 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	}
 
 	candidates := routeCandidates(tokens, line)
+	candidates = append(candidates, poBoxCandidates(tokens, line)...)
 
 	street, ok := streetLine(tokens, claims, line)
 	if !ok {
