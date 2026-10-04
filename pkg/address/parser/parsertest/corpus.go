@@ -40,10 +40,12 @@ type Case struct {
 	// the decomposition, both, or neither. They have to be independent
 	// because rendering the same string is not evidence two parses agree:
 	// "123 NORTH PARK" renders identically whether NORTH is read as a
-	// predirectional before the street name PARK, or NORTH PARK is read as
-	// one unsplit name, and Want cannot tell those apart. WantFields can,
-	// which is the entire reason it exists (go-projectusat#123,
-	// addressparsers#24).
+	// street name before the street suffix PARK, or NORTH PARK is read as
+	// one unsplit street name, and Want cannot tell those apart. Another
+	// possible decomposition would assign NORTH as a predirectional and
+	// PARK as the street name if another Street Suffix is present.
+	// WantFields can distinguish between each of them, which is why it
+	// exists (go-projectusat#123, addressparsers#24).
 	WantFields *address.Address
 }
 
