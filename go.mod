@@ -5,6 +5,6 @@ go 1.25.0
 require (
 	github.com/anyascii/go v0.3.3
 	github.com/hbollon/go-edlib v1.7.0
-	github.com/poetic-systems/addresstables v0.0.0-20261002220916-4978ee6affa7
+	github.com/poetic-systems/addresstables v0.0.0-20261004030433-2fce85fc99ee
 	golang.org/x/text v0.39.0
 )
