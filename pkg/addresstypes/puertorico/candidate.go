@@ -2,7 +2,6 @@ package puertorico
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
@@ -14,8 +13,6 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
-
-var whitespace = regexp.MustCompile(`\s+`)
 
 // PuertoRicoAddress is the AddressType for a Puerto Rico street address.
 //
@@ -249,11 +246,11 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizer.AddressNo
 		return nil, err
 	}
 
-	// TODO: Make sure that the result of normalizing the street name and the primary number is a
+	// Make sure that the result of normalizing the street name and the primary number is a
 	// valid puertorico street line.
-	// if !CheckStreetLine(...) {
-	// 	return nil, fmt.Errorf("Failed to normalize puertorico street line")
-	// }
+	if _, _, err := NormalizeStreetLine(out.FormatStreetLine()); err != nil {
+		return nil, err
+	}
 
 	return out, nil
 }

@@ -743,11 +743,12 @@ func TestContentNormalizerKeepsTheWordAfterAnAbbreviatedRegion(t *testing.T) {
 	// The same name on a Puerto Rico address, which composes its own street
 	// name chain around the shared region step.
 	got, err := n.Normalize(&address.Address{
-		Type:       &puertorico.PuertoRicoAddress{},
-		StreetName: "ALTS DE CANA",
-		City:       "San Juan",
-		Region:     "PR",
-		Postal:     "00907",
+		Type:          &puertorico.PuertoRicoAddress{},
+		PrimaryNumber: "1",
+		StreetName:    "CALLE ALTS DE CANA",
+		City:          "San Juan",
+		Region:        "PR",
+		Postal:        "00907",
 	})
 	if err != nil {
 		t.Fatalf("Normalize: unexpected error: %v", err)
