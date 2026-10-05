@@ -32,12 +32,22 @@ var poBoxWords = slices.Collect(puertorico.POBoxWords())
 func poBoxCandidates(tokens []token.Token, line lastline.LineClaim) []*address.CandidateAddress {
 	var candidates []*address.CandidateAddress
 
+	// covered is the first token no accepted box has claimed. A start inside
+	// an accepted box is the same box read again: BOX in PO BOX 2018, or PO BOX
+	// in GPO BOX 1118. The leftmost designator claims its tokens first, so the
+	// longer designator wins.
+	covered := 0
 	for start := range tokens {
+		if start < covered {
+			continue
+		}
+
 		c, ok := poBoxClaim(tokens, start)
 		if !ok || c.End() > line.Span.Start {
 			continue
 		}
 
+		covered = c.End()
 		candidates = append(candidates,
 			line.Candidate(&pobox.POBoxAddress{}, len(tokens), []claim.Claim{c}))
 	}

@@ -28,6 +28,21 @@ func TestEveryPuertoRicoSpellingOfAPOBoxIsRewrittenAsPOBox(t *testing.T) {
 	}
 }
 
+// PO BOX and GPO BOX contain a BOX designator of their own. The box must be
+// offered once, as APARTADO is, not once for each designator it contains.
+func TestAMultiWordDesignatorIsOfferedOnceLikeASingleWordOne(t *testing.T) {
+	baseline := len(candidates("XYZ COMPANY\nAPARTADO 2018\nSAN JUAN PR 00907"))
+
+	for _, designator := range []string{"PO BOX 2018", "GPO BOX 2018"} {
+		t.Run(designator, func(t *testing.T) {
+			got := len(candidates("XYZ COMPANY\n" + designator + "\nSAN JUAN PR 00907"))
+			if got != baseline {
+				t.Errorf("%q offered %d candidates, want %d as for APARTADO", designator, got, baseline)
+			}
+		})
+	}
+}
+
 // A designator with no box number after it is not a box, as on the mainland.
 func TestASpanishDesignatorWithNoNumberIsNotABox(t *testing.T) {
 	for _, c := range candidates("XYZ COMPANY\nAPARTADO\nSAN JUAN PR 00907") {
