@@ -152,6 +152,22 @@ func CountPassFields(results []Result) (pass, settled, total int) {
 	return pass, settled, len(results)
 }
 
+// CountPassAll returns how many of results passed accounting for both Want and
+// WantFields, how many were settled enough to be scored at all, and the total.
+// Reporting settled separately keeps an open question from reading as a
+// parser's failure.
+func CountPassAll(results []Result) (pass, settled, total int) {
+	for _, r := range results {
+		if r.Settled() || r.SettledFields() {
+			settled++
+		}
+		if r.Pass() || r.PassFields() {
+			pass++
+		}
+	}
+	return pass, settled, len(results)
+}
+
 // FieldResult is one field of an Address, comparing what a Case's
 // WantFields asserted against what Run's parse returned for it. Want and Got
 // are the field's rendering as a string even where the underlying field is
