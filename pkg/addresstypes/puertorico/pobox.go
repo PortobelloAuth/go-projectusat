@@ -71,6 +71,11 @@ func poBoxClaim(tokens []token.Token, start int) (claim.Claim, bool) {
 		}
 
 		number := foldUpper(tokens[start+n].Text)
+		// Pub 28 lists "PO BOX S-1190" among the designators that should be transformed
+		// to "PO BOX" in Puerto Rico. We interpret this as meaning "S-" should be removed
+		// from the beginning of all Puerto Rico PO BOX numbers.
+		number, _ = strings.CutPrefix(number, "S-")
+
 		if !pobox.CheckStreetLine("PO BOX " + number) {
 			continue
 		}

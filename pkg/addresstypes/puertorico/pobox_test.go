@@ -15,6 +15,7 @@ func TestEveryPuertoRicoSpellingOfAPOBoxIsRewrittenAsPOBox(t *testing.T) {
 		{"Apartado 2018", "PO BOX 2018"},
 		{"GPO BOX 1118", "PO BOX 1118"},
 		{"gpo box 1118", "PO BOX 1118"},
+		{"PO BOX S-1190", "PO BOX 1190"},
 	} {
 		t.Run(tc.designator, func(t *testing.T) {
 			got, ok := street(t, "XYZ COMPANY\n"+tc.designator+"\nSAN JUAN PR 00907")
