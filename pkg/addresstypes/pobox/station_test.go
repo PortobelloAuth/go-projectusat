@@ -27,3 +27,29 @@ func TestNoPostalStationWithoutDesignator(t *testing.T) {
 		}
 	}
 }
+
+// The standard's position: the station is the line above the box, as in Pub 28
+// §045. It is read the same way as the station below the box.
+func TestPostalStationAboveBox(t *testing.T) {
+	found := false
+	for _, c := range candidates("OLD SAN JUAN STA\nPO BOX 1190\nSAN JUAN PR 00902-1190") {
+		if c.Address.PostalStation == "OLD SAN JUAN STA" && c.Address.PrimaryNumber == "1190" {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Fatal("no candidate carries OLD SAN JUAN STA above the box as the postal station")
+	}
+}
+
+// A station is strongly tied to a PO BOX street line. With an ordinary street
+// line in the box's place there is no box reading at all, so no candidate can
+// carry the station.
+func TestPostalStationNeedsAPOBoxStreetLine(t *testing.T) {
+	for _, c := range candidates("OLD SAN JUAN STA\n123 MAIN ST\nSAN JUAN PR 00902") {
+		if c.Address.PostalStation != "" {
+			t.Errorf("a station was read with a non-PO BOX street line: %q", c.Address.PostalStation)
+		}
+	}
+}

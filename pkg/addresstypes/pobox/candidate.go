@@ -146,7 +146,12 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, detail}))
 		}
 
-		if station, ok := stationClaim(tokens, c, line); ok {
+		if station, ok := stationBelowBox(tokens, c, line); ok {
+			candidates = append(candidates,
+				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, station}))
+		}
+
+		if station, ok := stationAboveBox(tokens, c); ok {
 			candidates = append(candidates,
 				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, station}))
 		}
@@ -155,19 +160,14 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	return candidates
 }
 
-// stationClaim reads a postal station on the line between the box and the last
-// line, if there is one: "OLD SAN JUAN STA" in "PO BOX 1190\nOLD SAN JUAN
+// stationBelowBox reads a postal station on the line between the box and the
+// last line, if there is one: "OLD SAN JUAN STA" in "PO BOX 1190\nOLD SAN JUAN
 // STA\nSAN JUAN PR 00902-1190". The standard puts the station above the
-// delivery line, so it is the one line this package reads on that side of the
-// box, and it is read only when it is a line of its own directly above the last
-// line.
-//
-// The station is a name followed by STA or STATION, and the claim writes it as
-// the abbreviated form, which is what the standard renders. It is rated Exact
-// for the reason trailingDetail is: on this line in this position nothing else
-// reads it, and at any lower rating the candidate without it would tie once its
-// stranded line is demoted for leftover.
-func stationClaim(tokens []token.Token, c claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
+// delivery line, so this reading is the one that is wrong about position: it is
+// kept because the spec's own test row has the station here, and a reader that
+// refused it would drop a line that is in the spec. It is read only when it is
+// a line of its own directly above the last line.
+func stationBelowBox(tokens []token.Token, c claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
 	start, end := c.End(), line.Span.Start
 	if start >= end || end > len(tokens) {
 		return claim.Claim{}, false
@@ -182,6 +182,33 @@ func stationClaim(tokens []token.Token, c claim.Claim, line lastline.LineClaim) 
 		return claim.Claim{}, false
 	}
 
+	return stationOn(tokens, start, end)
+}
+
+// stationAboveBox reads the station on the line immediately above the box's own
+// line, the position Pub 28 §045 gives it: "OLD SAN JUAN STA\nPO BOX 1190\nSAN
+// JUAN PR 00902-1190". Like aboveLineDetail, it reads only the line directly
+// above, and only when that line runs up to the box's line.
+func stationAboveBox(tokens []token.Token, c claim.Claim) (claim.Claim, bool) {
+	boxLine := lineStart(tokens, c.Start())
+	if boxLine <= 0 {
+		return claim.Claim{}, false
+	}
+
+	above := lineStart(tokens, boxLine-1)
+	if token.LineEnd(tokens, above) != boxLine {
+		return claim.Claim{}, false
+	}
+
+	return stationOn(tokens, above, boxLine)
+}
+
+// stationOn reads tokens[start:end] as a postal station when the run is a name
+// followed by STA or STATION. The claim writes it in the abbreviated form, which
+// is what the standard renders. It is rated Exact for the reason trailingDetail
+// is: on a PO BOX line nothing else reads it, and at any lower rating the
+// candidate without it would tie once its stranded line is demoted for leftover.
+func stationOn(tokens []token.Token, start, end int) (claim.Claim, bool) {
 	// At least one name word, then the designator.
 	if end-start < 2 {
 		return claim.Claim{}, false
