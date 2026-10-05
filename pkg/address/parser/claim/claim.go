@@ -25,6 +25,7 @@ const (
 	PartSecondaryNumber     Part = "secondary number"
 	PartDetail              Part = "detail"
 	PartArea                Part = "area"
+	PartPostalStation       Part = "postal station"
 	PartCity                Part = "city"
 	PartRegion              Part = "region"
 	PartPostal              Part = "postal"

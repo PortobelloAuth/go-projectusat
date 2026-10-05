@@ -48,6 +48,13 @@ type Address struct {
 	// dialect the standard requires it for today.
 	Area string
 
+	// PostalStation is the named postal station a post office box is served
+	// from, such as "OLD SAN JUAN STA". USPS Publication 28 places it on the
+	// line between the box and the last line, and Format writes it above the
+	// street line. It is held apart from Area because it names the office
+	// that handles the mail rather than a neighborhood the address is in.
+	PostalStation string
+
 	// Street line elements
 	PrimaryNumber       string
 	Predirectional      string
@@ -101,6 +108,7 @@ func (a *Address) Equals(other *Address) bool {
 
 	return a.BusinessName == other.BusinessName &&
 		a.Area == other.Area &&
+		a.PostalStation == other.PostalStation &&
 		a.PrimaryNumber == other.PrimaryNumber &&
 		a.Predirectional == other.Predirectional &&
 		a.StreetName == other.StreetName &&
@@ -124,6 +132,7 @@ func (a *Address) Clone() *Address {
 		Type:                a.Type,
 		BusinessName:        a.BusinessName,
 		Area:                a.Area,
+		PostalStation:       a.PostalStation,
 		PrimaryNumber:       a.PrimaryNumber,
 		Predirectional:      a.Predirectional,
 		StreetName:          a.StreetName,
@@ -157,7 +166,7 @@ func (a *Address) Format(opts ...FormatOptions) string {
 	if o.SingleLine {
 		sep = " "
 	}
-	return textutil.JoinNonEmpty(sep, a.BusinessName, a.Area, a.FormatStreetLine(), a.FormatLastLine())
+	return textutil.JoinNonEmpty(sep, a.BusinessName, a.Area, a.PostalStation, a.FormatStreetLine(), a.FormatLastLine())
 }
 
 func (a *Address) FormatSingleLine(opts ...FormatOptions) string {

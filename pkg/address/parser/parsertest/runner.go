@@ -63,6 +63,7 @@ func (r Result) Fields() []FieldResult {
 		{Field: "Type", Want: typeName(want.Type), Got: typeName(got.Type)},
 		{Field: "BusinessName", Want: want.BusinessName, Got: got.BusinessName},
 		{Field: "Area", Want: want.Area, Got: got.Area},
+		{Field: "PostalStation", Want: want.PostalStation, Got: got.PostalStation},
 		{Field: "PrimaryNumber", Want: want.PrimaryNumber, Got: got.PrimaryNumber},
 		{Field: "Predirectional", Want: want.Predirectional, Got: got.Predirectional},
 		{Field: "StreetName", Want: want.StreetName, Got: got.StreetName},

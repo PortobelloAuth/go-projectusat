@@ -86,6 +86,8 @@ func assign(a *address.Address, p claim.ClaimPart) {
 		a.Detail = p.Value
 	case claim.PartArea:
 		a.Area = p.Value
+	case claim.PartPostalStation:
+		a.PostalStation = p.Value
 	case claim.PartCity:
 		a.City = p.Value
 	case claim.PartRegion:

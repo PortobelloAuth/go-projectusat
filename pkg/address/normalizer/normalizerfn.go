@@ -72,6 +72,7 @@ var NormalizeLastLine = ComposeNormalizationFn(
 
 var NormalizeOtherParts = ComposeNormalizationFn(
 	NormalizeAreaFn,
+	NormalizePostalStationFn,
 	NormalizeBusinessNameFn,
 	NormalizeDetailFn,
 )
@@ -146,6 +147,18 @@ func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*addres
 		}
 
 		a.Area = out
+	}
+	return a, nil
+}
+
+func NormalizePostalStationFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+	if len(a.PostalStation) > 0 {
+		out, err := textutil.FreeTextField(a.PostalStation, o.DiacriticMode)
+		if err != nil {
+			return nil, fmt.Errorf("postal station: %w", err)
+		}
+
+		a.PostalStation = out
 	}
 	return a, nil
 }

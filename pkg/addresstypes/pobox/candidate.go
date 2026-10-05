@@ -2,6 +2,7 @@ package pobox
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
@@ -144,9 +145,65 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 			candidates = append(candidates,
 				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, detail}))
 		}
+
+		if station, ok := stationClaim(tokens, c, line); ok {
+			candidates = append(candidates,
+				line.Candidate(&POBoxAddress{}, len(tokens), []claim.Claim{c, station}))
+		}
 	}
 
 	return candidates
+}
+
+// stationClaim reads a postal station on the line between the box and the last
+// line, if there is one: "OLD SAN JUAN STA" in "PO BOX 1190\nOLD SAN JUAN
+// STA\nSAN JUAN PR 00902-1190". The standard puts the station above the
+// delivery line, so it is the one line this package reads on that side of the
+// box, and it is read only when it is a line of its own directly above the last
+// line.
+//
+// The station is a name followed by STA or STATION, and the claim writes it as
+// the abbreviated form, which is what the standard renders. It is rated Exact
+// for the reason trailingDetail is: on this line in this position nothing else
+// reads it, and at any lower rating the candidate without it would tie once its
+// stranded line is demoted for leftover.
+func stationClaim(tokens []token.Token, c claim.Claim, line lastline.LineClaim) (claim.Claim, bool) {
+	start, end := c.End(), line.Span.Start
+	if start >= end || end > len(tokens) {
+		return claim.Claim{}, false
+	}
+
+	// The station is on a line of its own, and the line is the one directly
+	// above the last line.
+	if tokens[start].Line == tokens[c.Start()].Line || tokens[end-1].Line != tokens[start].Line {
+		return claim.Claim{}, false
+	}
+	if token.LineEnd(tokens, start) != end {
+		return claim.Claim{}, false
+	}
+
+	// At least one name word, then the designator.
+	if end-start < 2 {
+		return claim.Claim{}, false
+	}
+	designator := strings.ToUpper(tokens[end-1].Text)
+	if designator != "STA" && designator != "STATION" {
+		return claim.Claim{}, false
+	}
+
+	name := strings.ToUpper(token.Join(tokens[start : end-1]))
+
+	return claim.Claim{
+		Confidence: claim.ConfidenceExact,
+		Parts: []claim.ClaimPart{
+			{
+				Start:  start,
+				Length: end - start,
+				Part:   claim.PartPostalStation,
+				Value:  name + " STA",
+			},
+		},
+	}, true
 }
 
 // trailingDetail returns the private mailbox claim that follows the box
