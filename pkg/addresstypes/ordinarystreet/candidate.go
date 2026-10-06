@@ -195,7 +195,7 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) {
 			continue
 		}
-		if holdsStructure(claims, from, i) || !readsStreetLine(tokens, claims, i, end) {
+		if holdsStructure(claims, from, i) || hasBox(tokens[from:i]) || !readsStreetLine(tokens, claims, i, end) {
 			return from
 		}
 
@@ -223,6 +223,18 @@ func readsStreetLine(tokens []token.Token, claims []claim.Claim, start, end int)
 // RR alone is not a route, so isUnitOrRoute does not see it.
 func routeNumber(tokens []token.Token, i, end int) bool {
 	return i+1 < end && normalizeWord(tokens[i+1].Text) == "BOX"
+}
+
+// hasBox reports whether the words hold BOX, which makes them a rural route or
+// a post office box and not a business name: "RR 2 BOX 18" splits nowhere.
+func hasBox(tokens []token.Token) bool {
+	for _, t := range tokens {
+		if normalizeWord(t.Text) == "BOX" {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isUnitOrRoute reports whether the word opens a secondary unit or rural route.
