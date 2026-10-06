@@ -8,7 +8,10 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
+	"github.com/PortobelloAuth/go-projectusat/pkg/businesswords"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
+	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
@@ -58,13 +61,23 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 		start = lineStart(tokens, start-1)
 	}
 
-	placed := placements(tokens, claims, start, end)
+	// The street begins at the house number, and anything ahead of it is not
+	// street. aboveLineClaim keeps the line start: it looks at the line above.
+	street := businessBoundary(tokens, claims, start, end)
+
+	var business []claim.Claim
+	if street > start {
+		business = append(business, businessClaim(tokens, start, street))
+	}
+
+	placed := placements(tokens, claims, street, end)
 
 	var candidates []*address.CandidateAddress
-	for _, t := range tails(claims, start, end) {
-		for _, h := range heads(tokens, claims, start, t.nameEnd) {
+	for _, t := range tails(claims, street, end) {
+		for _, h := range heads(tokens, claims, street, t.nameEnd) {
 			for _, name := range nameReadings(tokens, claims, h.nameStart, t.nameEnd) {
-				accepted := make([]claim.Claim, 0, len(h.claims)+len(t.claims)+1)
+				accepted := make([]claim.Claim, 0, len(business)+len(h.claims)+len(t.claims)+1)
+				accepted = append(accepted, business...)
 				accepted = append(accepted, h.claims...)
 				accepted = append(accepted, t.claims...)
 				accepted = append(accepted, streetClaim(claims, placed, h, t, name))
@@ -147,6 +160,133 @@ func isSecondaryUnitLine(claims []claim.Claim, start, end int) bool {
 	for _, c := range claims {
 		if c.Start() == start && c.End() == end && assigns(c, claim.PartSecondaryDesignator) {
 			return true
+		}
+	}
+
+	return false
+}
+
+// houseNumber is a bare run of digits, the shape of a house number written
+// alone. It is deliberately narrower than primaryNumbers' digit test: "42ND" is
+// an ordinal in a street name, and "N6W23001" is a grid number this package
+// reads only at the start of a line.
+var houseNumber = regexp.MustCompile(`^[0-9]+$`)
+
+// businessBoundary returns where the street begins when a business name opens
+// the line, and from otherwise.
+//
+// A single line address has no line break to say where the business name ends,
+// so the numberless reading of the line takes the house number as the first
+// word of the street: "CENTER OF HOPE 110 EAST 7TH STREET" reads as a street
+// named "CENTER OF HOPE 110 EAST 7TH". The first bare number is the house number
+// when only words stand ahead of it, so the street begins there and the words
+// become leftover, which costs the reading a step as it should.
+//
+// It stays put where the words are not a business name: a line that opens with
+// a number is handled by primaryNumbers, a digit-bearing word before the first
+// bare number is an ordinal or a grid, a word the vocabularies read as unit,
+// box, place or region structure is not a business word, and nothing in the
+// prefix is a Publication 28 business word at all. That last test is what keeps
+// "Apartment 3200 ..", "RR 2 BOX 18 .." and "STE 480 .." from becoming business
+// names. A business word may still read as a street suffix — CENTER is CTR — so
+// those claims do not count.
+func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int) int {
+	if from >= end || strings.ContainsFunc(tokens[from].Text, unicode.IsDigit) {
+		return from
+	}
+
+	for i := from + 1; i < end-1; i++ {
+		if !strings.ContainsFunc(tokens[i].Text, unicode.IsDigit) {
+			continue
+		}
+		if !houseNumber.MatchString(tokens[i].Text) || holdsStructure(claims, from, i) || !hasBusinessWord(tokens[from:i]) {
+			return from
+		}
+
+		return i
+	}
+
+	return from
+}
+
+// hasBusinessWord reports whether the prefix reads as a business name: it must
+// open on a word that is not a unit or route designator, and contain at least one
+// Publication 28 business word. The opening test keeps "Apartment 3200 152 .." and
+// "Unit 3200 152 .." out. It cannot test every word, because BUILDING is both a
+// business word (UCENT BUILDING) and a unit designator (BLDG).
+func hasBusinessWord(tokens []token.Token) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	if isUnitOrRoute(tokens[0].Text) {
+		return false
+	}
+
+	for _, t := range tokens {
+		if _, err := businesswords.Info(normalizeWord(t.Text)); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isUnitOrRoute reports whether the word opens a secondary unit or rural route.
+func isUnitOrRoute(text string) bool {
+	word := normalizeWord(text)
+	if _, err := secondaryunit.Info(word); err == nil {
+		return true
+	}
+	_, err := ruralroute.Normalize(word)
+
+	return err == nil
+}
+
+// normalizeWord upper-cases a token and strips its punctuation for vocabulary lookup.
+func normalizeWord(text string) string {
+	return strings.ToUpper(textutil.StripPunctuation(text, textutil.StripOptions{KeepHyphen: false, KeepSlash: false}))
+}
+
+// businessClaim reads the words ahead of the street as the business name, so
+// they are kept rather than dropped as leftover: an address that names its
+// business should still say so.
+//
+// It is rated Strong, the same as the street it stands ahead of, because the
+// house number is what confirms where the words end. A lower rating would be a
+// confidence minimum that caps every reading at the business claim's level and
+// leaves the best one tied with its own variants. Nothing confirms the name
+// itself, which is the same ceiling streetConfidence gives a street name.
+func businessClaim(tokens []token.Token, from, to int) claim.Claim {
+	clean := textutil.StripPunctuation(token.Join(tokens[from:to]), textutil.StripOptions{
+		KeepHyphen: false,
+		KeepSlash:  false,
+	})
+
+	return claim.Claim{
+		Confidence: claim.ConfidenceStrong,
+		Parts: []claim.ClaimPart{{
+			Start:  from,
+			Length: to - from,
+			Part:   claim.PartBusinessName,
+			Value:  strings.ToUpper(clean),
+		}},
+	}
+}
+
+// holdsStructure reports whether a claim wholly inside [from, to) reads any of
+// its tokens as something other than a business word or a street-type word.
+func holdsStructure(claims []claim.Claim, from, to int) bool {
+	for _, c := range claims {
+		if c.Start() < from || c.End() > to {
+			continue
+		}
+		for _, p := range c.Parts {
+			switch p.Part {
+			case claim.PartStreetSuffix, claim.PartPredirectional, claim.PartPostdirectional,
+				claim.PartStreetName, claim.PartBusinessName:
+			default:
+				return true
+			}
 		}
 	}
 

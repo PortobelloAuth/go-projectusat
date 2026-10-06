@@ -80,6 +80,7 @@ func bestReading(t *testing.T, source string) *addressReading {
 
 	return &addressReading{
 		confidence: best.Confidence,
+		business:   a.BusinessName,
 		number:     a.PrimaryNumber,
 		pre:        a.Predirectional,
 		name:       a.StreetName,
@@ -94,6 +95,7 @@ func bestReading(t *testing.T, source string) *addressReading {
 
 type addressReading struct {
 	confidence claim.Confidence
+	business   string
 	number     string
 	pre        string
 	name       string
@@ -121,6 +123,33 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				confidence: claim.ConfidenceStrong,
 				number:     "123", name: "MAIN", suffix: "ST",
 				formatted: "123 MAIN ST",
+			},
+		},
+		{
+			// A business name ahead of the house number on the same line has no
+			// line break to end it. The first bare number is the house number,
+			// so the words stay out of the street name. CTR is CENTER read as a
+			// suffix, which is a street-type word and not structure, so it does
+			// not stop the boundary.
+			name:   "a business name ahead of the house number is not part of the street",
+			source: "UCENT BUILDING 847 NORTH 49TH STREET\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "UCENT BUILDING",
+				number:     "847", pre: "N", name: "49TH", suffix: "ST",
+				formatted: "847 N 49TH ST",
+			},
+		},
+		{
+			// The boundary is a bare number. An ordinal is a street name, so a
+			// street that opens with a directional and an ordinal keeps its
+			// numberless reading.
+			name:   "an ordinal street name is not mistaken for a house number",
+			source: "EAST 42ND STREET\nNEW YORK NY 10017",
+			want: addressReading{
+				confidence: claim.ConfidenceLikely,
+				pre:        "E", name: "42ND", suffix: "ST",
+				formatted: "E 42ND ST",
 			},
 		},
 		{
