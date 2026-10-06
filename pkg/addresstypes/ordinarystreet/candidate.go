@@ -503,7 +503,7 @@ func streetConfidence(claims, placed []claim.Claim, h head, t tail, name nameRea
 
 	swallows := !name.corroborated && !isDirectional(placed, name.part) &&
 		absorbs(placed, unplaced(h, t), name.part.Start, name.part.End())
-	if !swallows && !splitsName(claims, t, name) {
+	if !swallows && !splitsName(claims, t, name) && !splitsCompound(claims, h, name) {
 		return confidence
 	}
 
@@ -512,6 +512,30 @@ func streetConfidence(claims, placed []claim.Claim, h head, t tail, name nameRea
 	}
 
 	return claim.ConfidenceWeak
+}
+
+// splitsCompound reports whether the reading's predirectional is one half of a
+// compound directional that some vocabulary claims as one span. N EAST MAIN ST
+// reads N as the predirectional and leaves EAST to open the name, where the
+// standard's compound NE is the reading the words were written for (#186). The
+// split is charged one step, as splitsName charges a split street name.
+//
+// A one-token name is exempt. N E ST is N followed by the alphabet street E
+// (p.17), and the residue there is the second half of the pair by design.
+func splitsCompound(claims []claim.Claim, h head, name nameReading) bool {
+	if name.part.Length == 1 {
+		return false
+	}
+
+	for _, pre := range h.claims {
+		for _, c := range claims {
+			if c.Start() == pre.Start() && c.End() > pre.End() && assigns(c, claim.PartPredirectional) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // splitsName reports whether the reading's suffix closes a run that some
