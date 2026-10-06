@@ -167,9 +167,11 @@ func isSecondaryUnitLine(claims []claim.Claim, start, end int) bool {
 
 // houseNumber is a bare run of digits, the shape of a house number written
 // alone. It is deliberately narrower than primaryNumbers' digit test: "42ND" is
-// an ordinal in a street name, and "12TH." and "N6W23001" are not house numbers
-// a single line can be split on.
-var houseNumber = regexp.MustCompile(`^[0-9]+$`)
+// an ordinal in a street name, as is "12TH.". "100", "33-55", "A17", "A17B", and
+// "N6W23001" are all house numbers documented in the specification. We are not
+// supporting primary address numbers synthisized from building numbers here; that
+// logic is specific to Puerto Rico in the standard.
+var houseNumber = regexp.MustCompile(`^([0-9]+|[A-Z]?\d+[A-Z]?|[NS]\d+[EW]\d+|\d+-\d+)$`)
 
 // businessBoundary returns where the street begins when a business name opens
 // the line, and from otherwise.
@@ -281,6 +283,9 @@ func businessClaim(tokens []token.Token, from, to int) claim.Claim {
 
 // holdsStructure reports whether a claim wholly inside [from, to) reads any of
 // its tokens as something other than a business word or a street-type word.
+// FIXME: either the comment or the implementation is incorrect. This returns
+// `true` if _any_ claim exists within the [from, to) range - because all claims
+// have ClaimParts and each ClaimPart has a Part _and the _default_ is `true`.
 func holdsStructure(claims []claim.Claim, from, to int) bool {
 	for _, c := range claims {
 		if c.Start() < from || c.End() > to {
