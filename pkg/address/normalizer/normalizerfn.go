@@ -124,10 +124,20 @@ func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) 
 // has multi-word Primaries (UNITED STATES OF AMERICA, MAILSTOP CODE), so the
 // window still shrinks one word at a time rather than only ever trying the
 // single last word.
+//
+// Only a phrase longer than businessAbbreviationMinLength characters is
+// abbreviated, so COMPANY becomes CO and CENTER stays CENTER (Aaron on #182).
+// The threshold is arbitrary; it sits between the words we want shortened
+// and the ones we do not. A business name is captured to mark a shared
+// address, not matched on (Project US@ p.33), so nothing forces the shorter
+// form below it.
 func AbbreviateBusinessWords(bn string) string {
 	parts := strings.Split(bn, " ")
 	for i := 0; i < len(parts); i++ {
 		phrase := strings.Join(parts[i:], " ")
+		if len(phrase) <= businessAbbreviationMinLength {
+			continue
+		}
 
 		short, err := businesswords.NormalizeBusinessWordAbbreviation(phrase)
 		if err == nil {
@@ -648,3 +658,7 @@ func OnlyDirectionsFollow(parts []string) bool {
 
 	return true
 }
+
+// businessAbbreviationMinLength is the length a business word or phrase must
+// exceed before AbbreviateBusinessWords shortens it.
+const businessAbbreviationMinLength = 6

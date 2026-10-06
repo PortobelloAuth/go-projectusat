@@ -1,6 +1,9 @@
 package parsertest
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // historicalCase is one row of the parity suite go-projectusat carried in
 // its own goprojectusat_test.go from fbaa970 (the custom-parser option)
@@ -108,6 +111,19 @@ var HistoricalCases = buildHistoricalCases()
 // five-digit ZIP Code, and a gridHistorical row such as
 // "43 E 200 N, NORTH SALT LAKE, UT" has a city and a region without one, so
 // asking hasLastLine would give it a second last line.
+// bizMultiline is the multiline Want of each csharpParity business row: the
+// business name on its own line above the street line, as the standard
+// renders it (Project US@ p.33), with a business word longer than six
+// characters abbreviated (Aaron on #182). The C# single line Want is still
+// graded, on the single line rendering.
+var bizMultiline = map[string]string{
+	"Williamson Medical Center 3000 Edward Curd Lane": "WILLIAMSON MEDICAL CENTER\n3000 EDWARD CURD LN",
+	"Center of Hope 110 East 7th Street":              "CENTER OF HOPE\n110 E 7TH ST",
+	"3M Corporation 100 Main Street":                  "3M CORP\n100 MAIN ST",
+	"UCENT Building 847 North 49th Street":            "UCENT BLDG\n847 N 49TH ST",
+	"UCENT Building Suite 480 411 N Central Ave":      "UCENT BLDG\n411 N CENTRAL AVE STE 480",
+}
+
 func buildHistoricalCases() []Case {
 	groups := []struct {
 		set      []historicalCase
@@ -121,11 +137,27 @@ func buildHistoricalCases() []Case {
 	var cases []Case
 	for _, g := range groups {
 		for _, hc := range g.set {
+			want := hc.want
+			if multi, ok := bizMultiline[hc.in]; ok {
+				want = multi
+			}
 			cases = append(cases, Case{
 				Source: "go-projectusat",
 				Note:   fmt.Sprintf("parity - %s", hc.group),
 				Input:  hc.in + g.lastLine,
-				Want:   hc.want + g.lastLine,
+				Want:   want + g.lastLine,
+			})
+			if g.lastLine == "" {
+				continue
+			}
+			// The C# library renders every address on one line, so each
+			// completed row is also graded on the single line rendering. The
+			// Want is the C# one; the multiline row above is ours.
+			cases = append(cases, Case{
+				Source: "go-projectusat",
+				Note:   fmt.Sprintf("parity - %s (single line)", hc.group),
+				Input:  hc.in + g.lastLine,
+				Want:   hc.want + strings.ReplaceAll(g.lastLine, "\n", " "),
 			})
 		}
 	}

@@ -2,6 +2,7 @@ package parsertest
 
 import (
 	"fmt"
+	"strings"
 
 	goprojectusat "github.com/PortobelloAuth/go-projectusat"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
@@ -116,7 +117,12 @@ func Run(p parser.ParsingFunc, cases []Case) []Result {
 	results := make([]Result, len(cases))
 	for i, c := range cases {
 		parsed = nil // don't inherit the previous case's address on a parse error
-		got, err := goprojectusat.Normalize(c.Input, opts...)
+		caseOpts := opts
+		if c.Want != "" && !strings.Contains(c.Want, "\n") {
+			// A single line Want is graded against the single line rendering.
+			caseOpts = append(opts[:len(opts):len(opts)], goprojectusat.WithSingleLineFormatting())
+		}
+		got, err := goprojectusat.Normalize(c.Input, caseOpts...)
 		results[i] = Result{Case: c, Got: got, GotFields: parsed, Err: err}
 	}
 	return results
