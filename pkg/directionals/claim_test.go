@@ -88,8 +88,8 @@ func TestClaims(t *testing.T) {
 			name: "compound spelled as two tokens",
 			in:   "NORTH EAST",
 			want: []reading{
-				{"NORTH EAST", claim.PartPredirectional, claim.ConfidenceLikely, "NE"},
-				{"NORTH EAST", claim.PartPostdirectional, claim.ConfidenceLikely, "NE"},
+				{"NORTH EAST", claim.PartPredirectional, claim.ConfidenceStrong, "NE"},
+				{"NORTH EAST", claim.PartPostdirectional, claim.ConfidenceStrong, "NE"},
 				{"NORTH", claim.PartPredirectional, claim.ConfidenceStrong, "N"},
 				{"NORTH", claim.PartPostdirectional, claim.ConfidenceStrong, "N"},
 				{"EAST", claim.PartPredirectional, claim.ConfidenceStrong, "E"},

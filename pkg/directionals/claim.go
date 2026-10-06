@@ -104,10 +104,13 @@ func abbreviateSpan(tokens []token.Token) (string, bool) {
 // — NORTH SALT LAKE, SOUTH BEND — so it is rated lower even though the lookup
 // is just as certain.
 //
-// A compound written as two tokens drops one further step, because it always
-// competes with reading the same tokens as two separate directionals, and the
-// standard spells compounds as one word. NORTHEAST is the expected form;
-// NORTH EAST is a reading of it worth offering, not the one to prefer.
+// A compound written as two tokens drops one step, because it always competes
+// with reading the same tokens as two separate directionals, and the standard
+// spells compounds as one word. NORTHEAST is the expected form; NORTH EAST is
+// a reading of it, held Strong like the abbreviated two-token form. Spelling
+// the words out does not lower it further: rating the spelled pair Likely left
+// "NORTH EAST MAIN STREET" unable to reach NE MAIN ST against "N EAST MAIN ST"
+// (#186). The reading that splits the pair is demoted in streetConfidence.
 func spanConfidence(tokens []token.Token) claim.Confidence {
 	spelledOut := false
 	for _, t := range tokens {
@@ -121,8 +124,6 @@ func spanConfidence(tokens []token.Token) claim.Confidence {
 	}
 
 	switch {
-	case len(tokens) > 1 && spelledOut:
-		return claim.ConfidenceLikely
 	case len(tokens) > 1:
 		return claim.ConfidenceStrong
 	case spelledOut:
