@@ -256,21 +256,33 @@ func secondaryReadings(claims []claim.Claim, end, floor int) []*claim.Claim {
 // begins, into one claim. The highest level designator is the leftmost one, so
 // it stays the SecondaryDesignator, and everything after it is accumulated, in
 // order, into the SecondaryNumber: BLDG 420 then RM 120 becomes BLDG with the
-// number 420 RM 120. Only numbered claims join; an unnumbered designator such
-// as BSMT stands alone and is not extended.
+// number 420 RM 120. An unnumbered designator such as BSMT may lead the chain,
+// so BSMT STE 480 becomes BSMT with the number STE 480 rather than dropping
+// BSMT (#188); the claim it leads into must be numbered.
 //
 // # is never joined. Beside a placed unit it is the mailbox (#78, admitMailbox),
 // and a chain through it would offer STE 11 # 234 as a rival to STE 11 PMB 234.
 func joinSecondary(left, right claim.Claim) (claim.Claim, bool) {
 	ld, ln, lok := secondaryParts(left)
 	rd, rn, rok := secondaryParts(right)
-	if !lok || !rok || ld.Value == "#" || rd.Value == "#" {
+	if !rok || ld.Value == "#" || rd.Value == "#" {
 		return claim.Claim{}, false
 	}
 
-	number := ln
-	number.Length = rn.End() - ln.Start
-	number.Value = ln.Value + " " + rd.Value + " " + rn.Value
+	var number claim.ClaimPart
+	switch {
+	case lok:
+		number = ln
+		number.Length = rn.End() - ln.Start
+		number.Value = ln.Value + " " + rd.Value + " " + rn.Value
+	case len(left.Parts) == 1 && ld.Part == claim.PartSecondaryDesignator:
+		number = rn
+		number.Start = rd.Start
+		number.Length = rn.End() - rd.Start
+		number.Value = rd.Value + " " + rn.Value
+	default:
+		return claim.Claim{}, false
+	}
 
 	confidence := left.Confidence
 	if right.Confidence < confidence {

@@ -334,6 +334,19 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// An unnumbered designator may lead a chain. BSMT is kept as the
+			// designator and the numbered unit after it becomes the number,
+			// rather than BSMT being dropped (#188).
+			name:   "an unnumbered designator leads a chained secondary unit",
+			source: "411 N Central Ave Bsmt Ste 480\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "411", pre: "N", name: "CENTRAL", suffix: "AVE",
+				designator: "BSMT", secondary: "STE 480",
+				formatted: "411 N CENTRAL AVE BSMT STE 480",
+			},
+		},
+		{
 			// Punctuation in a street name should be removed.
 			name:   "punctuation should be removed from a street line",
 			source: "4000 12TH. Street\nHERNDON VA 22071",
