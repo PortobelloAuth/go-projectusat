@@ -187,7 +187,7 @@ func tails(claims []claim.Claim, from, to int) []tail {
 			afterUnit = detail.Start()
 		}
 
-		for _, secondary := range endingAt(claims, claim.PartSecondaryDesignator, afterUnit, from) {
+		for _, secondary := range secondaryReadings(claims, afterUnit, from) {
 			afterName := afterUnit
 			var accepted []claim.Claim
 			if detail != nil {
@@ -229,6 +229,76 @@ func tails(claims []claim.Claim, from, to int) []tail {
 	}
 
 	return out
+}
+
+// secondaryReadings returns every run of numbered secondary designators that
+// ends at end and begins no earlier than floor, preceded by a nil standing for
+// the reading with no secondary unit. A run of more than one designator, as in
+// BUILDING 420 ROOM 120, is merged into a single claim so that it is accepted
+// or rejected as one reading.
+func secondaryReadings(claims []claim.Claim, end, floor int) []*claim.Claim {
+	found := []*claim.Claim{nil}
+
+	for _, right := range endingAt(claims, claim.PartSecondaryDesignator, end, floor)[1:] {
+		found = append(found, right)
+
+		for _, left := range secondaryReadings(claims, right.Start(), floor)[1:] {
+			if merged, ok := joinSecondary(*left, *right); ok {
+				found = append(found, &merged)
+			}
+		}
+	}
+
+	return found
+}
+
+// joinSecondary merges the secondary designator left, which ends where right
+// begins, into one claim. The highest level designator is the leftmost one, so
+// it stays the SecondaryDesignator, and everything after it is accumulated, in
+// order, into the SecondaryNumber: BLDG 420 then RM 120 becomes BLDG with the
+// number 420 RM 120. Only numbered claims join; an unnumbered designator such
+// as BSMT stands alone and is not extended.
+//
+// # is never joined. Beside a placed unit it is the mailbox (#78, admitMailbox),
+// and a chain through it would offer STE 11 # 234 as a rival to STE 11 PMB 234.
+func joinSecondary(left, right claim.Claim) (claim.Claim, bool) {
+	ld, ln, lok := secondaryParts(left)
+	rd, rn, rok := secondaryParts(right)
+	if !lok || !rok || ld.Value == "#" || rd.Value == "#" {
+		return claim.Claim{}, false
+	}
+
+	number := ln
+	number.Length = rn.End() - ln.Start
+	number.Value = ln.Value + " " + rd.Value + " " + rn.Value
+
+	confidence := left.Confidence
+	if right.Confidence < confidence {
+		confidence = right.Confidence
+	}
+
+	return claim.Claim{
+		Confidence: confidence,
+		Parts:      []claim.ClaimPart{ld, number},
+	}, true
+}
+
+// secondaryParts returns the designator and number parts of a numbered
+// secondary claim, and whether the claim has both.
+func secondaryParts(c claim.Claim) (claim.ClaimPart, claim.ClaimPart, bool) {
+	var designator, number claim.ClaimPart
+	var hasDesignator, hasNumber bool
+
+	for _, p := range c.Parts {
+		switch p.Part {
+		case claim.PartSecondaryDesignator:
+			designator, hasDesignator = p, true
+		case claim.PartSecondaryNumber:
+			number, hasNumber = p, true
+		}
+	}
+
+	return designator, number, hasDesignator && hasNumber
 }
 
 // admitMailbox returns the private mailbox reading this package accepts from a

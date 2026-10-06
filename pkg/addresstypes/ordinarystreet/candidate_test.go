@@ -321,6 +321,19 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// Chained designators are one secondary unit. The highest level one,
+			// the leftmost, is the designator, and the rest accumulate into the
+			// number in order. BUILDING is not a street name word here.
+			name:   "chained secondary designators are one secondary unit",
+			source: "450 Jane Stanford Way Building 420 Room 120\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "450", name: "JANE STANFORD", suffix: "WAY",
+				designator: "BLDG", secondary: "420 RM 120",
+				formatted: "450 JANE STANFORD WAY BLDG 420 RM 120",
+			},
+		},
+		{
 			// Punctuation in a street name should be removed.
 			name:   "punctuation should be removed from a street line",
 			source: "4000 12TH. Street\nHERNDON VA 22071",
