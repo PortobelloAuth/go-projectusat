@@ -9,7 +9,6 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
-	"github.com/PortobelloAuth/go-projectusat/pkg/businesswords"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
 	"github.com/PortobelloAuth/go-projectusat/pkg/secondaryunit"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
@@ -168,38 +167,35 @@ func isSecondaryUnitLine(claims []claim.Claim, start, end int) bool {
 
 // houseNumber is a bare run of digits, the shape of a house number written
 // alone. It is deliberately narrower than primaryNumbers' digit test: "42ND" is
-// an ordinal in a street name, and "N6W23001" is a grid number this package
-// reads only at the start of a line.
+// an ordinal in a street name, and "12TH." and "N6W23001" are not house numbers
+// a single line can be split on.
 var houseNumber = regexp.MustCompile(`^[0-9]+$`)
 
 // businessBoundary returns where the street begins when a business name opens
 // the line, and from otherwise.
 //
 // A single line address has no line break to say where the business name ends,
-// so the numberless reading of the line takes the house number as the first
-// word of the street: "CENTER OF HOPE 110 EAST 7TH STREET" reads as a street
-// named "CENTER OF HOPE 110 EAST 7TH". The first bare number is the house number
-// when only words stand ahead of it, so the street begins there and the words
-// become leftover, which costs the reading a step as it should.
+// so the street begins at the first bare house number that opens a complete
+// street line: "CENTER OF HOPE 110 EAST 7TH STREET" reads its business as CENTER
+// OF HOPE, and "1ST STREET PIZZA COMPANY 511 MAIN ST" as 1ST STREET PIZZA COMPANY,
+// because 1ST is an ordinal and not a house number. "3M CORPORATION 100 MAIN ST"
+// reads 3M as part of the name for the same reason.
 //
-// It stays put where the words are not a business name: a line that opens with
-// a number is handled by primaryNumbers, a digit-bearing word before the first
-// bare number is an ordinal or a grid, a word the vocabularies read as unit,
-// box, place or region structure is not a business word, and nothing in the
-// prefix is a Publication 28 business word at all. That last test is what keeps
-// "Apartment 3200 ..", "RR 2 BOX 18 .." and "STE 480 .." from becoming business
-// names. A business word may still read as a street suffix — CENTER is CTR — so
-// those claims do not count.
+// It stays put where the line does not open with a business name. A line that
+// opens with a bare number is a house number and is handled by primaryNumbers,
+// as is a leading unit or route designator. Structure claims inside the prefix,
+// such as a unit, a private mailbox or a region, also rule the split out:
+// "Apartment 3200 152 South Tech Dr" is not split.
 func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int) int {
-	if from >= end || strings.ContainsFunc(tokens[from].Text, unicode.IsDigit) {
+	if from >= end || isUnitOrRoute(tokens[from].Text) || houseNumber.MatchString(tokens[from].Text) {
 		return from
 	}
 
 	for i := from + 1; i < end-1; i++ {
-		if !strings.ContainsFunc(tokens[i].Text, unicode.IsDigit) {
+		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) {
 			continue
 		}
-		if !houseNumber.MatchString(tokens[i].Text) || holdsStructure(claims, from, i) || !hasBusinessWord(tokens[from:i]) {
+		if holdsStructure(claims, from, i) || !readsStreetLine(tokens, claims, i, end) {
 			return from
 		}
 
@@ -209,26 +205,24 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 	return from
 }
 
-// hasBusinessWord reports whether the prefix reads as a business name: it must
-// open on a word that is not a unit or route designator, and contain at least one
-// Publication 28 business word. The opening test keeps "Apartment 3200 152 .." and
-// "Unit 3200 152 .." out. It cannot test every word, because BUILDING is both a
-// business word (UCENT BUILDING) and a unit designator (BLDG).
-func hasBusinessWord(tokens []token.Token) bool {
-	if len(tokens) == 0 {
-		return false
-	}
-	if isUnitOrRoute(tokens[0].Text) {
-		return false
-	}
-
-	for _, t := range tokens {
-		if _, err := businesswords.Info(normalizeWord(t.Text)); err == nil {
+// readsStreetLine reports whether the tokens from start to end read as a
+// street line: some tail and some head fit between them. It is the test a
+// boundary candidate has to pass before the words ahead of it are a business.
+func readsStreetLine(tokens []token.Token, claims []claim.Claim, start, end int) bool {
+	for _, t := range tails(claims, start, end) {
+		if len(heads(tokens, claims, start, t.nameEnd)) > 0 {
 			return true
 		}
 	}
 
 	return false
+}
+
+// routeNumber reports whether the number at i is a rural route's number, the
+// 2 of "RR 2 BOX 18": a number followed by BOX is never where a street begins.
+// RR alone is not a route, so isUnitOrRoute does not see it.
+func routeNumber(tokens []token.Token, i, end int) bool {
+	return i+1 < end && normalizeWord(tokens[i+1].Text) == "BOX"
 }
 
 // isUnitOrRoute reports whether the word opens a secondary unit or rural route.

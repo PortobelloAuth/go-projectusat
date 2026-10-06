@@ -141,6 +141,18 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// 1ST is an ordinal, not a house number, so the name it opens is
+			// kept whole and the split falls on 511.
+			name:   "an ordinal opening a business name is not the house number",
+			source: "1ST STREET PIZZA COMPANY 511 MAIN STREET\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "1ST STREET PIZZA COMPANY",
+				number:     "511", name: "MAIN", suffix: "ST",
+				formatted: "511 MAIN ST",
+			},
+		},
+		{
 			// The boundary is a bare number. An ordinal is a street name, so a
 			// street that opens with a directional and an ordinal keeps its
 			// numberless reading.
