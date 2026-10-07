@@ -179,6 +179,19 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// 511 MAIN FOUNTAIN & PIZZERIA is a business named for its street address;
+			// customers just call it "511 Main". The name should still be distinguishable
+			// from its street line.
+			name:   "a business name based on its address",
+			source: "511 MAIN 511 MAIN STREET\nASHTON ID 83420",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "511 MAIN",
+				number:     "511", name: "MAIN", suffix: "ST",
+				formatted: "511 MAIN ST",
+			},
+		},
+		{
 			// EAST IDAHO TOWING is a business named for the area it serves, with a
 			// directional and a region in its name.
 			name:   "a business name based on its address",
