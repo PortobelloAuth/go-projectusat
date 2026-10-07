@@ -152,6 +152,44 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				formatted: "511 MAIN ST",
 			},
 		},
+		// TODO: The "&" in this business name is removed, per USPS address guidelines.
+		// Determine correct behavior - allow, substitute, or remove - and implement.
+		// {
+		// 	// 511 MAIN FOUNTAIN & PIZZERIA is a business named for its street address;
+		// 	// The name should still be distinguishable from its street line.
+		// 	name:   "a business name based on its address",
+		// 	source: "511 MAIN FOUNTAIN & PIZZERIA 511 MAIN STREET\nASHTON ID 83420",
+		// 	want: addressReading{
+		// 		confidence: claim.ConfidenceStrong,
+		// 		business:   "511 MAIN FOUNTAIN & PIZZERIA",
+		// 		number:     "511", name: "MAIN", suffix: "ST",
+		// 		formatted: "511 MAIN ST",
+		// 	},
+		// },
+		{
+			// 511 MAIN FOUNTAIN & PIZZERIA is a business named for its street address;
+			// The name should still be distinguishable from its street line.
+			name:   "a business name based on its address",
+			source: "511 MAIN FOUNTAIN AND PIZZERIA 511 MAIN STREET\nASHTON ID 83420",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "511 MAIN FOUNTAIN AND PIZZERIA",
+				number:     "511", name: "MAIN", suffix: "ST",
+				formatted: "511 MAIN ST",
+			},
+		},
+		{
+			// EAST IDAHO TOWING is a business named for the area it serves, with a
+			// directional and a region in its name.
+			name:   "a business name based on its address",
+			source: "EAST IDAHO TOWING 578 MAIN STREET\nASHTON ID 83420",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "EAST IDAHO TOWING",
+				number:     "578", name: "MAIN", suffix: "ST",
+				formatted: "578 MAIN ST",
+			},
+		},
 		{
 			// 3M is a bare number inside the name. The street starts at the
 			// last bare number that opens a complete street line, so 100 is the
