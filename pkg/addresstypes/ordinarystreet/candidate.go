@@ -177,11 +177,13 @@ var houseNumber = regexp.MustCompile(`^([0-9]+|[A-Z]?\d+[A-Z]?|[NS]\d+[EW]\d+|\d
 // the line, and from otherwise.
 //
 // A single line address has no line break to say where the business name ends,
-// so the street begins at the first bare house number that opens a complete
+// so the street begins at the last bare house number that opens a complete
 // street line: "CENTER OF HOPE 110 EAST 7TH STREET" reads its business as CENTER
 // OF HOPE, and "1ST STREET PIZZA COMPANY 511 MAIN ST" as 1ST STREET PIZZA COMPANY,
 // because 1ST is an ordinal and not a house number. "3M CORPORATION 100 MAIN ST"
-// reads 3M as part of the name for the same reason.
+// reads 3M as part of the name for the same reason. The last number is taken
+// so that a name carrying its own number, as in "ACME 3M CORPORATION 100 MAIN
+// ST", stays whole.
 //
 // It stays put where the line does not open with a business name. A line that
 // opens with a bare number is a house number and is handled by primaryNumbers,
@@ -193,7 +195,7 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 		return from
 	}
 
-	for i := from + 1; i < end-1; i++ {
+	for i := end - 2; i > from; i-- {
 		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) {
 			continue
 		}

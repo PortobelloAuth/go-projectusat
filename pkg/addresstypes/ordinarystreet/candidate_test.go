@@ -153,6 +153,19 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// 3M is a bare number inside the name. The street starts at the
+			// last bare number that opens a complete street line, so 100 is the
+			// house number and 3M stays in the business name.
+			name:   "a bare number inside a business name is not the house number",
+			source: "ACME 3M CORPORATION 100 MAIN STREET\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "ACME 3M CORPORATION",
+				number:     "100", name: "MAIN", suffix: "ST",
+				formatted: "100 MAIN ST",
+			},
+		},
+		{
 			// The boundary is a bare number. An ordinal is a street name, so a
 			// street that opens with a directional and an ordinal keeps its
 			// numberless reading.
