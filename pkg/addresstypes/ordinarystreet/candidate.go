@@ -176,37 +176,140 @@ var houseNumber = regexp.MustCompile(`^([0-9]+|[A-Z]?\d+[A-Z]?|[NS]\d+[EW]\d+|\d
 // businessBoundary returns where the street begins when a business name opens
 // the line, and from otherwise.
 //
-// A single line address has no line break to say where the business name ends,
-// so the street begins at the last bare house number that opens a complete
-// street line: "CENTER OF HOPE 110 EAST 7TH STREET" reads its business as CENTER
-// OF HOPE, and "1ST STREET PIZZA COMPANY 511 MAIN ST" as 1ST STREET PIZZA COMPANY,
-// because 1ST is an ordinal and not a house number. "3M CORPORATION 100 MAIN ST"
-// reads 3M as part of the name for the same reason. The last number is taken
-// so that a name carrying its own number, as in "ACME 3M CORPORATION 100 MAIN
-// ST", stays whole.
+// A single line address has no line break to say where the business name ends.
+// The street begins at the last house number that opens a complete street line
+// and is not itself part of the street line that an earlier number opens:
 //
-// It stays put where the line does not open with a business name. A line that
-// opens with a bare number is a house number and is handled by primaryNumbers,
-// as is a leading unit or route designator. Structure claims inside the prefix,
-// such as a unit, a private mailbox or a region, also rule the split out:
-// "Apartment 3200 152 South Tech Dr" is not split.
+//   - "CENTER OF HOPE 110 EAST 7TH STREET" reads its business as CENTER OF HOPE.
+//   - "1ST STREET PIZZA COMPANY 511 MAIN ST" reads it as 1ST STREET PIZZA
+//     COMPANY, because 1ST is an ordinal and not a house number.
+//   - "3M CORPORATION 100 MAIN ST" reads it as 3M CORPORATION. 3M is house number
+//     shaped, but a line can open on a business name that starts with one, so
+//     the first token is only a candidate like any other.
+//   - "ACME 3M CORPORATION 100 MAIN ST" keeps its name whole, because the last
+//     qualifying number is taken.
+//
+// A later number is not a new street when it belongs to the street line already
+// found: the 500 of a grid address 100 N 500 E (opensHead), the 12 of COUNTY
+// ROAD 12 (insideClaim), the unit identifier of 100 MAIN ST 4 B
+// (closesStreetLine), and the 11 of 10 MAIN ST STE 11 (unitAfterStreetLine).
+//
+// It stays put where the line opens with a unit or route designator, which
+// primaryNumbers handles. Structure claims inside the prefix, such as a unit, a
+// private mailbox or a region, also rule the split out: "Apartment 3200 152
+// South Tech Dr" is not split.
 func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int) int {
-	if from >= end || isUnitOrRoute(tokens[from].Text) || houseNumber.MatchString(tokens[from].Text) {
+	if from >= end || isUnitOrRoute(tokens[from].Text) {
 		return from
 	}
 
-	for i := end - 2; i > from; i-- {
-		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) {
+	street := from
+	for i := from + 1; i < end-1; i++ {
+		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) || insideClaim(claims, i) {
 			continue
 		}
-		if holdsStructure(claims, from, i) || hasBox(tokens[from:i]) || !readsStreetLine(tokens, claims, i, end) {
-			return from
+		if opensHead(tokens, claims, street, i) || closesStreetLine(tokens, claims, street, i) {
+			continue
+		}
+		if unitAfterStreetLine(tokens, claims, street, i) {
+			continue
+		}
+		if !readsStreetLine(tokens, claims, i, end) {
+			continue
 		}
 
-		return i
+		street = i
 	}
 
-	return from
+	if street == from || holdsStructure(claims, from, street) || hasBox(tokens[from:street]) {
+		return from
+	}
+
+	return street
+}
+
+// insideClaim reports whether the token at i lies inside a street name some
+// vocabulary claims from ahead of it: the 12 of COUNTY ROAD 12, the 30 of
+// HIGHWAY 30. A number already read as part of a street's name is not where a
+// street begins.
+//
+// Only a street name counts. A secondary unit claim is not enough, because
+// BUILDING is both a business word and a unit designator: the 847 of UCENT
+// BUILDING 847 NORTH 49TH STREET is claimed as BLDG 847 and is still the house
+// number.
+func insideClaim(claims []claim.Claim, i int) bool {
+	for _, c := range claims {
+		if c.Start() < i && c.End() > i && assigns(c, claim.PartStreetName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// unitAfterStreetLine reports whether the number at i is the identifier of a
+// unit claimed from ahead of it, and the street line from start already closes
+// where that unit begins: the 420 of 450 JANE STANFORD WAY BUILDING 420, the 11
+// of 10 MAIN ST STE 11. A unit word that does not follow a closed street line,
+// the BUILDING of UCENT BUILDING 847 NORTH 49TH STREET, is read as part of a
+// business name instead.
+func unitAfterStreetLine(tokens []token.Token, claims []claim.Claim, start, i int) bool {
+	for _, c := range claims {
+		if c.Start() < i && c.End() > i && c.Start() > start && closesStreetLine(tokens, claims, start, c.Start()) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// opensHead reports whether the tokens from start to at are exactly the head
+// of a street line — a house number, a fraction after it, and a
+// predirectional — so that the number at at is the street name that follows
+// them and not a second house number. 100 N 500 E is a grid address whose
+// street is named 500, and 2300 W 8 MILE RD a street named 8 MILE.
+func opensHead(tokens []token.Token, claims []claim.Claim, start, at int) bool {
+	if !houseNumber.MatchString(tokens[start].Text) {
+		return false
+	}
+
+	afterNumber := start + 1
+	if afterNumber < at && fraction.MatchString(tokens[afterNumber].Text) {
+		afterNumber++
+	}
+	if afterNumber == at {
+		return true
+	}
+
+	for _, pre := range startingAt(claims, claim.PartPredirectional, afterNumber)[1:] {
+		if pre.End() == at {
+			return true
+		}
+	}
+
+	return false
+}
+
+// closesStreetLine reports whether the tokens from start to at, opening on a
+// house number, are already a whole street line closed by a suffix or a
+// postdirectional. What follows them is the remainder of that line, an
+// undesignated unit as in 100 MAIN ST 4 B, and not a business name ahead of a
+// second street.
+func closesStreetLine(tokens []token.Token, claims []claim.Claim, start, at int) bool {
+	if !houseNumber.MatchString(tokens[start].Text) {
+		return false
+	}
+
+	for _, t := range tails(claims, start, at) {
+		if !hasPart(t.claims, claim.PartStreetSuffix) && !hasPart(t.claims, claim.PartPostdirectional) {
+			continue
+		}
+		if len(heads(tokens, claims, start, t.nameEnd)) > 0 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // readsStreetLine reports whether the tokens from start to end read as a

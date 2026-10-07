@@ -166,6 +166,39 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// 3M is house number shaped, but the line goes on to read as a
+			// whole street from 100, so 3M opens a business name.
+			name:   "a house number shaped word opening a business name is not the house number",
+			source: "3M CORPORATION 100 MAIN STREET\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "3M CORPORATION",
+				number:     "100", name: "MAIN", suffix: "ST",
+				formatted: "100 MAIN ST",
+			},
+		},
+		{
+			// The 500 of a grid address is its street name, not a second
+			// house number, so the split falls on 100.
+			name:   "a business name ahead of a grid address splits at the house number",
+			source: "ACME CORP 100 N 500 E\nPROVO UT 84601",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "ACME CORP",
+				number:     "100", pre: "N", name: "500", post: "E",
+				formatted: "100 N 500 E",
+			},
+		},
+		{
+			name:   "a grid address is not split",
+			source: "100 N 500 E\nPROVO UT 84601",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "100", pre: "N", name: "500", post: "E",
+				formatted: "100 N 500 E",
+			},
+		},
+		{
 			// The boundary is a bare number. An ordinal is a street name, so a
 			// street that opens with a directional and an ordinal keeps its
 			// numberless reading.
