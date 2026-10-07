@@ -62,12 +62,16 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 
 	// The street begins at the house number, and anything ahead of it is not
 	// street. aboveLineClaim keeps the line start: it looks at the line above.
-	street := businessBoundary(tokens, claims, start, end)
+	unit := businessBoundary(tokens, claims, start, end)
 
 	var business []claim.Claim
-	if street > start {
-		business = append(business, businessClaim(tokens, start, street))
+	if unit > start {
+		business = append(business, businessClaim(tokens, start, unit))
 	}
+
+	// A unit written ahead of the house number is read where it always is, at
+	// the end of the delivery address. See prefixUnitEnd.
+	street := prefixUnitEnd(tokens, claims, unit, end)
 
 	placed := placements(tokens, claims, street, end)
 
@@ -75,11 +79,15 @@ func Candidates(tokens []token.Token, claims []claim.Claim, line lastline.LineCl
 	for _, t := range tails(claims, street, end) {
 		for _, h := range heads(tokens, claims, street, t.nameEnd) {
 			for _, name := range nameReadings(tokens, claims, h.nameStart, t.nameEnd) {
-				accepted := make([]claim.Claim, 0, len(business)+len(h.claims)+len(t.claims)+1)
+				accepted := make([]claim.Claim, 0, len(business)+len(h.claims)+len(t.claims)+2)
 				accepted = append(accepted, business...)
 				accepted = append(accepted, h.claims...)
 				accepted = append(accepted, t.claims...)
 				accepted = append(accepted, streetClaim(claims, placed, h, t, name))
+
+				if street > unit {
+					accepted = withPrefixUnit(claims, accepted, unit, street)
+				}
 
 				candidates = append(candidates,
 					line.Candidate(&OrdinaryStreetAddress{}, len(tokens), accepted))
@@ -118,10 +126,17 @@ func aboveLineClaim(tokens []token.Token, claims []claim.Claim, start int, unitP
 		return claim.Claim{}, false
 	}
 
-	above := lineStart(tokens, start-1)
+	return spanClaim(claims, lineStart(tokens, start-1), start, unitPlaced, detailPlaced)
+}
 
+// spanClaim returns the secondary unit or private mailbox claim this package
+// accepts for exactly the tokens from start to end, if the pool offers one. It
+// is the rule aboveLineClaim describes, and it is the same rule for a unit
+// written ahead of the house number on the street line itself: which line, or
+// which end of the line, the unit is written on does not change what it is.
+func spanClaim(claims []claim.Claim, start, end int, unitPlaced, detailPlaced bool) (claim.Claim, bool) {
 	for _, c := range claims {
-		if c.Start() != above || c.End() != start {
+		if c.Start() != start || c.End() != end {
 			continue
 		}
 
@@ -194,10 +209,11 @@ var houseNumber = regexp.MustCompile(`^([0-9]+|[A-Z]?\d+[A-Z]?|[NS]\d+[EW]\d+|\d
 // ROAD 12 (insideClaim), the unit identifier of 100 MAIN ST 4 B
 // (closesStreetLine), and the 11 of 10 MAIN ST STE 11 (unitAfterStreetLine).
 //
-// It stays put where the line opens with a unit or route designator, which
-// primaryNumbers handles. Structure claims inside the prefix, such as a unit, a
-// private mailbox or a region, also rule the split out: "Apartment 3200 152
-// South Tech Dr" is not split.
+// It stays put where the line opens with a unit or route designator, and a
+// unit written directly ahead of the house number is not business either
+// (unitBeforeStreetLine): "Apartment 3200 152 South Tech Dr" and "#3200 152
+// South Tech Dr" have no business name. Candidates reads that unit; see
+// prefixUnitEnd.
 func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int) int {
 	if from >= end || isUnitOrRoute(tokens[from].Text) {
 		return from
@@ -221,10 +237,7 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 		street = i
 	}
 
-	// find any prefixed secondary units that we need to adjust `street` for
-	street = findUnitBeforeStreetLine(claims, from, street)
-
-	return street
+	return unitBeforeStreetLine(claims, from, street)
 }
 
 // insideClaim reports whether the token at i lies inside a street name some
@@ -262,21 +275,150 @@ func unitAfterStreetLine(tokens []token.Token, claims []claim.Claim, start, i in
 	return false
 }
 
-// findUnitBeforeStreetLine returns the first index between start and end that is
-// claimed as a secondary designator and its number
-func findUnitBeforeStreetLine(claims []claim.Claim, start, end int) int {
-	first := end
+// unitBeforeStreetLine returns where a secondary unit or private mailbox
+// written directly ahead of the house number at street begins, or street where
+// there is none. The unit is not part of the business name ahead of it: ACME
+// SUITE 3200 152 S TECH DR names ACME, and SUITE 3200 is its unit.
+//
+// Only a claim that ends exactly at the house number counts. A unit word
+// further back, with business words between it and the street, is read as part
+// of the business name, as BUILDING is in UCENT BUILDING 847 N 49TH ST.
+func unitBeforeStreetLine(claims []claim.Claim, from, street int) int {
+	first := street
 	for _, c := range claims {
-		if c.Start() >= start && c.End() <= end {
-			for _, p := range c.Parts {
-				if (p.Part == claim.PartSecondaryDesignator || p.Part == claim.PartDetail) && first > p.Start {
-					first = p.Start
-				}
-			}
+		if c.End() == street && c.Start() >= from && c.Start() < first && isUnitClaim(c) {
+			first = c.Start()
 		}
 	}
 
 	return first
+}
+
+// prefixUnitEnd returns where the street line begins when it opens at from
+// with a secondary unit or private mailbox written ahead of the house number,
+// and from otherwise.
+//
+// "#3200 152 S TECH DR" and "SUITE 3200 152 S TECH DR" put the unit first. It
+// is still the unit, rendered where the standard puts it, after the street:
+// 152 S TECH DR STE 3200. Taking the line from the unit read SUITE 3200 152
+// SOUTH TECH as a street name, and #3200 as a house number.
+//
+// The unit only opens the line where a house number follows it and the rest
+// reads as a street line, the same test businessBoundary puts to a number.
+// Where more than one claim qualifies, the longest is taken: STE 3200 and not
+// STE with 3200 as the house number.
+func prefixUnitEnd(tokens []token.Token, claims []claim.Claim, from, end int) int {
+	street := from
+	for _, c := range claims {
+		at := c.End()
+		if c.Start() != from || at <= street || at >= end || !isUnitClaim(c) {
+			continue
+		}
+		if !houseNumber.MatchString(tokens[at].Text) || !readsStreetLine(tokens, claims, at, end) {
+			continue
+		}
+
+		street = at
+	}
+
+	return street
+}
+
+// withPrefixUnit returns a reading's accepted claims with the unit written
+// ahead of its house number, from start to end, accounted for.
+//
+// Where the reading's own tail placed no unit, the prefix is taken by
+// spanClaim's rule, so #3200 is the unit # 3200 and PMB 456 the mailbox.
+//
+// Where the tail did place one, the standard still has one designator slot,
+// and the prefix leads the chain into it, exactly as the leftmost designator
+// leads a chain at the end of the line (joinSecondary): UNIT 3200 152 TECH DR
+// ROOM 12 is 152 TECH DR UNIT 3200 RM 12, and UNIT 3200 152 TECH DR UPPER is
+// 152 TECH DR UNIT 3200 UPPR. A prefix that cannot chain — # beside a placed
+// unit is the mailbox (#78) — falls back to spanClaim, and one spanClaim will
+// not take either is left over and charged for.
+func withPrefixUnit(claims, accepted []claim.Claim, start, end int) []claim.Claim {
+	for i, placed := range accepted {
+		if !assigns(placed, claim.PartSecondaryDesignator) {
+			continue
+		}
+
+		for _, prefix := range claims {
+			if prefix.Start() != start || prefix.End() != end {
+				continue
+			}
+			if merged, ok := joinPrefixUnit(prefix, placed); ok {
+				out := append([]claim.Claim{}, accepted...)
+				out[i] = merged
+
+				return out
+			}
+		}
+	}
+
+	if prefix, ok := spanClaim(claims, start, end,
+		hasPart(accepted, claim.PartSecondaryDesignator), hasPart(accepted, claim.PartDetail)); ok {
+		return append(accepted, prefix)
+	}
+
+	return accepted
+}
+
+// joinPrefixUnit chains a numbered unit written ahead of the house number into
+// the unit the tail placed after the street, the prefix leading.
+//
+// The two are not adjacent, and a claim part is one run of tokens, so the
+// chained number is carried on both runs with the same value: the prefix's
+// number and the whole of the tail's unit each read as SecondaryNumber 3200 RM
+// 12. Every token is accounted for, and whichever part is assigned last, the
+// field reads the same.
+//
+// Unlike joinSecondary the tail's unit may be unnumbered, UPPER as much as RM
+// 12, because the prefix already supplies the number the chain hangs off. #
+// never chains, for the reason joinSecondary gives.
+func joinPrefixUnit(prefix, placed claim.Claim) (claim.Claim, bool) {
+	ld, ln, ok := secondaryParts(prefix)
+	if !ok || len(prefix.Parts) != 2 || ld.Value == "#" {
+		return claim.Claim{}, false
+	}
+
+	var rd, rn claim.ClaimPart
+	for _, p := range placed.Parts {
+		switch p.Part {
+		case claim.PartSecondaryDesignator:
+			rd = p
+		case claim.PartSecondaryNumber:
+			rn = p
+		default:
+			return claim.Claim{}, false
+		}
+	}
+	if rd.Value == "#" {
+		return claim.Claim{}, false
+	}
+
+	value := strings.TrimSpace(ln.Value + " " + rd.Value + " " + rn.Value)
+	number := ln
+	number.Value = value
+	tail := claim.ClaimPart{
+		Start:  placed.Start(),
+		Length: placed.End() - placed.Start(),
+		Part:   claim.PartSecondaryNumber,
+		Value:  value,
+	}
+
+	confidence := prefix.Confidence
+	if placed.Confidence < confidence {
+		confidence = placed.Confidence
+	}
+
+	return claim.Claim{Confidence: confidence, Parts: []claim.ClaimPart{ld, number, tail}}, true
+}
+
+// isUnitClaim reports whether a claim reads a secondary unit or a private
+// mailbox.
+func isUnitClaim(c claim.Claim) bool {
+	return assigns(c, claim.PartSecondaryDesignator) || assigns(c, claim.PartDetail)
 }
 
 // opensHead reports whether the tokens from start to at are exactly the head

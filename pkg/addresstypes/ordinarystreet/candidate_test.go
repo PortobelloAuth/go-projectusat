@@ -278,6 +278,31 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// A prefix unit and a tail unit chain, the prefix leading, as
+			// BLDG 420 RM 120 does at the end of the line.
+			name:   "a prefix secondary unit chains into the tail's unit",
+			source: "Unit 3200 152 Tech Dr Room 12\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "152", name: "TECH", suffix: "DR",
+				designator: "UNIT",
+				secondary:  "3200 RM 12",
+				formatted:  "152 TECH DR UNIT 3200 RM 12",
+			},
+		},
+		{
+			// The tail's unit may be unnumbered: the prefix carries the number.
+			name:   "a prefix secondary unit chains into an unnumbered tail unit",
+			source: "Unit 3200 152 Tech Dr Upper\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "152", name: "TECH", suffix: "DR",
+				designator: "UNIT",
+				secondary:  "3200 UPPR",
+				formatted:  "152 TECH DR UNIT 3200 UPPR",
+			},
+		},
+		{
 			// region offers PENNSYLVANIA as a possible street name at
 			// ConfidenceLikely. Corroboration must not drag the reading down to
 			// that: a vocabulary agreeing is not a vocabulary objecting.
