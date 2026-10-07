@@ -221,9 +221,8 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 		street = i
 	}
 
-	if street == from || holdsStructure(claims, from, street) || hasBox(tokens[from:street]) {
-		return from
-	}
+	// find any prefixed secondary units that we need to adjust `street` for
+	street = findUnitBeforeStreetLine(claims, from, street)
 
 	return street
 }
@@ -261,6 +260,23 @@ func unitAfterStreetLine(tokens []token.Token, claims []claim.Claim, start, i in
 	}
 
 	return false
+}
+
+// findUnitBeforeStreetLine returns the first index between start and end that is
+// claimed as a secondary designator and its number
+func findUnitBeforeStreetLine(claims []claim.Claim, start, end int) int {
+	first := end
+	for _, c := range claims {
+		if c.Start() >= start && c.End() <= end {
+			for _, p := range c.Parts {
+				if (p.Part == claim.PartSecondaryDesignator || p.Part == claim.PartDetail) && first > p.Start {
+					first = p.Start
+				}
+			}
+		}
+	}
+
+	return first
 }
 
 // opensHead reports whether the tokens from start to at are exactly the head
@@ -332,18 +348,6 @@ func routeNumber(tokens []token.Token, i, end int) bool {
 	return i+1 < end && normalizeWord(tokens[i+1].Text) == "BOX"
 }
 
-// hasBox reports whether the words hold BOX, which makes them a rural route or
-// a post office box and not a business name: "RR 2 BOX 18" splits nowhere.
-func hasBox(tokens []token.Token) bool {
-	for _, t := range tokens {
-		if normalizeWord(t.Text) == "BOX" {
-			return true
-		}
-	}
-
-	return false
-}
-
 // isUnitOrRoute reports whether the word opens a secondary unit or rural route.
 func isUnitOrRoute(text string) bool {
 	word := normalizeWord(text)
@@ -384,29 +388,6 @@ func businessClaim(tokens []token.Token, from, to int) claim.Claim {
 			Value:  strings.ToUpper(clean),
 		}},
 	}
-}
-
-// holdsStructure reports whether a claim wholly inside [from, to) reads any of
-// its tokens as something other than a business word or a street-type word.
-// FIXME: either the comment or the implementation is incorrect. This returns
-// `true` if _any_ claim exists within the [from, to) range - because all claims
-// have ClaimParts and each ClaimPart has a Part _and the _default_ is `true`.
-func holdsStructure(claims []claim.Claim, from, to int) bool {
-	for _, c := range claims {
-		if c.Start() < from || c.End() > to {
-			continue
-		}
-		for _, p := range c.Parts {
-			switch p.Part {
-			case claim.PartStreetSuffix, claim.PartPredirectional, claim.PartPostdirectional,
-				claim.PartStreetName, claim.PartBusinessName:
-			default:
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 // lineStart returns the index of the first token on the same line as at.

@@ -152,23 +152,11 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				formatted: "511 MAIN ST",
 			},
 		},
-		// TODO: The "&" in this business name is removed, per USPS address guidelines.
-		// Determine correct behavior - allow, substitute, or remove - and implement.
-		// {
-		// 	// 511 MAIN FOUNTAIN & PIZZERIA is a business named for its street address;
-		// 	// The name should still be distinguishable from its street line.
-		// 	name:   "a business name based on its address",
-		// 	source: "511 MAIN FOUNTAIN & PIZZERIA 511 MAIN STREET\nASHTON ID 83420",
-		// 	want: addressReading{
-		// 		confidence: claim.ConfidenceStrong,
-		// 		business:   "511 MAIN FOUNTAIN & PIZZERIA",
-		// 		number:     "511", name: "MAIN", suffix: "ST",
-		// 		formatted: "511 MAIN ST",
-		// 	},
-		// },
 		{
 			// 511 MAIN FOUNTAIN & PIZZERIA is a business named for its street address;
 			// The name should still be distinguishable from its street line.
+			// NOTE: "&" is (questionably) removed from a business name per the
+			// Project US@ standard / USPS Pub 28 so we use "AND" for this test.
 			name:   "a business name based on its address",
 			source: "511 MAIN FOUNTAIN AND PIZZERIA 511 MAIN STREET\nASHTON ID 83420",
 			want: addressReading{
@@ -259,6 +247,34 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 				confidence: claim.ConfidenceLikely,
 				pre:        "E", name: "42ND", suffix: "ST",
 				formatted: "E 42ND ST",
+			},
+		},
+		{
+			// A secondary designator written as a prefix should not be mistaken
+			// for a business name
+			name:   "A secondary unit as a prefix should not be mistaken for a business name",
+			source: "#3200 152 South Tech Dr\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "",
+				number:     "152", pre: "S", name: "TECH", suffix: "DR",
+				designator: "#",
+				secondary:  "3200",
+				formatted:  "152 S TECH DR # 3200",
+			},
+		},
+		{
+			// A secondary designator written as a prefix should not be mistaken
+			// for a business name
+			name:   "A secondary unit as a prefix should not be mistaken for a business name",
+			source: "SUITE 3200 152 South Tech Dr\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "",
+				number:     "152", pre: "S", name: "TECH", suffix: "DR",
+				designator: "STE",
+				secondary:  "3200",
+				formatted:  "152 S TECH DR STE 3200",
 			},
 		},
 		{
