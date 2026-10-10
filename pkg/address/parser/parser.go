@@ -2,7 +2,7 @@ package parser
 
 import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded"
+	zipcityembedded "github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded/parse"
 )
 
 // AddressVerifier functions take an address.Address and return it if it
@@ -40,7 +40,7 @@ type Parser struct {
 // New creates a new Parser using the provided AddressParsingOptions.
 // Although options is variadic, only the first options object will
 // actually be used.
-func New(opts ...AddressParsingOptions) *Parser {
+func New(opts ...AddressParsingOptions) (*Parser, error) {
 	o := AddressParsingOptions{}
 	if len(opts) > 0 {
 		o = opts[0]
@@ -54,13 +54,17 @@ func New(opts ...AddressParsingOptions) *Parser {
 	if o.CustomParser != nil {
 		p = o.CustomParser.Parse
 	} else {
-		p = zipcityembedded.New().Parse
+		zc, err := zipcityembedded.New()
+		if err != nil {
+			return nil, err
+		}
+		p = zc.Parse
 	}
 
 	return &Parser{
 		verifier: v,
 		parser:   p,
-	}
+	}, nil
 }
 
 func (p *Parser) Parse(source string) (*address.Address, error) {

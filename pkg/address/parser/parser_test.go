@@ -51,7 +51,10 @@ func TestParse(t *testing.T) {
 		},
 	}
 
-	p := parser.New()
+	p, err := parser.New()
+	if err != nil {
+		t.Fatalf("Error instantiating parser: %s", err)
+	}
 	for _, tc := range cases {
 		got, err := p.Parse(tc.In)
 		if err != nil {
@@ -71,7 +74,7 @@ func TestParseAppliesVerifierToCustomParse(t *testing.T) {
 	parsed := &address.Address{PrimaryNumber: "123", StreetName: "MAIN", StreetSuffix: "ST"}
 	wantErr := errors.New("verification failed")
 
-	p := parser.New(parser.AddressParsingOptions{
+	p, err := parser.New(parser.AddressParsingOptions{
 		CustomParser: parser.ParsingFn(func(source string) (*address.Address, error) {
 			return parsed, nil
 		}),
@@ -79,8 +82,11 @@ func TestParseAppliesVerifierToCustomParse(t *testing.T) {
 			return nil, wantErr
 		},
 	})
+	if err != nil {
+		t.Fatalf("Error instantiating parser: %s", err)
+	}
 
-	_, err := p.Parse("123 MAIN ST")
+	_, err = p.Parse("123 MAIN ST")
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("Parse did not return the verifier's error: got %v, want %v", err, wantErr)
 	}
@@ -94,7 +100,7 @@ func TestParseReturnsVerifierResult(t *testing.T) {
 	parsed := &address.Address{PrimaryNumber: "123", StreetName: "MAIN", StreetSuffix: "ST"}
 	verified := &address.Address{PrimaryNumber: "123", StreetName: "MAIN", StreetSuffix: "ST", City: "VERIFIED"}
 
-	p := parser.New(parser.AddressParsingOptions{
+	p, err := parser.New(parser.AddressParsingOptions{
 		CustomParser: parser.ParsingFn(func(source string) (*address.Address, error) {
 			return parsed, nil
 		}),
@@ -102,6 +108,9 @@ func TestParseReturnsVerifierResult(t *testing.T) {
 			return verified, nil
 		},
 	})
+	if err != nil {
+		t.Fatalf("Error instantiating parser: %s", err)
+	}
 
 	got, err := p.Parse("123 MAIN ST")
 	if err != nil {
@@ -111,11 +120,14 @@ func TestParseReturnsVerifierResult(t *testing.T) {
 		t.Errorf("Parse returned the custom parser's address instead of the verifier's result: got %s, want %s", *got, *verified)
 	}
 
-	identityParser := parser.New(parser.AddressParsingOptions{
+	identityParser, err := parser.New(parser.AddressParsingOptions{
 		CustomParser: parser.ParsingFn(func(source string) (*address.Address, error) {
 			return parsed, nil
 		}),
 	})
+	if err != nil {
+		t.Fatalf("Error instantiating parser: %s", err)
+	}
 
 	got, err = identityParser.Parse("123 MAIN ST")
 	if err != nil {

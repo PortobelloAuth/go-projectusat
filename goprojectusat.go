@@ -29,7 +29,11 @@ func Normalize(source string, opts ...USAtNormalizeOption) (string, error) {
 	}
 
 	// create a parser, then Parse(popts)
-	p := parser.New(*popts)
+	p, err := parser.New(*popts)
+	if err != nil {
+		return "", fmt.Errorf("Unable to instantiate parser: %w", err)
+	}
+
 	addr, err := p.Parse(source)
 	if err != nil {
 		return "", fmt.Errorf("Unable to parse address: %w", err)
@@ -119,6 +123,10 @@ func Parse(source string, opts ...parser.AddressParsingOptions) (*address.Addres
 		o = opts[0]
 	}
 	// create a parser, then Parse(opts)
-	p := parser.New(o)
+	p, err := parser.New(o)
+	if err != nil {
+		return nil, err
+	}
+
 	return p.Parse(source)
 }
