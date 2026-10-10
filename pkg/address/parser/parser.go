@@ -50,9 +50,11 @@ func New(opts ...AddressParsingOptions) *Parser {
 		v = o.Verifier
 	}
 
-	p := zipcityembedded.New().Parse
+	var p ParsingFn
 	if o.CustomParser != nil {
 		p = o.CustomParser.Parse
+	} else {
+		p = zipcityembedded.New().Parse
 	}
 
 	return &Parser{
