@@ -133,7 +133,7 @@ func TestNormalizeWithCustomParser(t *testing.T) {
 }
 
 func TestNormalize(t *testing.T) {
-	t.Skip("parser.Parse returns \"Not implemented\" until go-projectusat#61 lands")
+	t.Skip("parser.Parse returns \"no address type offered a reading\" for address line only cases until go-projectusat#113 lands")
 	for _, tc := range cases {
 		got, err := goprojectusat.Normalize(tc.in)
 		if err != nil {
