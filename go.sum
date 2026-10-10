@@ -11,6 +11,8 @@ github.com/poetic-systems/addresstables v0.1.0-alpha.0 h1:bsPfgfImKRoTXjUO9pzy+p
 github.com/poetic-systems/addresstables v0.1.0-alpha.0/go.mod h1:0+0MslI2VD30//JsNgvjPLz04GiV6YEsFE2pni512Fs=
 github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010065656-171e814d823a h1:bK+fs+zu5JL9r86NFnWJMUJ++MTPj1PnLMfZW+qcgFE=
 github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010065656-171e814d823a/go.mod h1:wqkYtdCgWdJftdXLN8nk9EOOdyCo07sQ0068a53Kpdo=
+github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010150231-b928d01415bb h1:z1UeNNeDfEugdziYpMtNeZ4m/uHnXjl+U3HM921vQtY=
+github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010150231-b928d01415bb/go.mod h1:wqkYtdCgWdJftdXLN8nk9EOOdyCo07sQ0068a53Kpdo=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 golang.org/x/text v0.41.0 h1:vz/seA0lnX87Othu2f/0L24RcgrXD9/YFTSuGjj3rH8=

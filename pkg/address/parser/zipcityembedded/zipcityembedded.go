@@ -19,7 +19,12 @@ type Parser struct {
 func New() *Parser {
 	return &Parser{
 		parser: sync.OnceValue(func() *zcparser.Parser {
-			return zcparser.New()
+			zc, err := zcparser.New()
+			if err != nil {
+				// OnceValue() lazy loading does not allow us to return or handle the error
+				panic(err)
+			}
+			return zc
 		}),
 	}
 }

@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded"
 )
@@ -69,8 +67,4 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 		return nil, err
 	}
 	return p.verifier(addr)
-}
-
-func notImplementedParser(source string) (*address.Address, error) {
-	return nil, fmt.Errorf("Not implemented")
 }

@@ -94,10 +94,21 @@ var ErrNoReading = fmt.Errorf("parse: no address type offered a reading")
 var zip5 = regexp.MustCompile(`^(\d{5})(?:-?\d{4})?$`)
 
 // Parser reads a free text address.
-type Parser struct{}
+type Parser struct {
+	zipcity *zipcity.ZipCity
+}
 
 // New returns a Parser.
-func New() *Parser { return &Parser{} }
+func New() (*Parser, error) {
+	zc, err := zipcity.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Parser{
+		zipcity: zc,
+	}, nil
+}
 
 // Parse reads source into a structured address, returning ErrNoReading when no
 // address type recognizes it.
@@ -236,7 +247,7 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 		return
 	}
 	r := reference{}
-	if ans, ok := streetAgreement(r, best.Address); ok && ans == agrees {
+	if ans, ok := p.streetAgreement(r, best.Address); ok && ans == agrees {
 		return
 	}
 
@@ -245,7 +256,7 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 		if window == nil || !recognizable(window.Address) {
 			continue
 		}
-		if ans, ok := streetAgreement(r, window.Address); !ok || ans != agrees {
+		if ans, ok := p.streetAgreement(r, window.Address); !ok || ans != agrees {
 			continue
 		}
 		if window.Address.BusinessName == "" {
@@ -450,7 +461,7 @@ func (p *Parser) lastLines(r reference, tokens []token.Token, claims []claim.Cla
 
 	var confirmed []lastline.LineClaim
 	for _, line := range lines {
-		ans, ok := cityAgreement(r, linePart(line, claim.PartPostal), linePart(line, claim.PartCity), linePart(line, claim.PartRegion))
+		ans, ok := p.cityAgreement(r, linePart(line, claim.PartPostal), linePart(line, claim.PartCity), linePart(line, claim.PartRegion))
 		if ok && ans == agrees {
 			confirmed = append(confirmed, line)
 		}
@@ -478,11 +489,11 @@ func linePart(line lastline.LineClaim, part claim.Part) string {
 // city with — whether the state has that city at all. A city known for this
 // ZIP Code is stronger evidence than a city known somewhere in the state, so
 // the second is asked only when the first cannot be.
-func cityAgreement(r reference, postal, city, region string) (agreement, bool) {
-	if ans, ok := zipCityAgreement(r, postal, city); ok {
+func (p *Parser) cityAgreement(r reference, postal, city, region string) (agreement, bool) {
+	if ans, ok := p.zipCityAgreement(r, postal, city); ok {
 		return ans, true
 	}
-	return cityZipsAgreement(r, postal, city, region)
+	return p.cityZipsAgreement(r, postal, city, region)
 }
 
 // choose ranks candidates and returns the best, or nil when none survive.
@@ -745,10 +756,10 @@ func gateOne(ans agreement, confirmed bool) agreement {
 func (p *Parser) agreement(r reference, a *address.Address) questionAnswers {
 	var qa questionAnswers
 
-	if ans, ok := cityAgreement(r, a.Postal, a.City, a.Region); ok {
+	if ans, ok := p.cityAgreement(r, a.Postal, a.City, a.Region); ok {
 		qa.city = ans
 	}
-	if ans, ok := streetAgreement(r, a); ok {
+	if ans, ok := p.streetAgreement(r, a); ok {
 		qa.street = ans
 	}
 
@@ -776,14 +787,14 @@ func (r reference) check(key string, query func() (bool, error)) (bool, error) {
 // than answering, when there is nothing to ask about or zipcity could not be
 // consulted: an address the data cannot speak to is not thereby a better or a
 // worse reading.
-func zipCityAgreement(r reference, postal, city string) (agreement, bool) {
+func (p *Parser) zipCityAgreement(r reference, postal, city string) (agreement, bool) {
 	m := zip5.FindStringSubmatch(postal)
 	if m == nil || city == "" {
 		return unknown, false
 	}
 
 	present, err := r.check("zip city "+m[1]+" "+city, func() (bool, error) {
-		return zipcity.CheckZipAndCity(m[1], city)
+		return p.zipcity.CheckZipAndCity(m[1], city)
 	})
 	if err != nil {
 		return unknown, false
@@ -808,13 +819,13 @@ func zipCityAgreement(r reference, postal, city string) (agreement, bool) {
 // PALM BEACH, and only the data knows one of those is a place
 // (addressparsers#17). Which of the city's codes the address belongs to is
 // not asked here; that is the street question's business.
-func cityZipsAgreement(r reference, postal, city, region string) (agreement, bool) {
+func (p *Parser) cityZipsAgreement(r reference, postal, city, region string) (agreement, bool) {
 	if zip5.MatchString(postal) || city == "" || len(region) != 2 {
 		return unknown, false
 	}
 
 	present, err := r.check("city zips "+region+" "+city, func() (bool, error) {
-		for range zipcity.ZipsKnownFor(region, city) {
+		for range p.zipcity.ZipsKnownFor(region, city) {
 			return true, nil
 		}
 		return false, nil
@@ -894,7 +905,7 @@ func cityZipsAgreement(r reference, postal, city, region string) (agreement, boo
 // removes that gap along with the false premise. The two-shard fold above
 // still applies on top of this; only what counts as "present" in one shard
 // changed.
-func streetAgreement(r reference, a *address.Address) (agreement, bool) {
+func (p *Parser) streetAgreement(r reference, a *address.Address) (agreement, bool) {
 	if civic, ok := a.Type.(address.DataDependentAddressType); !ok || !civic.IsCivicAddressType() {
 		return unknown, false
 	}
@@ -913,7 +924,7 @@ func streetAgreement(r reference, a *address.Address) (agreement, bool) {
 	var inZip, inCity bool
 	if hasZip {
 		present, err := r.check("zip street "+m[1]+" "+street, func() (bool, error) {
-			match, err := zipcity.MatchZipAndStreet(m[1], street)
+			match, err := p.zipcity.MatchZipAndStreet(m[1], street)
 			return presentMatch(match), err
 		})
 		if err != nil {
@@ -923,7 +934,7 @@ func streetAgreement(r reference, a *address.Address) (agreement, bool) {
 	}
 	if hasCity {
 		present, err := r.check("city street "+a.City+" "+a.Region+" "+street, func() (bool, error) {
-			match, err := zipcity.MatchCityStateAndStreet(a.City, a.Region, street)
+			match, err := p.zipcity.MatchCityStateAndStreet(a.City, a.Region, street)
 			return presentMatch(match), err
 		})
 		if err != nil {

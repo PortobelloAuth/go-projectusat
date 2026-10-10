@@ -6,7 +6,7 @@ require (
 	github.com/anyascii/go v0.3.3
 	github.com/hbollon/go-edlib v1.7.0
 	github.com/poetic-systems/addresstables v0.1.0-alpha.0
-	github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010065656-171e814d823a
+	github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010150231-b928d01415bb
 	golang.org/x/text v0.41.0
 )
 
