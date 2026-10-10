@@ -9,8 +9,8 @@ github.com/hbollon/go-edlib v1.7.0 h1:Jt3AtZ+AdgtJhzkrCFvkbdbNL3KCqZlGioLnUfwsxe
 github.com/hbollon/go-edlib v1.7.0/go.mod h1:wnt6o6EIVEzUfgbUZY7BerzQ2uvzp354qmS2xaLkrhM=
 github.com/poetic-systems/addresstables v0.1.0-alpha.0 h1:bsPfgfImKRoTXjUO9pzy+p2ENsQiCDne5x2RKactNAc=
 github.com/poetic-systems/addresstables v0.1.0-alpha.0/go.mod h1:0+0MslI2VD30//JsNgvjPLz04GiV6YEsFE2pni512Fs=
-github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010180529-4a2387027267 h1:ggZ+KsHrW4MeRd3AEYKWx4xEjjpaz6kChZYzWn6zwAs=
-github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010180529-4a2387027267/go.mod h1:wqkYtdCgWdJftdXLN8nk9EOOdyCo07sQ0068a53Kpdo=
+github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010175148-347f2d74e00b h1:dgTkksOSS0f9Qaz5zDB0YIk2i21ZseJe/P0ga1Nbkdc=
+github.com/poetic-systems/zipcity v0.1.0-alpha.0.0.20261010175148-347f2d74e00b/go.mod h1:wqkYtdCgWdJftdXLN8nk9EOOdyCo07sQ0068a53Kpdo=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 golang.org/x/text v0.41.0 h1:vz/seA0lnX87Othu2f/0L24RcgrXD9/YFTSuGjj3rH8=
