@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
-	"github.com/PortobelloAuth/go-projectusat/pkg/postalcode"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded"
 )
 
 // AddressVerifier functions take an address.Address and return it if it
@@ -36,7 +35,8 @@ func IdentityVerifier(a *address.Address) (*address.Address, error) {
 // Parser is used to parse a string in to a Project US@ structured
 // patient address.
 type Parser struct {
-	Options AddressParsingOptions
+	verifier AddressVerifier
+	parser   ParsingFn
 }
 
 // New creates a new Parser using the provided AddressParsingOptions.
@@ -47,34 +47,30 @@ func New(opts ...AddressParsingOptions) *Parser {
 	if len(opts) > 0 {
 		o = opts[0]
 	}
-	if o.Verifier == nil {
-		o.Verifier = IdentityVerifier
+	v := IdentityVerifier
+	if o.Verifier != nil {
+		v = o.Verifier
+	}
+
+	p := zipcityembedded.New().Parse
+	if o.CustomParser != nil {
+		p = o.CustomParser.Parse
 	}
 
 	return &Parser{
-		Options: o,
+		verifier: v,
+		parser:   p,
 	}
 }
 
 func (p *Parser) Parse(source string) (*address.Address, error) {
-	if p.Options.CustomParser != nil {
-		addr, err := p.Options.CustomParser.Parse(source)
-		if err != nil {
-			return nil, err
-		}
-		return p.Options.Verifier(addr)
+	addr, err := p.parser(source)
+	if err != nil {
+		return nil, err
 	}
-	// TODO: implement Parse
-	/*
-		- split the string on newlines, commas, and spaces
-		- score each token
-		- use scores to determine which Address parts each token belongs to
-		- run verifier to check whether the address is verifiable (does not error)
-	*/
-	tokens := token.Tokenize(source)
+	return p.verifier(addr)
+}
 
-	postalcode.Claims(tokens)
-	// use the most likely zip code and/or region to select Puerto Rico or military
-	// specific parsers.
+func notImplementedParser(source string) (*address.Address, error) {
 	return nil, fmt.Errorf("Not implemented")
 }
