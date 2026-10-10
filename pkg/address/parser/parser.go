@@ -2,7 +2,7 @@ package parser
 
 import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	zipcityembedded "github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded/parse"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded"
 )
 
 // AddressVerifier functions take an address.Address and return it if it

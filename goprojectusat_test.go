@@ -137,7 +137,7 @@ func TestNormalize(t *testing.T) {
 	for _, tc := range cases {
 		got, err := goprojectusat.Normalize(tc.in)
 		if err != nil {
-			t.Fatalf("Normalize: %v", err)
+			t.Fatalf("Normalize - %q error: %s", tc.in, err)
 		}
 
 		if got != tc.want {

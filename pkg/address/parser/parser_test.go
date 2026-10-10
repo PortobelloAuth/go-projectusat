@@ -6,11 +6,11 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
 )
 
 // Distinguish E St from East St
 func TestParse(t *testing.T) {
-	t.Skip("parser.Parse returns \"Not implemented\" until go-projectusat#61 lands")
 	cases := []struct {
 		In   string
 		Want address.Address
@@ -19,6 +19,7 @@ func TestParse(t *testing.T) {
 		{
 			In: "43 E 200 N, NORTH SALT LAKE, UT",
 			Want: address.Address{
+				Type:                &ordinarystreet.OrdinaryStreetAddress{},
 				PrimaryNumber:       "43",
 				Predirectional:      "E",
 				StreetName:          "200",
@@ -36,6 +37,7 @@ func TestParse(t *testing.T) {
 		{
 			In: "3253 W 9200 S, West Jordan, UT 84088",
 			Want: address.Address{
+				Type:                &ordinarystreet.OrdinaryStreetAddress{},
 				PrimaryNumber:       "3253",
 				Predirectional:      "W",
 				StreetName:          "9200",
@@ -43,7 +45,7 @@ func TestParse(t *testing.T) {
 				Postdirectional:     "S",
 				SecondaryDesignator: "",
 				SecondaryNumber:     "",
-				City:                "West Jordan",
+				City:                "WEST JORDAN",
 				Region:              "UT",
 				Postal:              "84088",
 				Country:             "",
