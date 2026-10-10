@@ -3,3 +3,7 @@
 
 go.work
 go.work.sum
+
+/customparser
+/defaultparser
+*.prof
