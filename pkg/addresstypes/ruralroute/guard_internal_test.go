@@ -1,6 +1,8 @@
 package ruralroute
 
 import (
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -51,5 +53,46 @@ func checkGuard(t *testing.T, s string) {
 	}
 	if got != want || (gotErr == nil) != (wantErr == nil) {
 		t.Errorf("Normalize(%q) = %q, %v; normalize = %q, %v", s, got, gotErr, want, wantErr)
+	}
+}
+
+// rewriteGuardInputs probe each literal the guards look for, alone and glued
+// into longer words.
+var rewriteGuardInputs = append(slices.Clone(guardInputs),
+	"RR 4 NUMBER 12", "RR NO 4", "RR NUM4", "RR4", "RR 04 BOX 012",
+	"HC0", "BOX 0", "NOTE", "ANNUM", "RR 4 BOX 12 #", "RR 4BOX12",
+)
+
+func TestRewriteGuards(t *testing.T) {
+	for _, in := range rewriteGuardInputs {
+		for _, s := range []string{in, strings.ToUpper(in)} {
+			checkRewriteGuards(t, s)
+		}
+	}
+}
+
+func FuzzRewriteGuards(f *testing.F) {
+	for _, in := range rewriteGuardInputs {
+		f.Add(in)
+	}
+	f.Fuzz(checkRewriteGuards)
+}
+
+// checkRewriteGuards fails when a guard in normalize would skip a regexp that
+// matches s.
+func checkRewriteGuards(t *testing.T, s string) {
+	for _, g := range []struct {
+		name  string
+		guard bool
+		re    *regexp.Regexp
+	}{
+		{"hasNumberMarker", hasNumberMarker(s), routeHashPattern},
+		{"hasNumberMarker", hasNumberMarker(s), boxHashPattern},
+		{"hasDigit", hasDigit(s), gluednumber},
+		{"contains 0", strings.IndexByte(s, '0') >= 0, leadingzero},
+	} {
+		if !g.guard && g.re.MatchString(s) {
+			t.Errorf("%s(%q) = false, but %s matches it", g.name, s, g.re)
+		}
 	}
 }

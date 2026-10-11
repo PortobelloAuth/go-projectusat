@@ -129,8 +129,15 @@ func Normalize(line string) (string, error) {
 	capitalized = textutil.CollapseRE2Space(capitalized)
 
 	replaced := routeReplacer.Replace(strings.TrimSpace(capitalized))
-	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
-	replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	// Neither rewrite can match without a digit, and leadingzero not without a
+	// 0; skipping them when the literal is absent changes nothing
+	// (TestRewriteGuards) and spares two regexp passes per candidate span.
+	if strings.ContainsAny(replaced, "0123456789") {
+		replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
+	}
+	if strings.IndexByte(replaced, '0') >= 0 {
+		replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	}
 
 	standardized := routePattern.FindString(replaced)
 	if standardized == "" {
