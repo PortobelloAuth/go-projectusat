@@ -141,6 +141,35 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// 480 is the number of SUITE 480, written directly ahead of the
+			// house number 411, and not a house number opening a street named
+			// 411 N CENTRAL. Taking it for one left BUILDING SUITE — BLDG
+			// numbered SUITE, which secondaryunit offers only as contested — as
+			// the unit, and no reading was built from STE 480 at all (#199).
+			name:   "a unit written between the business name and the house number is the unit",
+			source: "UCENT Building Suite 480 411 N Central Ave\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "UCENT BUILDING",
+				number:     "411", pre: "N", name: "CENTRAL", suffix: "AVE",
+				designator: "STE", secondary: "480",
+				formatted: "411 N CENTRAL AVE STE 480",
+			},
+		},
+		{
+			// unitBeforeStreetLine's own example, which the same boundary bug
+			// read as business ACME SUITE at 3200 152 S TECH DR (#199).
+			name:   "a spelled-out unit ahead of the house number leaves the business name",
+			source: "ACME Suite 3200 152 S Tech Dr\nTAMPA FL 33602",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "ACME",
+				number:     "152", pre: "S", name: "TECH", suffix: "DR",
+				designator: "STE", secondary: "3200",
+				formatted: "152 S TECH DR STE 3200",
+			},
+		},
+		{
 			// 1ST is an ordinal, not a house number, so the name it opens is
 			// kept whole and the split falls on 511.
 			name:   "an ordinal opening a business name is not the house number",

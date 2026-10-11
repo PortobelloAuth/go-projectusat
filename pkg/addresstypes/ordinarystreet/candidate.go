@@ -205,7 +205,9 @@ var houseNumber = regexp.MustCompile(`^([0-9]+|[A-Z]?\d+[A-Z]?|[NS]\d+[EW]\d+|\d
 //     qualifying number is taken.
 //
 // A later number is not a new street when it belongs to the street line already
-// found: the 500 of a grid address 100 N 500 E (opensHead), the 12 of COUNTY
+// found: the 500 of a grid address 100 N 500 E (opensHead, except where the
+// first number is a unit's, as in SUITE 480 411 N CENTRAL AVE — see
+// unitNumberAhead), the 12 of COUNTY
 // ROAD 12 (insideClaim), the unit identifier of 100 MAIN ST 4 B
 // (closesStreetLine), and the 11 of 10 MAIN ST STE 11 (unitAfterStreetLine).
 //
@@ -224,7 +226,10 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 		if !houseNumber.MatchString(tokens[i].Text) || routeNumber(tokens, i, end) || insideClaim(claims, i) {
 			continue
 		}
-		if opensHead(tokens, claims, street, i) || closesStreetLine(tokens, claims, street, i) {
+		if opensHead(tokens, claims, street, i) && !unitNumberAhead(claims, street, i) {
+			continue
+		}
+		if closesStreetLine(tokens, claims, street, i) {
 			continue
 		}
 		if unitAfterStreetLine(tokens, claims, street, i) {
@@ -238,6 +243,32 @@ func businessBoundary(tokens []token.Token, claims []claim.Claim, from, end int)
 	}
 
 	return unitBeforeStreetLine(claims, from, street)
+}
+
+// unitNumberAhead reports whether the number at street, the boundary taken so
+// far, is the identifier of a secondary unit or private mailbox that ends
+// exactly at i, so that the number at i is a house number with that unit
+// written directly ahead of it, and not the first word of a street name that
+// the number at street opens.
+//
+// opensHead reads a number followed directly by another as a house number and
+// a numbered street, as 2300 8 MILE RD is. That reading cannot stand where a
+// unit claims the first number: in UCENT BUILDING SUITE 480 411 N CENTRAL AVE
+// the 480 is the number of SUITE 480, and taking it as the house number left
+// a street named 411 N CENTRAL, with BUILDING SUITE — BLDG numbered SUITE,
+// which secondaryunit only offers as contested — as the only unit ending
+// ahead of it. The STE 480 claim, the reading of the unit the address was
+// written with, ends at 411, a boundary that was never tried, so no candidate
+// was built from it (#199). With 411 as the house number, STE 480 is the unit
+// ahead of it (unitBeforeStreetLine) and UCENT BUILDING the business name.
+func unitNumberAhead(claims []claim.Claim, street, i int) bool {
+	for _, c := range claims {
+		if c.Start() <= street && c.End() == i && isUnitClaim(c) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // insideClaim reports whether the token at i lies inside a street name some
