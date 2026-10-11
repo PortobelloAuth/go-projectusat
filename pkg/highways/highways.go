@@ -193,6 +193,20 @@ func NormalizeStreetName(name string) (string, error) {
 		return "", fmt.Errorf("empty street name")
 	}
 
+	// s is single-spaced, so its first word is everything before the first
+	// space.
+	lead, _, _ := strings.Cut(s, " ")
+	if !mayLeadHighway(lead) {
+		return "", fmt.Errorf("not a highway name: %q", s)
+	}
+
+	return normalizeUpper(s)
+}
+
+// normalizeUpper is NormalizeStreetName's recognizer, without the
+// leading-word guard, for s already trimmed, upper-cased, single-spaced, and
+// not empty.
+func normalizeUpper(s string) (string, error) {
 	// Split glued interstate forms (I10, IH280) into separate tokens before field split.
 	tokens := strings.Fields(expandGluedInterstate(s))
 
@@ -202,6 +216,54 @@ func NormalizeStreetName(name string) (string, error) {
 	}
 
 	return out, nil
+}
+
+// highwayLeads are the words matchHighwayCore's rules, and the bare COUNTY
+// form in normalizeTokens, test the first token against.
+var highwayLeads = map[string]bool{
+	"FARM": true, "HWY": true, "HIGHWAY": true, "FM": true,
+	"INTERSTATE": true, "I": true, "IH": true, "US": true, "CR": true,
+	"COUNTY": true, "CNTY": true, "TSR": true, "TOWNSHIP": true,
+	"RANCH": true, "STATE": true, "ST": true, "SR": true, "RD": true,
+	"ROAD": true, "RT": true, "RTE": true, "ROUTE": true, "EXPRESSWAY": true,
+}
+
+// multiWordStateLeads are the first words of multiWordStateNames.
+var multiWordStateLeads = func() map[string]bool {
+	leads := map[string]bool{}
+	for _, name := range multiWordStateNames {
+		first, _, _ := strings.Cut(name, " ")
+		leads[first] = true
+	}
+	return leads
+}()
+
+// mayLeadHighway reports whether a name whose first upper-cased word is lead
+// could be a highway. Every form normalizeTokens accepts begins with highway
+// vocabulary, a state name or two-letter code (splitLeadingState), or a
+// glued interstate (I10) that expandGluedInterstate turns into I; anything
+// else matches no rule, so the guard is a necessary condition and skipping
+// the recognizer when it fails changes no result. Almost every span Claims
+// asks about fails it.
+func mayLeadHighway(lead string) bool {
+	return highwayLeads[lead] ||
+		singleWordStateNames[lead] ||
+		multiWordStateLeads[lead] ||
+		(len(lead) == 2 && usStateAbbrevs[lead]) ||
+		(strings.HasPrefix(lead, "I") && gluedInterstate.MatchString(lead))
+}
+
+// leadingWord returns the first word of strings.ToUpper(text) as
+// strings.Fields splits it, and false when text is all space.
+func leadingWord(text string) (string, bool) {
+	u := strings.TrimLeftFunc(strings.ToUpper(text), unicode.IsSpace)
+	if u == "" {
+		return "", false
+	}
+	if i := strings.IndexFunc(u, unicode.IsSpace); i >= 0 {
+		return u[:i], true
+	}
+	return u, true
 }
 
 func collapseSpace(s string) string {

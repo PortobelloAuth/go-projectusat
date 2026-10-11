@@ -51,6 +51,14 @@ func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for start := range tokens {
+		// Every span from start begins with the first word of its first
+		// token, so when that word cannot lead a highway none of them is one.
+		// A token that is all space has no first word; its spans fall
+		// through to NormalizeStreetName.
+		if lead, ok := leadingWord(tokens[start].Text); ok && !mayLeadHighway(lead) {
+			continue
+		}
+
 		// A phrase hard wrapped across two lines is not one phrase. See
 		// token.LineEnd.
 		span := min(maxSpan, token.LineEnd(tokens, start)-start)
