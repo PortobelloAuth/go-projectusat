@@ -86,8 +86,7 @@ var replacements = slices.Collect(func(yield func(string) bool) {
 
 var routeReplacer = strings.NewReplacer(replacements...)
 
-var alphanumspace = regexp.MustCompile("[^0-9A-Z ]+")
-var whitespace = regexp.MustCompile(`\s+`)
+var alphanumspace = textutil.UpperAlnumSpace
 
 var designatorGroup = "(" + strings.Join(standardDesignators, "|") + ")"
 var numberedGroup = "(" + strings.Join(append(slices.Clone(standardDesignators), "BOX"), "|") + ")"
@@ -126,12 +125,19 @@ func Normalize(line string) (string, error) {
 	}
 
 	capitalized := strings.ToUpper(folded)
-	capitalized = alphanumspace.ReplaceAllString(capitalized, "")
-	capitalized = whitespace.ReplaceAllString(capitalized, " ")
+	capitalized = alphanumspace.ReplaceRunsOutside(capitalized, "")
+	capitalized = textutil.CollapseRE2Space(capitalized)
 
 	replaced := routeReplacer.Replace(strings.TrimSpace(capitalized))
-	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
-	replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	// Neither rewrite can match without a digit, and leadingzero not without a
+	// 0; skipping them when the literal is absent changes nothing
+	// (TestRewriteGuards) and spares two regexp passes per candidate span.
+	if strings.ContainsAny(replaced, "0123456789") {
+		replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
+	}
+	if strings.IndexByte(replaced, '0') >= 0 {
+		replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	}
 
 	standardized := routePattern.FindString(replaced)
 	if standardized == "" {

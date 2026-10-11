@@ -57,7 +57,12 @@ func Normalize(sn string) (string, error) {
 
 	// capitalize
 	capitalized := strings.ToUpper(sn)
-	capitalized = hashPattern.ReplaceAllString(capitalized, " ")
+	// hashPattern cannot match without a #, and skipping it when there is none
+	// spares a regexp pass over every span boxClaim considers
+	// (TestHashGuard, go-projectusat#194).
+	if strings.IndexByte(capitalized, '#') >= 0 {
+		capitalized = hashPattern.ReplaceAllString(capitalized, " ")
+	}
 
 	replaced := poboxReplacer.Replace(capitalized)
 
@@ -71,7 +76,12 @@ func Normalize(sn string) (string, error) {
 
 func NormalizeStreetName(streetname string) (string, error) {
 	capitalized := strings.ToUpper(streetname)
-	capitalized = hashPattern.ReplaceAllString(capitalized, " ")
+	// hashPattern cannot match without a #, and skipping it when there is none
+	// spares a regexp pass over every span boxClaim considers
+	// (TestHashGuard, go-projectusat#194).
+	if strings.IndexByte(capitalized, '#') >= 0 {
+		capitalized = hashPattern.ReplaceAllString(capitalized, " ")
+	}
 
 	replaced := poboxReplacer.Replace(capitalized)
 
