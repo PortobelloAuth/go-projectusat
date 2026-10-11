@@ -187,6 +187,21 @@ func mayBeRoute(sn string) bool {
 	return false
 }
 
+// hasNumberMarker reports whether s holds one of the markers routeHashPattern
+// and boxHashPattern rewrite — #, NUMBER, NUM or NO — without which neither
+// can match. NUMBER contains NUM, so three literals cover all four.
+// TestRewriteGuards and FuzzRewriteGuards hold every guard in normalize to the
+// regexp it skips.
+func hasNumberMarker(s string) bool {
+	return strings.IndexByte(s, '#') >= 0 || strings.Contains(s, "NUM") || strings.Contains(s, "NO")
+}
+
+// hasDigit reports whether s holds an ASCII digit, without which gluednumber
+// cannot match.
+func hasDigit(s string) bool {
+	return strings.ContainsAny(s, "0123456789")
+}
+
 func Normalize(sn string) (string, error) {
 	if !mayBeRoute(sn) {
 		return "", errNotRoute
@@ -197,14 +212,20 @@ func Normalize(sn string) (string, error) {
 func normalize(sn string) (string, error) {
 	// capitalize
 	capitalized := strings.ToUpper(sn)
-	capitalized = routeHashPattern.ReplaceAllString(capitalized, "$1 ")
-	capitalized = boxHashPattern.ReplaceAllString(capitalized, "$1 BOX ")
+	if hasNumberMarker(capitalized) {
+		capitalized = routeHashPattern.ReplaceAllString(capitalized, "$1 ")
+		capitalized = boxHashPattern.ReplaceAllString(capitalized, "$1 BOX ")
+	}
 	capitalized = alphanumspace.ReplaceRunsOutside(capitalized, "")
 	capitalized = textutil.CollapseRE2Space(capitalized)
 
 	replaced := routeReplacer.Replace(capitalized)
-	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
-	replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	if hasDigit(replaced) {
+		replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
+	}
+	if strings.IndexByte(replaced, '0') >= 0 {
+		replaced = leadingzero.ReplaceAllString(replaced, "$1 ")
+	}
 
 	suffix := routePattern.ReplaceAllString(replaced, "")
 	replaced, _ = strings.CutSuffix(replaced, suffix)
