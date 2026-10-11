@@ -8,6 +8,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 /*
@@ -87,8 +88,7 @@ var maxSpan = slices.Max(slices.Collect(func(yield func(int) bool) {
 // evidence that this line says something more than the phrase, and dropping
 // them would make "GENERAL DELIVERY 5" normalize as though the 5 were never
 // there.
-var punctuation = regexp.MustCompile(`[^0-9A-Z ]+`)
-var whitespace = regexp.MustCompile(`\s+`)
+var punctuation = textutil.UpperAlnumSpace
 
 // bareZip5 matches a plain five digit ZIP with no ZIP+4 add-on already
 // present and nothing else.
@@ -109,8 +109,8 @@ var bareZip5 = regexp.MustCompile(`^\d{5}$`)
 // no part of sn, because an error is the value most likely to reach a log.
 func Normalize(sn string) (string, error) {
 	capitalized := strings.ToUpper(sn)
-	capitalized = punctuation.ReplaceAllString(capitalized, " ")
-	capitalized = whitespace.ReplaceAllString(capitalized, " ")
+	capitalized = punctuation.ReplaceRunsOutside(capitalized, " ")
+	capitalized = textutil.CollapseRE2Space(capitalized)
 	capitalized = strings.TrimSpace(capitalized)
 
 	if slices.Contains(recognizedSpellings, capitalized) {

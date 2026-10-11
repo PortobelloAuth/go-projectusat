@@ -14,10 +14,10 @@ package region
 import (
 	"fmt"
 	"maps"
-	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 	"github.com/hbollon/go-edlib"
 	"github.com/poetic-systems/addresstables/regions"
 )
@@ -81,7 +81,7 @@ var regionKeys = slices.Collect(maps.Keys(regionMap))
 // punctuation matches everything a region name is not made of. Region names in
 // this table are letters and spaces, so a digit surviving the strip is what
 // makes a lookup of 2ND fail instead of finding North Dakota.
-var punctuation = regexp.MustCompile("[^a-zA-Z0-9 ]+")
+var punctuation = textutil.AlnumSpace
 
 func normalizeRegion(r string, fuzzy bool) (string, error) {
 	info, err := Info(r, fuzzy)
@@ -94,7 +94,7 @@ func normalizeRegion(r string, fuzzy bool) (string, error) {
 
 func Info(r string, fuzzy bool) (*RegionInfo, error) {
 	// clean out any punctuation
-	clean := punctuation.ReplaceAllString(r, "")
+	clean := punctuation.ReplaceRunsOutside(r, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 	// if requested, fuzzy match keys

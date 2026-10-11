@@ -14,10 +14,10 @@ package streetsuffixes
 import (
 	"fmt"
 	"maps"
-	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 	"github.com/hbollon/go-edlib"
 	"github.com/poetic-systems/addresstables/streetsuffixes"
 )
@@ -60,7 +60,7 @@ var streetSuffixKeys = slices.Collect(maps.Keys(streetSuffixPrimaryMap))
 // punctuation matches everything a street suffix is not made of. Suffix keys in
 // this table are letters and spaces, so a digit surviving the strip is what
 // makes a lookup of 1ST fail instead of finding STREET.
-var punctuation = regexp.MustCompile("[^a-zA-Z0-9 ]+")
+var punctuation = textutil.AlnumSpace
 
 func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error) {
 	info, err := Info(src, fuzzy)
@@ -77,7 +77,7 @@ func normalizeStreetSuffix(src string, primary bool, fuzzy bool) (string, error)
 
 func Info(src string, fuzzy bool) (*StreetSuffix, error) {
 	// clean out any punctuation
-	clean := punctuation.ReplaceAllString(src, "")
+	clean := punctuation.ReplaceRunsOutside(src, "")
 	// capitalize
 	capitalized := strings.ToUpper(clean)
 	// if requested, fuzzy match keys
