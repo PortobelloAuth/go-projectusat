@@ -1,10 +1,11 @@
 package ruralroute
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
@@ -157,7 +158,44 @@ var routeReplacements = slices.Collect(func(yield func(string) bool) {
 
 var routeReplacer = strings.NewReplacer(routeReplacements...)
 
+var errNotRoute = errors.New("Not a recognized rural route or highway contract route")
+
+// mayBeRoute is a cheap necessary condition for Normalize to succeed, checked
+// ahead of its nine regular expression passes. routeClaim asks Normalize about
+// up to eight spans at every token of every input, almost none of which are
+// routes, and measured under go-projectusat#194 those passes were about a
+// quarter of all parsing CPU.
+//
+// Normalize succeeds only when its result starts with a standard designator,
+// RR or HC. Every rewrite it makes keeps the first character that survives
+// alphanumspace in place: routeHashPattern and boxHashPattern both keep the
+// leading alphanumeric of each match, alphanumspace only deletes, whitespace
+// leaves a leading space a space, and routeReplacer can change that character
+// only by replacing a spelling that starts there — and every spelling starts
+// with R, H or S. So unless the first rune that upper-cases into
+// alphanumspace's kept set [0-9A-Z ] is one of R, H or S, Normalize must fail.
+// TestMayBeRouteIsNecessary and FuzzMayBeRouteIsNecessary hold this to the
+// unguarded normalize.
+func mayBeRoute(sn string) bool {
+	for _, r := range sn {
+		switch u := unicode.ToUpper(r); {
+		case u == 'R' || u == 'H' || u == 'S':
+			return true
+		case u == ' ' || ('0' <= u && u <= '9') || ('A' <= u && u <= 'Z'):
+			return false
+		}
+	}
+	return false
+}
+
 func Normalize(sn string) (string, error) {
+	if !mayBeRoute(sn) {
+		return "", errNotRoute
+	}
+	return normalize(sn)
+}
+
+func normalize(sn string) (string, error) {
 	// capitalize
 	capitalized := strings.ToUpper(sn)
 	capitalized = routeHashPattern.ReplaceAllString(capitalized, "$1 ")
@@ -177,7 +215,7 @@ func Normalize(sn string) (string, error) {
 		return replaced, nil
 	}
 
-	return "", fmt.Errorf("Not a recognized rural route or highway contract route")
+	return "", errNotRoute
 }
 
 func NewRuralRoute(a *address.Address) (*address.Address, error) {
