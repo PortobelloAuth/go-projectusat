@@ -86,8 +86,7 @@ var replacements = slices.Collect(func(yield func(string) bool) {
 
 var routeReplacer = strings.NewReplacer(replacements...)
 
-var alphanumspace = regexp.MustCompile("[^0-9A-Z ]+")
-var whitespace = regexp.MustCompile(`\s+`)
+var alphanumspace = textutil.UpperAlnumSpace
 
 var designatorGroup = "(" + strings.Join(standardDesignators, "|") + ")"
 var numberedGroup = "(" + strings.Join(append(slices.Clone(standardDesignators), "BOX"), "|") + ")"
@@ -126,8 +125,8 @@ func Normalize(line string) (string, error) {
 	}
 
 	capitalized := strings.ToUpper(folded)
-	capitalized = alphanumspace.ReplaceAllString(capitalized, "")
-	capitalized = whitespace.ReplaceAllString(capitalized, " ")
+	capitalized = alphanumspace.ReplaceRunsOutside(capitalized, "")
+	capitalized = textutil.CollapseRE2Space(capitalized)
 
 	replaced := routeReplacer.Replace(strings.TrimSpace(capitalized))
 	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")

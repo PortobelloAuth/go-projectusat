@@ -72,9 +72,8 @@ under p. 30's rules rather than p. 22's. See #119 for the three places the two
 pages disagree.
 */
 
-var alphanumspace = regexp.MustCompile("[^0-9A-Z ]+")
+var alphanumspace = textutil.UpperAlnumSpace
 var boxHashPattern = regexp.MustCompile(`([0-9A-Z]+)\s*(BOX\s+)?(#|NUMBER|NUM|NO)\s*`)
-var whitespace = regexp.MustCompile(`\s+`)
 
 // designator is a spelling a route may be written with, and the standardized
 // form it becomes.
@@ -200,8 +199,8 @@ func normalize(sn string) (string, error) {
 	capitalized := strings.ToUpper(sn)
 	capitalized = routeHashPattern.ReplaceAllString(capitalized, "$1 ")
 	capitalized = boxHashPattern.ReplaceAllString(capitalized, "$1 BOX ")
-	capitalized = alphanumspace.ReplaceAllString(capitalized, "")
-	capitalized = whitespace.ReplaceAllString(capitalized, " ")
+	capitalized = alphanumspace.ReplaceRunsOutside(capitalized, "")
+	capitalized = textutil.CollapseRE2Space(capitalized)
 
 	replaced := routeReplacer.Replace(capitalized)
 	replaced = gluednumber.ReplaceAllString(replaced, "$1 $2")
