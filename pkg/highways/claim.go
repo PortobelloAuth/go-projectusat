@@ -55,14 +55,18 @@ func Claims(tokens []token.Token) []claim.Claim {
 		// token.LineEnd.
 		span := min(maxSpan, token.LineEnd(tokens, start)-start)
 		for length := span; length >= 1; length-- {
-			if splitsCompoundDirectional(tokens, start, start+length) {
-				continue
-			}
-
 			text := token.Join(tokens[start : start+length])
 
 			normalized, err := NormalizeStreetName(text)
 			if err != nil {
+				continue
+			}
+
+			// Both checks are filters with no side effects, so their order
+			// does not change which spans are claimed. The recognizer goes
+			// first because it rejects almost every span, and the compound
+			// check asks directionals about every token pair in the span.
+			if splitsCompoundDirectional(tokens, start, start+length) {
 				continue
 			}
 
