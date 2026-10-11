@@ -116,7 +116,30 @@ var allDiacriticRanges = rangetable.Merge(
 	diacriticMap['s'],
 )
 
+// isASCII reports whether every byte of s is below 0x80.
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
+}
+
 func Substitute(source string) (string, error) {
+	// An ASCII string has nothing for the chain below to do: NFD and NFC leave
+	// it as it is, every diacritic range starts at U+00C0, and no ASCII
+	// character is a nonspacing mark. Building and running the chain anyway
+	// was about 7% of parsing CPU under go-projectusat#194, because the parser
+	// folds every candidate span through here. TestSubstituteASCIIFastPath and
+	// FuzzSubstituteASCIIFastPath hold this to the full chain.
+	if isASCII(source) {
+		return strings.ToLower(source), nil
+	}
+	return substitute(source)
+}
+
+func substitute(source string) (string, error) {
 	// Chain the transformation: NFD Decomposition -> Remove Diacritics -> NFC Recomposition
 	mapping := func(r rune) rune {
 		for k, v := range diacriticMap {
