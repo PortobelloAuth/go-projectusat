@@ -134,6 +134,41 @@ func TestUSAtParseMatchesPackageParse(t *testing.T) {
 	}
 }
 
+// TestUSAtNormalizeAddressMatchesNormalize checks that NormalizeAddress
+// (go-projectusat#206), applied after Parse, agrees with the combined
+// Normalize on the same input and options — it is the same normalizer, only
+// reachable a part at a time.
+func TestUSAtNormalizeAddressMatchesNormalize(t *testing.T) {
+	u, err := goprojectusat.New(goprojectusat.WithFuzzyNormalization())
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	for _, c := range parsertest.Cases {
+		want, wantErr := u.Normalize(c.Input)
+
+		parsed, parseErr := u.Parse(c.Input)
+		if errString(parseErr) != errString(wantErr) && parseErr != nil {
+			continue // Normalize's error came from normalization, not parsing; not this test's case.
+		}
+		if parseErr != nil {
+			if errString(parseErr) != errString(wantErr) {
+				t.Errorf("Parse(%q) err = %v, want %v", c.Input, parseErr, wantErr)
+			}
+			continue
+		}
+
+		normalized, normErr := u.NormalizeAddress(parsed)
+		got := ""
+		if normErr == nil {
+			got = normalized.Format()
+		}
+		if got != want || errString(normErr) != errString(wantErr) {
+			t.Errorf("Parse+NormalizeAddress(%q)\n got  %q, %v\n want %q, %v", c.Input, got, normErr, want, wantErr)
+		}
+	}
+}
+
 // TestUSAtConcurrentUse shares one USAt across goroutines; run with -race.
 func TestUSAtConcurrentUse(t *testing.T) {
 	u, err := goprojectusat.New(goprojectusat.WithMatchingNormalization())

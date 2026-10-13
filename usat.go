@@ -87,6 +87,15 @@ func (u *USAt) Parse(source string) (*address.Address, error) {
 	return u.parser.Parse(source)
 }
 
+// NormalizeAddress normalizes an already-parsed address, using the
+// normalizer u was built with. It is the entry point for a caller that only
+// needs normalization of one address part (go-projectusat#206) and would
+// otherwise have to build a second normalizer with the same options to get
+// it, duplicating the one u already holds.
+func (u *USAt) NormalizeAddress(a *address.Address) (*address.Address, error) {
+	return u.normalizer.Normalize(a)
+}
+
 // defaultUSAt is the USAt the package-level Normalize and Parse use when they
 // are given no options. It is built on first use, not at import, so a
 // program that only ever uses a custom parser never loads the default one.
