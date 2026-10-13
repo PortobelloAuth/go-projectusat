@@ -169,6 +169,47 @@ func TestUSAtNormalizeAddressMatchesNormalize(t *testing.T) {
 	}
 }
 
+// TestUSAtNormalizeGluedPunctuationDesignator is Aaron's go-projectusat#207
+// repro: "Apt." keeps its period glued to the word (the tokenizer only drops
+// a token that is punctuation alone), and that period must not stop the
+// designator from being recognized. The Puerto Rico diacritics case from his
+// comment is excluded here — that one is #205's open architectural question,
+// not this bug.
+func TestUSAtNormalizeGluedPunctuationDesignator(t *testing.T) {
+	cases := []struct {
+		input  string
+		expect string
+	}{
+		{
+			input:  "123 Main Street Apt 23\nNorfolk, Virginia 23510",
+			expect: "123 MAIN ST # 23\nNORFOLK VA 23510",
+		},
+		{
+			input:  "123 Main Street Apt. 23\nNorfolk, Virginia 23510",
+			expect: "123 MAIN ST # 23\nNORFOLK VA 23510",
+		},
+	}
+
+	usat, err := goprojectusat.New(
+		goprojectusat.WithDiacriticNormalization(diacritics.SubstituteDiacritics),
+		goprojectusat.WithSecondaryAsHash(),
+	)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	for _, c := range cases {
+		got, err := usat.Normalize(c.input)
+		if err != nil {
+			t.Errorf("Normalize(%q) error: %v", c.input, err)
+			continue
+		}
+		if got != c.expect {
+			t.Errorf("Normalize(%q) = %q, want %q", c.input, got, c.expect)
+		}
+	}
+}
+
 // TestUSAtConcurrentUse shares one USAt across goroutines; run with -race.
 func TestUSAtConcurrentUse(t *testing.T) {
 	u, err := goprojectusat.New(goprojectusat.WithMatchingNormalization())

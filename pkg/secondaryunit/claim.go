@@ -7,6 +7,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
 // Claims returns every reading of tokens this package can support.
@@ -37,11 +38,17 @@ func Claims(tokens []token.Token) []claim.Claim {
 	var claims []claim.Claim
 
 	for i, t := range tokens {
-		info, err := Info(t.Text)
+		// A designator like "Apt." keeps its period: the tokenizer only drops
+		// a token that is punctuation alone, not punctuation glued to a word.
+		clean := textutil.StripPunctuation(t.Text, textutil.StripOptions{
+			KeepHyphen: true,
+		})
+
+		info, err := Info(clean)
 		if err != nil {
-			if number, ok := gluedHashNumber(t.Text); ok {
+			if number, ok := gluedHashNumber(clean); ok {
 				claims = append(claims, gluedClaim(i, hashUnit.Short, number, claim.ConfidenceExact))
-			} else if c, ok := gluedHyphenClaim(i, t.Text); ok {
+			} else if c, ok := gluedHyphenClaim(i, clean); ok {
 				claims = append(claims, c)
 			}
 			continue
@@ -56,7 +63,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 
 		if !info.Numbered {
 			claims = append(claims, claim.Claim{
-				Confidence: designatorConfidence(t.Text, info),
+				Confidence: designatorConfidence(clean, info),
 				Parts:      []claim.ClaimPart{designator},
 			})
 
@@ -68,7 +75,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 		}
 
 		claims = append(claims, claim.Claim{
-			Confidence: numberedConfidence(t.Text, info, tokens[i+1].Text),
+			Confidence: numberedConfidence(clean, info, tokens[i+1].Text),
 			Parts: []claim.ClaimPart{
 				designator,
 				{
