@@ -134,4 +134,16 @@ var OursCases = []Case{
 		Input:  "585 AVE FD ROOSEVELT\nSAN JUAN PR 00907",
 		Want:   "585 AVENIDA FD ROOSEVELT\nSAN JUAN PR 00907",
 	},
+	{
+		Source: "ours",
+		Note:   "go-projectusat#190: a suite number as a prefix after a business name",
+		Input:  "ACME SUITE 3200 152 South Tech Dr\nPhoenix, Arizona 85001",
+		Want:   "ACME\n152 S TECH DR STE 3200\nPHOENIX AZ 85001",
+	},
+	{
+		Source: "ours",
+		Note:   "go-projectusat#191: multiple secondary designators in a prefix position",
+		Input:  "BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401",
+		Want:   "1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401",
+	},
 }

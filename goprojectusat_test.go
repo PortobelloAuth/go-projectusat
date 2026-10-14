@@ -90,6 +90,11 @@ var saintCases = []NormalizeTestCase{
 	{"435 S ST CLAIR ST TOLEDO OH 43601", "435 S SAINT CLAIR ST TOLEDO OH 43601", "street"},
 }
 
+var otherCases = []NormalizeTestCase{
+	{"ACME SUITE 3200 152 South Tech Dr\nPhoenix, Arizona 85001", "ACME\n152 S TECH DR STE 3200\nPHOENIX AZ 85001", "other"},
+	{"BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401", "1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401", "other"},
+}
+
 var cases = slices.Collect(func(yield func(NormalizeTestCase) bool) {
 	for _, v := range csharpParityCases {
 		if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("parity - %s", v.group)}) {
@@ -105,6 +110,12 @@ var cases = slices.Collect(func(yield func(NormalizeTestCase) bool) {
 
 	for _, v := range saintCases {
 		if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("saint - %s", v.group)}) {
+			return
+		}
+	}
+
+	for _, v := range otherCases {
+		if !yield(NormalizeTestCase{in: v.in, want: v.want, group: fmt.Sprintf("other - %s", v.group)}) {
 			return
 		}
 	}
