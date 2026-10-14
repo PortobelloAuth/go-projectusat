@@ -663,3 +663,28 @@ func TestARegionWithNoCityIsReadBeneathACountry(t *testing.T) {
 			best.Span.End(), len(tokens))
 	}
 }
+
+func TestARegionWhichMayBeWrittenAsACountry(t *testing.T) {
+	tokens, lines := read("a24 Calle Marginal, Bayamón, 00956, Puerto Rico")
+	if len(lines) == 0 {
+		t.Fatal("no readings")
+	}
+
+	best := lines[0]
+	if got, ok := valueOf(best, claim.PartRegion); !ok || got != "PR" {
+		t.Fatalf("best reading assigns region %q (present: %t), want PR", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartCountry); ok && got != "" {
+		t.Errorf("best reading does not assign country %q (present: %t), want empty string", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartCity); !ok || got != "BAYAMÓN" {
+		t.Fatalf("best reading assigns city %q (present: %t), want BAYAMÓN", got, ok)
+	}
+	if got, ok := valueOf(best, claim.PartPostal); !ok || got != "00956" {
+		t.Fatalf("best reading assigns postal %q (present: %t), want 00956", got, ok)
+	}
+	if best.Span.End() != len(tokens) {
+		t.Errorf("span ends at %d, want %d: the last line runs to the end of the address",
+			best.Span.End(), len(tokens))
+	}
+}

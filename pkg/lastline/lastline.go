@@ -226,7 +226,38 @@ func byPartEndingAt(claims []claim.Claim, part claim.Part, end int) []indexedCla
 func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lineStart, cityEnd int, members []indexedClaim) []LineClaim {
 	var lines []LineClaim
 
+	// if a city claim contains a postal claim, skip it; very few cities have a
+	// numeric name at all, fewer still are shaped like a postal code, and the USPS
+	// encourages writing the city name out. Examples like
+	//   Twentynine Palms, CA
+	//   Ninety Six, SC
+	//   Eighty-Four, PA
+	//   Fifty-Six, AR
+	//   Hundred, WV
+	//   etc.
+	// only serve to prove the point. An alternative, should this prove problematic,
+	// would be to demote such city readings.
+	// (See https://en.wikipedia.org/wiki/List_of_places_with_numeric_names)
+	postalclaims := make([]claim.Claim, 0)
+	for _, c := range claims {
+		if len(c.Parts) == 1 && c.Parts[0].Part == claim.PartPostal {
+			postalclaims = append(postalclaims, c)
+		}
+	}
+
 	for _, start := range cityStarts(tokens, lineStart, cityEnd) {
+		reasonablecity := true
+		for _, postal := range postalclaims {
+			if start <= postal.Start() && cityEnd >= postal.End() {
+				// if there's a postal claim inside the city reading it isn't a
+				// reasonable city claim
+				reasonablecity = false
+			}
+		}
+		if !reasonablecity {
+			continue
+		}
+
 		parts := []claim.ClaimPart{{
 			Start:  start,
 			Length: cityEnd - start,
@@ -247,12 +278,30 @@ func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lin
 func assemble(claims []claim.Claim, start, end int, confidence claim.Confidence, parts []claim.ClaimPart, members []indexedClaim) LineClaim {
 	accepted := map[int]bool{}
 
+	var country *claim.Claim
+
 	for _, m := range members {
 		if !m.ok {
 			continue
 		}
 		accepted[m.index] = true
-		parts = append(parts, claims[m.index].Parts...)
+		a := claims[m.index]
+		// if the country and region cover the same tokens and they are the last tokens that
+		// tells us we have a "region as country" claim (Puerto Rico, Marshall Islands, etc.)
+		if a.Parts[0].Part == claim.PartCountry {
+			country = &a
+			if country.End() == end {
+				for _, c := range claims {
+					if c.Start() == country.Start() &&
+						c.End() == country.End() &&
+						c.Parts[0].Part == claim.PartRegion {
+						// use the Region claim instead
+						a = c
+					}
+				}
+			}
+		}
+		parts = append(parts, a.Parts...)
 	}
 
 	slices.SortFunc(parts, func(a, b claim.ClaimPart) int { return a.Start - b.Start })

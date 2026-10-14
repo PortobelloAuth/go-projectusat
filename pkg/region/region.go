@@ -29,6 +29,7 @@ type RegionInfo struct {
 	Short              string
 	Alt                []string
 	PossibleStreetName bool
+	PossibleCountry    bool
 }
 
 // notStreetNames names the regions whose spelling must never be offered as a
@@ -53,12 +54,31 @@ var notStreetNames = map[string]bool{
 	"AA": true, // Armed Forces Americas
 }
 
+// Several US Postal Service regions are considered countries in at least some
+// international contexts and they may appear in the country position in a
+// last line.
+var possibleCountry = map[string]bool{
+	"PR": true, // Puerto Rico
+	"GU": true, // Guam
+	"MP": true, // Northern Mariana Islands
+	"FM": true, // Federated States of Micronesia
+	"PW": true, // Palau
+	"MH": true, // Marshall Islands
+	"AS": true, // American Samoa
+}
+
 func info(r regions.Region) RegionInfo {
+	pc, ok := possibleCountry[r.Short]
+	if !ok {
+		pc = false
+	}
+
 	return RegionInfo{
 		Primary:            r.Primary,
 		Short:              r.Short,
 		Alt:                r.Alt,
 		PossibleStreetName: !notStreetNames[r.Short],
+		PossibleCountry:    pc,
 	}
 }
 
@@ -120,6 +140,7 @@ func Info(r string, fuzzy bool) (*RegionInfo, error) {
 		Short:              info.Short,
 		Alt:                slices.Clone(info.Alt),
 		PossibleStreetName: info.PossibleStreetName,
+		PossibleCountry:    info.PossibleCountry,
 	}, nil
 }
 

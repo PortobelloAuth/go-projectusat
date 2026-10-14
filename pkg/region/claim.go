@@ -77,6 +77,18 @@ func Claims(tokens []token.Token) []claim.Claim {
 					}},
 				})
 			}
+
+			if info.PossibleCountry {
+				claims = append(claims, claim.Claim{
+					Confidence: claim.ConfidenceWeak,
+					Parts: []claim.ClaimPart{{
+						Start:  start,
+						Length: length,
+						Part:   claim.PartCountry,
+						Value:  info.Short,
+					}},
+				})
+			}
 		}
 	}
 

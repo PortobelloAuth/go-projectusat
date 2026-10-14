@@ -70,11 +70,16 @@ func TestClaims(t *testing.T) {
 			// The vocabulary lists MICRONESIA as an alias of the full name, so
 			// the shorter reading is claimed too. Both are true readings of
 			// these tokens and they overlap; the parser discards one.
+			// Note that there are also country claims for MICRONESIA because it
+			// is a country and its addresses may be written that way, though
+			// that isn't the USPS standard.
 			name: "longest span in the vocabulary, and the alias nested in it",
 			in:   "FEDERATED STATES OF MICRONESIA",
 			want: []reading{
 				{"FEDERATED STATES OF MICRONESIA", claim.PartRegion, claim.ConfidenceStrong, "FM"},
+				{"FEDERATED STATES OF MICRONESIA", claim.PartCountry, claim.ConfidenceWeak, "FM"},
 				{"MICRONESIA", claim.PartRegion, claim.ConfidenceStrong, "FM"},
+				{"MICRONESIA", claim.PartCountry, claim.ConfidenceWeak, "FM"},
 			},
 		},
 		{
