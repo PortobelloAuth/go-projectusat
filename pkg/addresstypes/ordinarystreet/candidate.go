@@ -311,18 +311,52 @@ func unitAfterStreetLine(tokens []token.Token, claims []claim.Claim, start, i in
 // there is none. The unit is not part of the business name ahead of it: ACME
 // SUITE 3200 152 S TECH DR names ACME, and SUITE 3200 is its unit.
 //
-// Only a claim that ends exactly at the house number counts. A unit word
-// further back, with business words between it and the street, is read as part
-// of the business name, as BUILDING is in UCENT BUILDING 847 N 49TH ST.
+// Only a unit that ends exactly at the house number counts, though it may be a
+// run of them, as BLDG 4 STE 200 is in ACME BLDG 4 STE 200 123 MAIN ST (see
+// unitRuns). A unit word further back, with business words between it and the
+// street, is read as part of the business name, as BUILDING is in UCENT
+// BUILDING 847 N 49TH ST.
 func unitBeforeStreetLine(claims []claim.Claim, from, street int) int {
-	first := street
-	for _, c := range claims {
-		if c.End() == street && c.Start() >= from && c.Start() < first && isUnitClaim(c) {
-			first = c.Start()
+	for first := from; first < street; first++ {
+		if len(unitRuns(claims, first, street)) > 0 {
+			return first
 		}
 	}
 
-	return first
+	return street
+}
+
+// unitRuns returns every reading of exactly the tokens from start to end as a
+// unit written ahead of the house number: one secondary unit or private
+// mailbox claim, or a run of numbered secondary units merged the way
+// joinSecondary merges one at the end of the line. BLDG 4 STE 200 123 MAIN ST
+// is read as 123 MAIN ST BLDG 4 STE 200, as it would be written the other way
+// round (#191).
+//
+// Every unit in a run but the last must be numbered. An unnumbered unit word
+// ahead of a numbered one is read as part of the business name, as BUILDING
+// is in UCENT BUILDING SUITE 480 411 N CENTRAL AVE (#199).
+func unitRuns(claims []claim.Claim, start, end int) []claim.Claim {
+	var found []claim.Claim
+	for _, c := range claims {
+		if c.Start() != start || c.End() > end || !isUnitClaim(c) {
+			continue
+		}
+		if c.End() == end {
+			found = append(found, c)
+			continue
+		}
+		if _, _, ok := secondaryParts(c); !ok {
+			continue
+		}
+		for _, rest := range unitRuns(claims, c.End(), end) {
+			if merged, ok := joinSecondary(c, rest); ok {
+				found = append(found, merged)
+			}
+		}
+	}
+
+	return found
 }
 
 // prefixUnitEnd returns where the street line begins when it opens at from
@@ -336,16 +370,16 @@ func unitBeforeStreetLine(claims []claim.Claim, from, street int) int {
 //
 // The unit only opens the line where a house number follows it and the rest
 // reads as a street line, the same test businessBoundary puts to a number.
-// Where more than one claim qualifies, the longest is taken: STE 3200 and not
-// STE with 3200 as the house number.
+// Where more than one reading qualifies, the longest is taken: STE 3200 and not
+// STE with 3200 as the house number, and BLDG 4 STE 200 and not BLDG 4 with
+// 200 as the house number (unitRuns).
 func prefixUnitEnd(tokens []token.Token, claims []claim.Claim, from, end int) int {
 	street := from
-	for _, c := range claims {
-		at := c.End()
-		if c.Start() != from || at <= street || at >= end || !isUnitClaim(c) {
+	for at := from + 1; at < end; at++ {
+		if !houseNumber.MatchString(tokens[at].Text) || len(unitRuns(claims, from, at)) == 0 {
 			continue
 		}
-		if !houseNumber.MatchString(tokens[at].Text) || !readsStreetLine(tokens, claims, at, end) {
+		if !readsStreetLine(tokens, claims, at, end) {
 			continue
 		}
 
@@ -369,15 +403,14 @@ func prefixUnitEnd(tokens []token.Token, claims []claim.Claim, from, end int) in
 // unit is the mailbox (#78) — falls back to spanClaim, and one spanClaim will
 // not take either is left over and charged for.
 func withPrefixUnit(claims, accepted []claim.Claim, start, end int) []claim.Claim {
+	prefixes := unitRuns(claims, start, end)
+
 	for i, placed := range accepted {
 		if !assigns(placed, claim.PartSecondaryDesignator) {
 			continue
 		}
 
-		for _, prefix := range claims {
-			if prefix.Start() != start || prefix.End() != end {
-				continue
-			}
+		for _, prefix := range prefixes {
 			if merged, ok := joinPrefixUnit(prefix, placed); ok {
 				out := append([]claim.Claim{}, accepted...)
 				out[i] = merged
@@ -387,7 +420,7 @@ func withPrefixUnit(claims, accepted []claim.Claim, start, end int) []claim.Clai
 		}
 	}
 
-	if prefix, ok := spanClaim(claims, start, end,
+	if prefix, ok := spanClaim(prefixes, start, end,
 		hasPart(accepted, claim.PartSecondaryDesignator), hasPart(accepted, claim.PartDetail)); ok {
 		return append(accepted, prefix)
 	}

@@ -170,6 +170,32 @@ func TestBestReadingDecomposesTheStreetLine(t *testing.T) {
 			},
 		},
 		{
+			// A run of units ahead of the house number is read as the same run
+			// written after the street. Only one unit was chained, so BLDG 4
+			// STE 200 123 MAIN was read as a street name (#191).
+			name:   "a run of units ahead of the house number is the unit",
+			source: "BLDG 4 STE 200 123 Main St\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				number:     "123", name: "MAIN", suffix: "ST",
+				designator: "BLDG", secondary: "4 STE 200",
+				formatted: "123 MAIN ST BLDG 4 STE 200",
+			},
+		},
+		{
+			// With a business name ahead of the run, only STE 200 was taken as
+			// the unit and BLDG 4 was read into the business name (#191).
+			name:   "a run of units between the business name and the house number is the unit",
+			source: "ACME BLDG 4 STE 200 123 Main St\nDENVER CO 80201",
+			want: addressReading{
+				confidence: claim.ConfidenceStrong,
+				business:   "ACME",
+				number:     "123", name: "MAIN", suffix: "ST",
+				designator: "BLDG", secondary: "4 STE 200",
+				formatted: "123 MAIN ST BLDG 4 STE 200",
+			},
+		},
+		{
 			// 1ST is an ordinal, not a house number, so the name it opens is
 			// kept whole and the split falls on 511.
 			name:   "an ordinal opening a business name is not the house number",
