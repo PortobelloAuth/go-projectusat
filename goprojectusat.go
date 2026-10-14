@@ -38,6 +38,10 @@ func Normalize(source string, opts ...USAtNormalizeOption) (string, error) {
 	return u.Normalize(source)
 }
 
+// WithParsedAddressVerifier provides a `parser.AddessVerifier` function to a USAt instance's
+// internal parser. This function is called after an address has been parsed by the internal
+// parser (which may be a custom address parser or `parser.ParsingFunc`) and before the
+// internal address normalizer.
 func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		popts.Verifier = v
@@ -45,6 +49,12 @@ func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
 	}
 }
 
+// WithCustomAddressParser allows passing in a `parser.ParsingFunc` to replace the core parsing
+// function of a USAt instance. By default `goprojectusat.USAt` relies on a parser that uses
+// [zipcity](https://github.com/poetic-systems/zipcity) to disambiguate between streets, cites,
+// and regions. `zipcity`'s bloom filters are an efficient method for doing this without calling
+// an API or running a database. However, they may not serve every use case. WithCustomAddressParser
+// lets a caller use their own data store, API, or other custom parsing logic.
 func WithCustomAddressParser(cp parser.ParsingFunc) USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		popts.CustomParser = cp
@@ -52,6 +62,9 @@ func WithCustomAddressParser(cp parser.ParsingFunc) USAtNormalizeOption {
 	}
 }
 
+// WithFuzzyNormalization enbales fuzzy matching in the normalization functions that support
+// it - particularly `streetsuffixes` and `region` - have support for fuzzy matching using
+// Damerau-Levenshtein edit distance.
 func WithFuzzyNormalization() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = true
@@ -59,6 +72,15 @@ func WithFuzzyNormalization() USAtNormalizeOption {
 	}
 }
 
+// WithSecondaryAsHash sets the normalization functions to replace secondary designators
+// with "#". [Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
+// allows the secondary designator of an address to be `"#"` when it is not known. As a
+// result, any address with a numbered secondary designator may also be recorded with a
+// `"#"` (unless the address also contains a Private Mailbox.) For a matching / exchange
+// use case normalization must resolve to a single value in order to match. This option
+// normalizes numbered secondary designators to `"#"` to facilitate such matching.
+// NOTE: for addresses with multiple secodary units (i.e. BLDG 5 STE 110) only the first
+// will be normalized to `"#"`. This is not likely to be the desired behavior.
 func WithSecondaryAsHash() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.SecondaryAsHash = true
@@ -66,6 +88,17 @@ func WithSecondaryAsHash() USAtNormalizeOption {
 	}
 }
 
+// WithDiacriticNormalization sets the diacritics.DiacriticMode used during normalization.
+// [Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
+// allows diacritics to be retained or substituted according to a table it supplies.
+// `WithDiacriticNormalization()` allows the caller to specify how they would like
+// the parser and normalizer to handle diacritic substitution.
+// `diacritics.DiacriticMode` is an enumeration with 3 possible values:
+//   - `diacritics.KeepDiacritics` does not change diacritics
+//   - `diacritics.SubstituteDiacritics` substitutes diacritics according to the
+//     ProjectUS@ specification
+//   - `diacritics.TransliterateDiacritics` transliterates diacritics, replacing
+//     them with ASCII letter combinations that commonly represent them.
 func WithDiacriticNormalization(d diacritics.DiacriticMode) USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.DiacriticMode = d
@@ -73,6 +106,11 @@ func WithDiacriticNormalization(d diacritics.DiacriticMode) USAtNormalizeOption 
 	}
 }
 
+// WithContentNormalization() explicitly sets the options recommended for "content form"
+// normalization. These options that are appropriate for address intake and storage: an
+// exact controlled vocabulary, diacritic preservation, and secondary designators as
+// their standard abbreviations (`APT`, `STE`, …). These same options are used by default.
+// However, using this Option clearly indicates the caller's intent to use content normalization.
 func WithContentNormalization() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = false
@@ -82,6 +120,10 @@ func WithContentNormalization() USAtNormalizeOption {
 	}
 }
 
+// WithMatchingNormalization() sets the options recommended for "exchange form", also known as
+// matching normalization. These options that are appropriate for address matching: fuzzy matching
+// of certain vocabularies, diacritic substitution, and numbered secondary designators converted
+// to `"#"`.
 func WithMatchingNormalization() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = true
@@ -91,6 +133,7 @@ func WithMatchingNormalization() USAtNormalizeOption {
 	}
 }
 
+// WithSingleLineFormatting specifies that addresses should be formatted without newlines.
 func WithSingleLineFormatting() USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		fopts.SingleLine = true
@@ -98,6 +141,9 @@ func WithSingleLineFormatting() USAtNormalizeOption {
 	}
 }
 
+// WithDiacriticFormatting allows formatting an address that has been parsed keeping diacritics
+// in a format with diacritics substituted or transliterated, without changing the source address
+// data.
 func WithDiacriticFormatting(d diacritics.DiacriticMode) USAtNormalizeOption {
 	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		fopts.DiacriticMode = d
