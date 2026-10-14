@@ -82,16 +82,41 @@ func (u *USAt) Normalize(source string) (string, error) {
 }
 
 // Parse parses source into a structured address, using the parser and
-// verifier u was built with. It does not normalize or format.
+// verifier u was built with. source may be written on one line or on several,
+// and its parts may be separated by commas or not.
+//
+// The parser reads each element as the standard names it, so the result is
+// already upper case, with the USPS Publication 28 abbreviations: South Tech
+// Drive Suite 3200 is parsed as Predirectional S, StreetName TECH,
+// StreetSuffix DR, SecondaryDesignator STE. What Parse does not do is apply
+// u's normalization options, such as WithMatchingNormalization, or format the
+// result. Pass the result to NormalizeAddress for the first, and call its
+// Format method for the second. Normalize does all three.
+//
+// The returned address's Type records which kind of address it was read as,
+// for example a PO box or an ordinary street address. Type is what the
+// address formats by, so keep it on the result rather than clearing it.
+//
+// It returns an error, and no address, when source cannot be read as any kind
+// of address, or when the verifier given to WithParsedAddressVerifier rejects
+// the reading.
 func (u *USAt) Parse(source string) (*address.Address, error) {
 	return u.parser.Parse(source)
 }
 
-// NormalizeAddress normalizes an already-parsed address, using the
-// normalizer u was built with. It is the entry point for a caller that only
-// needs normalization of one address part (go-projectusat#206) and would
-// otherwise have to build a second normalizer with the same options to get
-// it, duplicating the one u already holds.
+// NormalizeAddress normalizes a structured address, using the normalization
+// options u was built with, and returns the result as a new address. a itself
+// is not modified.
+//
+// a is usually the result of Parse, but it does not have to be. A caller that
+// has an address in fields already, or only some of them, can normalize just
+// those: an Address holding only City "salt lake city" and Region "utah"
+// normalizes to SALT LAKE CITY and UT, and its other fields stay empty. Such
+// an address has no Type, and is normalized by the rules for an ordinary
+// street address.
+//
+// It does not format. Call Format on the result for the string Normalize
+// would have returned.
 func (u *USAt) NormalizeAddress(a *address.Address) (*address.Address, error) {
 	return u.normalizer.Normalize(a)
 }

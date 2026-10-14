@@ -254,6 +254,82 @@ func ExampleNew() {
 	// PO BOX 11890 PHOENIX AZ 85001
 }
 
+func ExampleUSAt_Parse() {
+	usat, err := goprojectusat.New()
+	if err != nil {
+		panic(err)
+	}
+	addr, err := usat.Parse("Acme Widgets, 152 South Tech Drive Suite 3200, Salt Lake City, Utah 84101")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("BusinessName:", addr.BusinessName)
+	fmt.Println("PrimaryNumber:", addr.PrimaryNumber)
+	fmt.Println("Predirectional:", addr.Predirectional)
+	fmt.Println("StreetName:", addr.StreetName)
+	fmt.Println("StreetSuffix:", addr.StreetSuffix)
+	fmt.Println("SecondaryDesignator:", addr.SecondaryDesignator)
+	fmt.Println("SecondaryNumber:", addr.SecondaryNumber)
+	fmt.Println("City:", addr.City)
+	fmt.Println("Region:", addr.Region)
+	fmt.Println("Postal:", addr.Postal)
+
+	// Output:
+	// BusinessName: ACME WIDGETS
+	// PrimaryNumber: 152
+	// Predirectional: S
+	// StreetName: TECH
+	// StreetSuffix: DR
+	// SecondaryDesignator: STE
+	// SecondaryNumber: 3200
+	// City: SALT LAKE CITY
+	// Region: UT
+	// Postal: 84101
+}
+
+// Parse and NormalizeAddress together are Normalize without the formatting,
+// leaving the address in fields. Here WithMatchingNormalization is applied by
+// NormalizeAddress, not by Parse, and replaces the designator with #.
+func ExampleUSAt_NormalizeAddress() {
+	usat, err := goprojectusat.New(goprojectusat.WithMatchingNormalization())
+	if err != nil {
+		panic(err)
+	}
+	parsed, err := usat.Parse("152 South Tech Drive Suite 3200, Salt Lake City, UT 84101")
+	if err != nil {
+		panic(err)
+	}
+	normalized, err := usat.NormalizeAddress(parsed)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("parsed:", parsed.SecondaryDesignator, parsed.SecondaryNumber)
+	fmt.Println("normalized:", normalized.SecondaryDesignator, normalized.SecondaryNumber)
+
+	// Output:
+	// parsed: STE 3200
+	// normalized: # 3200
+}
+
+// An address need not come from Parse. One that holds only some of its
+// fields normalizes just those.
+func ExampleUSAt_NormalizeAddress_fields() {
+	usat, err := goprojectusat.New()
+	if err != nil {
+		panic(err)
+	}
+	normalized, err := usat.NormalizeAddress(&address.Address{City: "salt lake city", Region: "utah"})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(normalized.City)
+	fmt.Println(normalized.Region)
+
+	// Output:
+	// SALT LAKE CITY
+	// UT
+}
+
 func benchmarkCases(b *testing.B, normalize func(string) (string, error)) {
 	b.ReportAllocs()
 	for b.Loop() {
