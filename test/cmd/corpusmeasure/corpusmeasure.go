@@ -40,6 +40,7 @@ func main() {
 		{"SpecCases", parsertest.SpecCases},
 		{"HistoricalCases", parsertest.HistoricalCases},
 		{"OursCases", parsertest.OursCases},
+		{"UsAddressCases", parsertest.UsAddressCases},
 	}
 
 	for _, s := range suites {
@@ -47,8 +48,11 @@ func main() {
 		pass, settled, total := parsertest.CountPass(results)
 		fmt.Printf("%s: %d/%d/%d (pass/settled/total)\n", s.name, pass, settled, total)
 		for _, r := range results {
-			if r.Settled() && !r.Pass() {
-				fmt.Printf("  FAIL [%s] %q\n    want: %q\n    got:  %q (err=%v)\n", r.Case.Source, r.Case.Input, r.Case.Want, r.Got, r.Err)
+			switch {
+			case r.Err != nil:
+				fmt.Printf("  ERR  [%s] %q: %v\n", r.Case.Source, r.Case.Input, r.Err)
+			case r.Settled() && !r.Pass():
+				fmt.Printf("  FAIL [%s] %q\n    want: %q\n    got:  %q\n", r.Case.Source, r.Case.Input, r.Case.Want, r.Got)
 			}
 		}
 	}

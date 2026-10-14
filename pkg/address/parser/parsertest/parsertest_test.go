@@ -159,13 +159,15 @@ func fieldMismatch(fields []parsertest.FieldResult, name, want, got string) bool
 
 // TestCasesComposition pins how many cases each set of the corpus carries.
 // It is a ratchet on the corpus's shape, not on any parser's score: it exists
-// so a case added or dropped from spec.go, historical.go, or ours.go is a
-// deliberate, reviewed number change here, not a silent drift.
+// so a case added or dropped from spec.go, historical.go, ours.go, or
+// usaddress.go is a deliberate, reviewed number change here, not a silent
+// drift.
 func TestCasesComposition(t *testing.T) {
 	const (
 		wantSpec       = 49 * 2       // one fixed-point and one reaches case per Incorrect/Correct pair
 		wantHistorical = 55*2 + 3 + 4 // csharpParity multiline and single line + gridHistorical + saintHistorical
 		wantOurs       = 14
+		wantUsAddress  = 146 + 5 + 8 + 687 // labeled + multi_word_state_addresses + simple_address_patterns + us50_test_tagged
 	)
 
 	if got := len(parsertest.SpecCases); got != wantSpec {
@@ -177,7 +179,10 @@ func TestCasesComposition(t *testing.T) {
 	if got := len(parsertest.OursCases); got != wantOurs {
 		t.Errorf("len(OursCases) = %d, want %d", got, wantOurs)
 	}
-	if want := wantSpec + wantHistorical + wantOurs; len(parsertest.Cases) != want {
+	if got := len(parsertest.UsAddressCases); got != wantUsAddress {
+		t.Errorf("len(UsAddressCases) = %d, want %d", got, wantUsAddress)
+	}
+	if want := wantSpec + wantHistorical + wantOurs + wantUsAddress; len(parsertest.Cases) != want {
 		t.Errorf("len(Cases) = %d, want %d", len(parsertest.Cases), want)
 	}
 }

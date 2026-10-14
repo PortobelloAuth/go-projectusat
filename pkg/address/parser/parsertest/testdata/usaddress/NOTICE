@@ -1,0 +1,38 @@
+This directory vendors four tagged-address test-data files from the
+datamade/usaddress project:
+
+    https://github.com/datamade/usaddress/tree/main/measure_performance/test_data
+
+at commit aa7699b53a0843fc443f9e87285b88cbd9eaf50a:
+
+    labeled.xml
+    multi_word_state_addresses.xml
+    simple_address_patterns.xml
+    us50_test_tagged.xml
+
+Two further files at that path, synthetic_osm_data.xml and
+synthetic_clean_osm_data.xml, are not vendored here — see the doc comment on
+UsAddressCases in ../../usaddress.go for why.
+
+datamade/usaddress is MIT licensed:
+
+    Copyright (c) 2014 The Atlanta Journal Constitution
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
