@@ -39,7 +39,7 @@ func legacyNormalize(source string, opts ...goprojectusat.USAtNormalizeOption) (
 	if err != nil {
 		return "", fmt.Errorf("Unable to normalize address: %w", err)
 	}
-	return addr.Format(*fopts), nil
+	return addr.Format(*fopts)
 }
 
 var optionSets = map[string][]goprojectusat.Option{
@@ -160,11 +160,12 @@ func TestUSAtNormalizeAddressMatchesNormalize(t *testing.T) {
 
 		normalized, normErr := u.NormalizeAddress(parsed)
 		got := ""
+		gotErr := normErr
 		if normErr == nil {
-			got = normalized.Format()
+			got, gotErr = normalized.Format()
 		}
-		if got != want || errString(normErr) != errString(wantErr) {
-			t.Errorf("Parse+NormalizeAddress(%q)\n got  %q, %v\n want %q, %v", c.Input, got, normErr, want, wantErr)
+		if got != want || errString(gotErr) != errString(wantErr) {
+			t.Errorf("Parse+NormalizeAddress(%q)\n got  %q, %v\n want %q, %v", c.Input, got, gotErr, want, wantErr)
 		}
 	}
 }

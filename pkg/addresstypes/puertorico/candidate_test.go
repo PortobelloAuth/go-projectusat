@@ -281,7 +281,11 @@ func TestUrbanizationStandsAloneAsTheStreetLine(t *testing.T) {
 			if top == nil {
 				t.Fatal("no reading")
 			}
-			if got := top.Address.Format(); got != c.want {
+			got, err := top.Address.Format()
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if got != c.want {
 				t.Errorf("Format() = %q, want %q", got, c.want)
 			}
 		})

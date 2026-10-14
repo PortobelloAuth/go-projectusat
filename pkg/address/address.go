@@ -1,7 +1,9 @@
 package address
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
@@ -160,16 +162,24 @@ type FormatOptions struct {
 //
 // Although options is variadic, only the first options object will
 // actually be used.
-func (a *Address) Format(opts ...FormatOptions) string {
+func (a *Address) Format(opts ...FormatOptions) (string, error) {
 	o := variadicOptions(opts)
 	sep := "\n"
 	if o.SingleLine {
 		sep = " "
 	}
-	return textutil.JoinNonEmpty(sep, a.BusinessName, a.Area, a.PostalStation, a.FormatStreetLine(), a.FormatLastLine())
+	out := textutil.JoinNonEmpty(sep, a.BusinessName, a.Area, a.PostalStation, a.FormatStreetLine(), a.FormatLastLine())
+	if o.DiacriticMode == diacritics.KeepDiacritics {
+		return out, nil
+	}
+	out, err := diacritics.Normalize(out, o.DiacriticMode)
+	if err != nil {
+		return "", fmt.Errorf("formatting address: %w", err)
+	}
+	return strings.ToUpper(out), nil
 }
 
-func (a *Address) FormatSingleLine(opts ...FormatOptions) string {
+func (a *Address) FormatSingleLine(opts ...FormatOptions) (string, error) {
 	o := variadicOptions(opts)
 	o.SingleLine = true
 	return a.Format(o)

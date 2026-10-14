@@ -27,7 +27,10 @@ func TestFormatAfterNormalize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Normalize: %v", err)
 	}
-	got := norm.Format()
+	got, err := norm.Format()
+	if err != nil {
+		t.Fatalf("Format: %v", err)
+	}
 	want := "ACME CORP\n123 N MAIN ST SW APT 4\nSPRINGFIELD IL 62701"
 	if got != want {
 		t.Fatalf("Format(Normalize(...)) = %q, want %q", got, want)

@@ -78,7 +78,7 @@ func (u *USAt) Normalize(source string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Unable to normalize address: %w", err)
 	}
-	return addr.Format(u.format), nil
+	return addr.Format(u.format)
 }
 
 // Parse parses source into a structured address, using the parser and

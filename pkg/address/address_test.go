@@ -5,6 +5,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ruralroute"
+	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 func TestFormatStreetLine(t *testing.T) {
@@ -169,6 +170,7 @@ func TestFormat(t *testing.T) {
 	cases := []struct {
 		name string
 		in   address.Address
+		opts address.FormatOptions
 		want string
 	}{
 		{
@@ -277,10 +279,24 @@ func TestFormat(t *testing.T) {
 			},
 			want: "RR 4 BOX 125\nCUMBERLAND IA 50843",
 		},
+		{
+			// go-projectusat#212: DiacriticMode was accepted but never applied.
+			name: "substitute diacritics mode normalizes then re-uppercases",
+			in: address.Address{
+				City:   "SÃO PAULO",
+				Region: "SP",
+				Postal: "01310-100",
+			},
+			opts: address.FormatOptions{DiacriticMode: diacritics.SubstituteDiacritics},
+			want: "SAO PAULO SP 01310-100",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tc.in.Format()
+			got, err := tc.in.Format(tc.opts)
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
 			if got != tc.want {
 				t.Fatalf("Format = %q, want %q", got, tc.want)
 			}
