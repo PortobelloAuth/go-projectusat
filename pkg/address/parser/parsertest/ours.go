@@ -146,4 +146,16 @@ var OursCases = []Case{
 		Input:  "BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401",
 		Want:   "1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401",
 	},
+	{
+		Source: "ours",
+		Note:   "go-projectusat#190: a suite number as a prefix after a business name that starts with a number",
+		Input:  "84 LUMBER SUITE 3200 152 South Tech Dr\nPhoenix, Arizona 85001",
+		Want:   "84 LUMBER\n152 S TECH DR STE 3200\nPHOENIX AZ 85001",
+	},
+	{
+		Source: "ours",
+		Note:   "go-projectusat#191: multiple secondary designators in a prefix position after a business name that starts with a number",
+		Input:  "84 LUMBER BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401",
+		Want:   "84 LUMBER\n1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401",
+	},
 }

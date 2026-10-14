@@ -92,7 +92,9 @@ var saintCases = []NormalizeTestCase{
 
 var otherCases = []NormalizeTestCase{
 	{"ACME SUITE 3200 152 South Tech Dr\nPhoenix, Arizona 85001", "ACME\n152 S TECH DR STE 3200\nPHOENIX AZ 85001", "other"},
+	{"84 Lumber Suite 3200 152 South Tech Dr\nPhoenix, Arizona 85001", "84 LUMBER\n152 S TECH DR STE 3200\nPHOENIX AZ 85001", "other"},
 	{"BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401", "1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401", "other"},
+	{"84 LUMBER BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401", "84 LUMBER\n1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401", "other"},
 }
 
 var cases = slices.Collect(func(yield func(NormalizeTestCase) bool) {

@@ -165,7 +165,7 @@ func TestCasesComposition(t *testing.T) {
 	const (
 		wantSpec       = 49 * 2       // one fixed-point and one reaches case per Incorrect/Correct pair
 		wantHistorical = 55*2 + 3 + 4 // csharpParity multiline and single line + gridHistorical + saintHistorical
-		wantOurs       = 12
+		wantOurs       = 14
 	)
 
 	if got := len(parsertest.SpecCases); got != wantSpec {
