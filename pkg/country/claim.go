@@ -41,7 +41,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 		// token.LineEnd.
 		span := min(maxSpan, token.LineEnd(tokens, start)-start)
 		for length := span; length >= 1; length-- {
-			candidate := token.Join(tokens[start : start+length])
+			candidate := strings.ToUpper(token.Join(tokens[start : start+length]))
 
 			normalized, ok := countryNameMap[candidate]
 			if !ok {
