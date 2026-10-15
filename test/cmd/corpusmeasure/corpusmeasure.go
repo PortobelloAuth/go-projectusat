@@ -51,8 +51,12 @@ func main() {
 			switch {
 			case r.Err != nil:
 				fmt.Printf("  ERR  [%s] %q: %v\n", r.Case.Source, r.Case.Input, r.Err)
-			case r.Settled() && !r.Pass():
-				fmt.Printf("  FAIL [%s] %q\n    want: %q\n    got:  %q\n", r.Case.Source, r.Case.Input, r.Case.Want, r.Got)
+			case (r.Settled() || r.SettledFields()) && !(r.Pass() || r.PassFields()):
+				want := fmt.Sprintf("%s", r.Case.Want)
+				if !r.Settled() && r.SettledFields() {
+					want = fmt.Sprintf("%q", r.Case.WantFields)
+				}
+				fmt.Printf("  FAIL [%s] %q\n     want: %q\n      got: %q\n   parsed: %q\n", r.Case.Source, r.Case.Input, want, r.Got, r.GotFields)
 			}
 		}
 	}

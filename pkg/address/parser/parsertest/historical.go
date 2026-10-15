@@ -130,6 +130,7 @@ func buildHistoricalCases() []Case {
 		lastLine string
 	}{
 		{csharpParity, mainlandLastLine},
+		{csharpParity, ""},
 		{gridHistorical, ""},
 		{saintHistorical, ""},
 	}

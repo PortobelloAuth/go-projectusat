@@ -123,7 +123,7 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 		return nil, ErrNoReading
 	}
 
-	best := p.readLine(tokens)
+	best := p.readLine(tokens, true)
 	if best == nil {
 		return nil, ErrNoReading
 	}
@@ -135,8 +135,8 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 // than rank it: the firm name above the address, and a secondary designator
 // written ahead of the street. It is separate from read because step 7 asks
 // for a whole reading of a shorter run of tokens, not for a raw candidate.
-func (p *Parser) readLine(tokens []token.Token) *address.CandidateAddress {
-	best, claims := p.read(tokens)
+func (p *Parser) readLine(tokens []token.Token, lastlinepatch bool) *address.CandidateAddress {
+	best, claims := p.read(tokens, lastlinepatch)
 	if best == nil || best.Address == nil {
 		return nil
 	}
@@ -158,7 +158,7 @@ func (p *Parser) readLine(tokens []token.Token) *address.CandidateAddress {
 // winning address type reads, and picking on the grammar alone would hide that
 // reading from the choice — which is why what narrows the set is the data and
 // nothing else. See lastLines.
-func (p *Parser) read(tokens []token.Token) (*address.CandidateAddress, []claim.Claim) {
+func (p *Parser) read(tokens []token.Token, lastlinepatch bool) (*address.CandidateAddress, []claim.Claim) {
 	var claims []claim.Claim
 	for _, vocabulary := range vocabularies {
 		claims = append(claims, vocabulary(tokens)...)
@@ -166,11 +166,58 @@ func (p *Parser) read(tokens []token.Token) (*address.CandidateAddress, []claim.
 
 	r := reference{}
 	var candidates []*address.CandidateAddress
-	for _, line := range p.lastLines(r, tokens, claims) {
+	lines := p.lastLines(r, tokens, claims)
+	for _, line := range lines {
 		for _, addressType := range addressTypes {
 			candidates = append(candidates, addressType(tokens, claims, line)...)
 		}
 	}
+
+	if len(candidates) == 0 && lastlinepatch {
+		// add a candidate with just the last line parts
+		if len(lines) > 0 {
+			candidates = append(candidates, lines[0].Candidate(nil, 0, []claim.Claim{}))
+			ll := candidates[0]
+			// all partial address candidates are weak(?)
+			ll.Confidence = claim.ConfidenceWeak
+		}
+
+		// add a fake last line in LASTLINE, DC
+		end := len(tokens)
+		line := lastline.LineClaim{
+			Span: lastline.Span{Start: end, Length: 0},
+			Claim: claim.Claim{
+				Confidence: claim.ConfidenceWeak,
+				Parts: []claim.ClaimPart{
+					{
+						Start:  end,
+						Length: 0,
+						Part:   claim.PartCity,
+						Value:  "LASTLINE",
+					},
+					{
+						Start:  end,
+						Length: 0,
+						Part:   claim.PartRegion,
+						Value:  "DC",
+					},
+				},
+			},
+			Rejected: []claim.Claim{},
+			Leftover: []lastline.Span{},
+		}
+		for _, addressType := range addressTypes {
+			candidates = append(candidates, addressType(tokens, claims, line)...)
+		}
+		for _, c := range candidates {
+			// clean up the fake last line
+			if c.Address.City == "LASTLINE" && c.Address.Region == "DC" {
+				c.Address.City = ""
+				c.Address.Region = ""
+			}
+		}
+	}
+
 	if len(candidates) == 0 {
 		return nil, claims
 	}
@@ -252,7 +299,7 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 	}
 
 	for start, end := 1, token.LineEnd(tokens, 0); start < end; start++ {
-		window := p.readLine(tokens[start:])
+		window := p.readLine(tokens[start:], false)
 		if window == nil || !recognizable(window.Address) {
 			continue
 		}
@@ -330,7 +377,7 @@ func (p *Parser) leadingSecondary(tokens []token.Token, claims []claim.Claim, be
 		return
 	}
 
-	rest, _ := p.read(tokens[width:])
+	rest, _ := p.read(tokens[width:], false)
 	if rest == nil || rest.Address == nil || rest.Address.StreetName == "" {
 		return
 	}
