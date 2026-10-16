@@ -265,8 +265,20 @@ func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lin
 			Value:  textutil.Upper(token.Join(tokens[start:cityEnd])),
 		}}
 
-		lines = append(lines, assemble(claims, start, len(tokens),
-			confidenceFor(shape, marked(tokens, lineStart, start)), parts, members))
+		digits := textutil.Digits.ReplaceRunsOutside(parts[0].Value, "")
+
+		// As with the note on a postal code above, the USPS discourages the use
+		// of digits in city names and very few city names are actually numeric.
+		// Rank any city with digits in it confidence weak - it has likely absorbed
+		// street line information.
+		confidence := claim.ConfidenceWeak
+		if len(digits) == 0 {
+			confidence = confidenceFor(shape, marked(tokens, lineStart, start))
+		}
+
+		assembled := assemble(claims, start, len(tokens), confidence, parts, members)
+
+		lines = append(lines, assembled)
 	}
 
 	return lines

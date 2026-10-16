@@ -30,11 +30,17 @@ const (
 	lower  = "abcdefghijklmnopqrstuvwxyz"
 )
 
+// Digits is [0-9].
+var Digits = NewASCIISet(digits)
+
 // UpperAlnumSpace is [0-9A-Z ].
 var UpperAlnumSpace = NewASCIISet(digits + upper + " ")
 
 // AlnumSpace is [a-zA-Z0-9 ].
 var AlnumSpace = NewASCIISet(digits + upper + lower + " ")
+
+// AlphaSpace is [a-zA-Z ].
+var AlphaSpace = NewASCIISet(upper + lower + " ")
 
 func (set *ASCIISet) has(c byte) bool {
 	return c < utf8.RuneSelf && set[c]

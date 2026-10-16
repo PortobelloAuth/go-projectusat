@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
@@ -143,7 +144,7 @@ func (p *Parser) readLine(tokens []token.Token, lastlinepatch bool) *address.Can
 	if firm := firmLine(tokens, best); firm != "" {
 		best.Address.BusinessName = firm
 	}
-	p.leadingSecondary(tokens, claims, best)
+	p.leadingSecondary(tokens, claims, best, lastlinepatch)
 	return best
 }
 
@@ -167,15 +168,27 @@ func (p *Parser) read(tokens []token.Token, lastlinepatch bool) (*address.Candid
 	r := reference{}
 	var candidates []*address.CandidateAddress
 	lines := p.lastLines(r, tokens, claims)
+	lowconfidence := true
 	for _, line := range lines {
+		// If all line claims are ConfidenceWeak it is a signal that we may have a street-line-only
+		// address that still parsed a last line, perhaps because it had the postdirectional "NE",
+		// which is also a region ("NEBRASKA".) In such low confidence scenarios, we'll try adding
+		// a fake last line too and then score the results against each other.
+		//
+		// One of our tests has a street-line-only address with a postdirectional of NE. It will
+		// look like a city in Nebraska, but the city is the number 20.
+		if line.Claim.Confidence > claim.ConfidenceWeak {
+			lowconfidence = false
+		}
 		for _, addressType := range addressTypes {
 			candidates = append(candidates, addressType(tokens, claims, line)...)
 		}
 	}
 
-	if len(candidates) == 0 && lastlinepatch {
-		// add a candidate with just the last line parts
+	// Only add a last line for addresses that are not already multi-line
+	if tokens[0].OfLines == 1 && (len(candidates) == 0 || lowconfidence) && lastlinepatch {
 		if len(lines) > 0 {
+			// add a candidate with just the last line parts
 			candidates = append(candidates, lines[0].Candidate(nil, 0, []claim.Claim{}))
 			ll := candidates[0]
 			// all partial address candidates are weak(?)
@@ -209,19 +222,18 @@ func (p *Parser) read(tokens []token.Token, lastlinepatch bool) (*address.Candid
 		for _, addressType := range addressTypes {
 			candidates = append(candidates, addressType(tokens, claims, line)...)
 		}
-		for _, c := range candidates {
-			// clean up the fake last line
-			if c.Address.City == "LASTLINE" && c.Address.Region == "DC" {
-				c.Address.City = ""
-				c.Address.Region = ""
-			}
-		}
 	}
 
 	if len(candidates) == 0 {
 		return nil, claims
 	}
-	return p.choose(r, candidates), claims
+	chosen := p.choose(r, candidates)
+	// clean up the fake last line, if it was used
+	if chosen.Address.City == "LASTLINE" && chosen.Address.Region == "DC" {
+		chosen.Address.City = ""
+		chosen.Address.Region = ""
+	}
+	return chosen, claims
 }
 
 // firmLine reports the topmost physical line as a business name, or "" where
@@ -350,7 +362,7 @@ func recognizable(a *address.Address) bool {
 // the vocabulary's own example). And only when the shorter re-read finds a
 // street and claims no secondary of its own, so a designator is never stacked
 // on a reading that already has one.
-func (p *Parser) leadingSecondary(tokens []token.Token, claims []claim.Claim, best *address.CandidateAddress) {
+func (p *Parser) leadingSecondary(tokens []token.Token, claims []claim.Claim, best *address.CandidateAddress, lastlinepatch bool) {
 	a := best.Address
 	if _, ok := a.Type.(*ordinarystreet.OrdinaryStreetAddress); !ok {
 		return
@@ -377,7 +389,7 @@ func (p *Parser) leadingSecondary(tokens []token.Token, claims []claim.Claim, be
 		return
 	}
 
-	rest, _ := p.read(tokens[width:], false)
+	rest, _ := p.read(tokens[width:], lastlinepatch)
 	if rest == nil || rest.Address == nil || rest.Address.StreetName == "" {
 		return
 	}
@@ -620,9 +632,43 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 		if a, b := len(scored[i].candidate.Leftover), len(scored[j].candidate.Leftover); a != b {
 			return a < b
 		}
-		return streetConfidence(scored[i].candidate) > streetConfidence(scored[j].candidate)
+		if a, b := streetConfidence(scored[i].candidate), streetConfidence(scored[j].candidate); a != b {
+			return a > b
+		}
+
+		a := scored[i].candidate.Address
+		b := scored[j].candidate.Address
+		// prefer the candidate that respects directionals
+		idirectionals := unsplitDirectional(a.StreetName, false) + unsplitDirectional(a.StreetName, true)
+		jdirectionals := unsplitDirectional(b.StreetName, false) + unsplitDirectional(b.StreetName, true)
+		return idirectionals > jdirectionals
 	})
+
 	return scored[0].candidate
+}
+
+func unsplitDirectional(streetname string, post bool) int {
+	parts := strings.Split(streetname, " ")
+	lp := len(parts)
+	if lp > 1 {
+		i := 0
+		if post {
+			i = lp - 1
+		}
+		_, err := directionals.NormalizeDirectional(parts[i])
+		if err == nil {
+			if !post {
+				// check for regions before penalizing the street
+				_, err := region.Info(strings.Join(parts[0:2], " "), false)
+				if err == nil {
+					// the street starts with a region
+					return 0
+				}
+			}
+			return 1
+		}
+	}
+	return 0
 }
 
 // streetConfidence is how strongly the street line alone is held: the minimum
