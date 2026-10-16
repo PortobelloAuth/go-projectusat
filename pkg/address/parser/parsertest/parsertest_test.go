@@ -166,7 +166,7 @@ func TestCasesComposition(t *testing.T) {
 	const (
 		wantSpec       = 49 * 2       // one fixed-point and one reaches case per Incorrect/Correct pair
 		wantHistorical = 55*3 + 3 + 4 // csharpParity multiline and single line + gridHistorical + saintHistorical
-		wantOurs       = 14
+		wantOurs       = 15
 		wantUsAddress  = 146 + 5 + 8 + 687 // labeled + multi_word_state_addresses + simple_address_patterns + us50_test_tagged
 	)
 

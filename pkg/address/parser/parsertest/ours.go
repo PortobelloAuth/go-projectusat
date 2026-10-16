@@ -158,4 +158,10 @@ var OursCases = []Case{
 		Input:  "84 LUMBER BLDG 4 STE 200 1403 MAIN ST OGDEN UT 84401",
 		Want:   "84 LUMBER\n1403 MAIN ST BLDG 4 STE 200\nOGDEN UT 84401",
 	},
+	{
+		Source: "ours",
+		Note:   "last-line-only address",
+		Input:  "Ogden, UT 84401",
+		Want:   "OGDEN UT 84401",
+	},
 }
