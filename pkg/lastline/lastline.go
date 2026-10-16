@@ -226,6 +226,16 @@ func byPartEndingAt(claims []claim.Claim, part claim.Part, end int) []indexedCla
 func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lineStart, cityEnd int, members []indexedClaim) []LineClaim {
 	var lines []LineClaim
 
+	zipStart := -1
+	zipEnd := -1
+	for _, m := range members {
+		c := claims[m.index]
+		if c.Parts[0].Part == claim.PartPostal {
+			zipStart = c.Start()
+			zipEnd = c.End()
+			break
+		}
+	}
 	// if a city claim contains a postal claim, skip it; very few cities have a
 	// numeric name at all, fewer still are shaped like a postal code, and the USPS
 	// encourages writing the city name out. Examples like
@@ -243,11 +253,20 @@ func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lin
 		if len(c.Parts) == 1 && c.Parts[0].Part == claim.PartPostal {
 			postalclaims = append(postalclaims, c)
 		}
+
+		if c.Confidence == claim.ConfidenceExact &&
+			c.Parts[0].Part == claim.PartStreetName &&
+			c.Parts[0].Value == "PO BOX" {
+			if c.Start() <= zipStart && zipEnd == c.End() {
+				return []LineClaim{}
+			}
+		}
 	}
 
 	for _, start := range cityStarts(tokens, lineStart, cityEnd) {
 		reasonablecity := true
-		for _, postal := range postalclaims {
+		for i := 0; reasonablecity && i < len(postalclaims); i++ {
+			postal := postalclaims[i]
 			if start <= postal.Start() && cityEnd >= postal.End() {
 				// if there's a postal claim inside the city reading it isn't a
 				// reasonable city claim

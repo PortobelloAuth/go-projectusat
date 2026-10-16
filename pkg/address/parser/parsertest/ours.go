@@ -164,4 +164,22 @@ var OursCases = []Case{
 		Input:  "Ogden, UT 84401",
 		Want:   "OGDEN UT 84401",
 	},
+	{
+		Source: "ours",
+		Note:   "single-line-only POST OFFICE BOX address with 5-digit box",
+		Input:  "POST OFFICE BOX 84401",
+		Want:   "PO BOX 84401",
+	},
+	{
+		Source: "ours",
+		Note:   "single-line-only PO BOX address with 5-digit box",
+		Input:  "PO BOX 84401",
+		Want:   "PO BOX 84401",
+	},
+	{
+		Source: "ours",
+		Note:   "single-line-only POST OFFICE address with 5-digit box",
+		Input:  "POB 84401",
+		Want:   "PO BOX 84401",
+	},
 }
