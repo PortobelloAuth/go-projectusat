@@ -27,7 +27,10 @@ func TestRunReportsPerCase(t *testing.T) {
 		{Source: "ours", Note: "no ground truth yet", Input: "300 ELM PARK"},
 	}
 
-	results := parsertest.Run(stub, cases)
+	results, err := parsertest.Run(stub, cases)
+	if err != nil {
+		t.Fatalf("Run() error: %s", err)
+	}
 	if len(results) != len(cases) {
 		t.Fatalf("Run returned %d results for %d cases", len(results), len(cases))
 	}
@@ -105,7 +108,10 @@ func TestRunReportsFieldsPerCase(t *testing.T) {
 		},
 	}
 
-	results := parsertest.Run(stub, cases)
+	results, err := parsertest.Run(stub, cases)
+	if err != nil {
+		t.Fatalf("Run() error: %s", err)
+	}
 	if len(results) != len(cases) {
 		t.Fatalf("Run returned %d results for %d cases", len(results), len(cases))
 	}

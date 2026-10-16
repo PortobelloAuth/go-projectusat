@@ -103,7 +103,7 @@ func (r Result) PassFields() bool {
 // it to WantFields. One parse, two scores. It returns one Result per case,
 // in the order given, so a caller can report by Source rather than only a
 // total.
-func Run(p parser.ParsingFunc, cases []Case) []Result {
+func Run(p parser.ParsingFunc, cases []Case) ([]Result, error) {
 	var parsed *address.Address
 	opts := []goprojectusat.USAtNormalizeOption{
 		goprojectusat.WithCustomAddressParser(p),
@@ -114,18 +114,28 @@ func Run(p parser.ParsingFunc, cases []Case) []Result {
 		}),
 	}
 
+	singlelineopts := append(opts[:len(opts):len(opts)], goprojectusat.WithSingleLineFormatting())
+	multilineUSat, err := goprojectusat.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to instantiate multiline parser for run: %w", err)
+	}
+	onelineUSat, err := goprojectusat.New(singlelineopts...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to instantiate single line parser for run: %w", err)
+	}
+
 	results := make([]Result, len(cases))
 	for i, c := range cases {
 		parsed = nil // don't inherit the previous case's address on a parse error
-		caseOpts := opts
+		p := multilineUSat
 		if c.Want != "" && !strings.Contains(c.Want, "\n") {
 			// A single line Want is graded against the single line rendering.
-			caseOpts = append(opts[:len(opts):len(opts)], goprojectusat.WithSingleLineFormatting())
+			p = onelineUSat
 		}
-		got, err := goprojectusat.Normalize(c.Input, caseOpts...)
+		got, err := p.Normalize(c.Input)
 		results[i] = Result{Case: c, Got: got, GotFields: parsed, Err: err}
 	}
-	return results
+	return results, nil
 }
 
 // CountPass returns how many of results passed, how many were settled enough

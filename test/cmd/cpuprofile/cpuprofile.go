@@ -23,7 +23,11 @@ func main() {
 	// Load the default parser (and zipcity) before profiling starts, so the
 	// profile shows steady-state parsing rather than initialization.
 	start := time.Now()
-	if _, err := goprojectusat.Normalize(parsertest.Cases[0].Input); err != nil {
+	usat, err := goprojectusat.New()
+	if err != nil {
+		log.Fatalf("Could not create API for CPU profile: %s", err)
+	}
+	if _, err := usat.Normalize(parsertest.Cases[0].Input); err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
 	fmt.Printf("warm-up (parser load + 1 parse): %s\n", time.Since(start))
@@ -42,7 +46,7 @@ func main() {
 	start = time.Now()
 	for range *iterations {
 		for _, c := range parsertest.Cases {
-			_, _ = goprojectusat.Normalize(c.Input)
+			_, _ = usat.Normalize(c.Input)
 		}
 	}
 	elapsed := time.Since(start)

@@ -2,7 +2,6 @@ package goprojectusat
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
@@ -46,26 +45,32 @@ func New(opts ...Option) (*USAt, error) {
 		}
 	}
 
-	u, err := build(popts, nopts, fopts)
+	// u, err := build(popts, nopts, fopts)
+	p, err := parser.New(popts)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to instantiate parser: %w", err)
 	}
-	return u, nil
-}
-
-// build returns parser.New's error unwrapped, so the package-level Parse can
-// keep returning exactly what it always has.
-func build(popts parser.AddressParsingOptions, nopts normalizer.AddressNormalizationOptions, fopts address.FormatOptions) (*USAt, error) {
-	p, err := parser.New(popts)
-	if err != nil {
-		return nil, err
-	}
+	// return u, nil
 	return &USAt{
 		parser:     p,
 		normalizer: normalizer.NewNomalizer(nopts),
 		format:     fopts,
 	}, nil
 }
+
+// // build returns parser.New's error unwrapped, so the package-level Parse can
+// // keep returning exactly what it always has.
+// func build(popts parser.AddressParsingOptions, nopts normalizer.AddressNormalizationOptions, fopts address.FormatOptions) (*USAt, error) {
+// 	p, err := parser.New(popts)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &USAt{
+// 		parser:     p,
+// 		normalizer: normalizer.NewNomalizer(nopts),
+// 		format:     fopts,
+// 	}, nil
+// }
 
 // Normalize parses source, normalizes the result, and formats it, using the
 // options u was built with.
@@ -121,11 +126,11 @@ func (u *USAt) NormalizeAddress(a *address.Address) (*address.Address, error) {
 	return u.normalizer.Normalize(a)
 }
 
-// defaultUSAt is the USAt the package-level Normalize and Parse use when they
-// are given no options. It is built on first use, not at import, so a
-// program that only ever uses a custom parser never loads the default one.
-// Like zipcityembedded's own singleton, a construction error is kept and
-// returned to every caller rather than retried.
-var defaultUSAt = sync.OnceValues(func() (*USAt, error) {
-	return build(parser.AddressParsingOptions{}, normalizer.AddressNormalizationOptions{}, address.FormatOptions{})
-})
+// // defaultUSAt is the USAt the package-level Normalize and Parse use when they
+// // are given no options. It is built on first use, not at import, so a
+// // program that only ever uses a custom parser never loads the default one.
+// // Like zipcityembedded's own singleton, a construction error is kept and
+// // returned to every caller rather than retried.
+// var defaultUSAt = sync.OnceValues(func() (*USAt, error) {
+// 	return build(parser.AddressParsingOptions{}, normalizer.AddressNormalizationOptions{}, address.FormatOptions{})
+// })

@@ -19,8 +19,18 @@ func main() {
 	}
 	defer f.Close()
 
+	start := time.Now()
+	usat, err := goprojectusat.New()
+	if err != nil {
+		log.Fatalf("Could not create API for CPU profile: %s", err)
+	}
+	if _, err := usat.Normalize(parsertest.Cases[0].Input); err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
+	fmt.Printf("warm-up (parser load + 1 parse): %s\n", time.Since(start))
+
 	for _, c := range parsertest.Cases {
-		out, err := goprojectusat.Normalize(c.Input)
+		out, err := usat.Normalize(c.Input)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err)
 		}

@@ -44,7 +44,10 @@ func main() {
 	}
 
 	for _, s := range suites {
-		results := parsertest.Run(p, s.cases)
+		results, err := parsertest.Run(p, s.cases)
+		if err != nil {
+			panic(fmt.Errorf("Run() error: %s", err))
+		}
 		pass, settled, total := parsertest.CountPass(results)
 		fmt.Printf("%s: %d/%d/%d (pass/settled/total)\n", s.name, pass, settled, total)
 		for _, r := range results {
