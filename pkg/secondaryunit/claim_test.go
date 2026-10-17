@@ -148,13 +148,12 @@ func TestClaims(t *testing.T) {
 			want: []reading{},
 		},
 		{
-			// The tokenizer only drops a token that is punctuation alone
-			// (#207); "APT." keeps its period glued to the word. The
-			// period does not make the abbreviation any less exact.
+			// The tokenizer drops the period from "APT." (#236), so the
+			// abbreviation is claimed, exactly, as written without it.
 			name: "punctuated abbreviation is still exact",
 			in:   "APT. 4B",
 			want: []reading{
-				{"APT.", claim.PartSecondaryDesignator, claim.ConfidenceExact, "APT"},
+				{"APT", claim.PartSecondaryDesignator, claim.ConfidenceExact, "APT"},
 				{"4B", claim.PartSecondaryNumber, claim.ConfidenceExact, "4B"},
 			},
 		},
@@ -162,7 +161,7 @@ func TestClaims(t *testing.T) {
 			name: "punctuated unnumbered designator",
 			in:   "BSMT.",
 			want: []reading{
-				{"BSMT.", claim.PartSecondaryDesignator, claim.ConfidenceExact, "BSMT"},
+				{"BSMT", claim.PartSecondaryDesignator, claim.ConfidenceExact, "BSMT"},
 			},
 		},
 	}

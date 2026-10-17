@@ -37,6 +37,31 @@ func TestJoin(t *testing.T) {
 			in:   "RR006#87b",
 			want: "RR006 #87b",
 		},
+		{
+			name: "periods are removed",
+			in:   "123 N. MAIN AVE., U.S. HIGHWAY 1",
+			want: "123 N MAIN AVE US HIGHWAY 1",
+		},
+		{
+			name: "P.O. box reads as PO BOX",
+			in:   "P.O. BOX 12, DENVER CO",
+			want: "PO BOX 12 DENVER CO",
+		},
+		{
+			name: "apostrophe, hyphen and slash are kept",
+			in:   "5 O'BRIEN ST 1/2 A-B",
+			want: "5 O'BRIEN ST 1/2 A-B",
+		},
+		{
+			name: "periods beside digits are kept",
+			in:   "9028 ROAD 39.4 RR NO.2",
+			want: "9028 ROAD 39.4 RR NO.2",
+		},
+		{
+			name: "colons and parentheses are removed from inside tokens",
+			in:   "271 SPRING ST ATTN: REGUS (IRVING)",
+			want: "271 SPRING ST ATTN REGUS IRVING",
+		},
 		{"no tokens", "", ""},
 	}
 

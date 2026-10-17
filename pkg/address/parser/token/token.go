@@ -3,6 +3,7 @@ package token
 import (
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 type Token struct {
@@ -15,7 +16,30 @@ type Token struct {
 
 var bycommaspace = regexp.MustCompile(`([^,\s#]+|#[^,\s#]*|[,\s]+)`)
 var whitespace = regexp.MustCompile(`\s`)
+
+// embeddedpunctuation is punctuation no address part contains, removed from
+// inside a token as well: "ATTN:" and "(IRVING" read as ATTN and IRVING.
+// Apostrophes, hyphens, slashes, ampersands and "#" stay: names, fractions and
+// secondary numbers use them.
+var embeddedpunctuation = regexp.MustCompile(`[():;"|*]`)
 var punctuationalone = regexp.MustCompile(`^(\||\*|\.|\(|\)|"|:|;|@|&|'|\x{2019})$`)
+
+// dropPeriods removes the periods from a token unless a digit sits beside one:
+// "U.S." and "N." read as US and N, while "39.4" is a number and "NO.2" is
+// claimed as written. Nothing downstream can use a period, and the tables hold
+// none, so "N. MIAMI" must reach them as "N MIAMI".
+func dropPeriods(s string) string {
+	r := []rune(s)
+	out := make([]rune, 0, len(r))
+	for i, c := range r {
+		if c == '.' && !(i > 0 && unicode.IsDigit(r[i-1])) && !(i+1 < len(r) && unicode.IsDigit(r[i+1])) {
+			continue
+		}
+		out = append(out, c)
+	}
+
+	return string(out)
+}
 
 func Tokenize(source string) []Token {
 	tokens := make([]Token, 0)
@@ -30,7 +54,7 @@ func Tokenize(source string) []Token {
 			clean := punctuationalone.ReplaceAllString(txt, "")
 
 			// clean up excess whitespace
-			txt = whitespace.ReplaceAllString(clean, "")
+			txt = dropPeriods(embeddedpunctuation.ReplaceAllString(whitespace.ReplaceAllString(clean, ""), ""))
 			if len(txt) > 0 {
 				if txt[0] == ',' {
 					pcomma += len(txt) // there might be more than one comma

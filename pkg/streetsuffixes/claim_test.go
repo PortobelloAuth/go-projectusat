@@ -73,7 +73,7 @@ func TestClaims(t *testing.T) {
 			name: "trailing punctuation does not prevent a claim",
 			in:   "ST.",
 			want: []reading{
-				{"ST.", claim.PartStreetSuffix, claim.ConfidenceExact, "ST"},
+				{"ST", claim.PartStreetSuffix, claim.ConfidenceExact, "ST"},
 			},
 		},
 		{
