@@ -824,9 +824,11 @@ func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
 		streets := []string{
 			"MONTANA",
 			"MONTANA TREASURE AVENUE",
+			"MONTANA SKY",
 			"MT AVENUE",
 			"MOUNT",
 			"MOUNT ZION",
+			"ROCKY MOUNT", // Rocky Mount, NC and Rocky Mount, VA
 			"MT",
 			"MT HWY 50",
 		}
