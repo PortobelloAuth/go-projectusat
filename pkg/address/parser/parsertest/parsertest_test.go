@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/parsertest"
 )
@@ -191,4 +192,77 @@ func TestCasesComposition(t *testing.T) {
 	if want := wantSpec + wantHistorical + wantOurs + wantUsAddress; len(parsertest.Cases) != want {
 		t.Errorf("len(Cases) = %d, want %d", len(parsertest.Cases), want)
 	}
+}
+
+// TestUsAddressWantFields pins the generated usaddress decomposition
+// (usaddress_generated.go, go-projectusat#223) in three ways.
+//
+// The count is a ratchet like TestCasesComposition: a regeneration that
+// settles or unsettles cases changes it, so the change is a reviewed number
+// and not a silent drift.
+//
+// Every committed WantFields must already be in content-normalized form. The
+// generator ran each one through the content normalizer, so a value that no
+// longer survives it unchanged means the normalizer moved after generation —
+// or the file was edited by hand — and the record needs regenerating and
+// reviewing rather than quietly disagreeing with the code it checks.
+//
+// The two named cases pin the mapping decisions from review on #234: an
+// attention line is dropped rather than unsettling the record (Project US@
+// pp.34-35, "Remove ATTENTION, ATTN:"), and a StreetNamePreType route
+// designator is part of the street name.
+func TestUsAddressWantFields(t *testing.T) {
+	const wantSettled = 767
+
+	settled := 0
+	n := normalizer.NewContentNomalizer()
+	for _, c := range parsertest.UsAddressCases {
+		if c.WantFields == nil {
+			continue
+		}
+		settled++
+		got, err := n.Normalize(c.WantFields)
+		if err != nil {
+			t.Errorf("%q: Normalize(WantFields) error: %v", c.Input, err)
+			continue
+		}
+		if !got.Equals(c.WantFields) {
+			t.Errorf("%q: WantFields is not normalized; Normalize gives %+v, committed %+v", c.Input, got, c.WantFields)
+		}
+	}
+	if settled != wantSettled {
+		t.Errorf("UsAddressCases with WantFields = %d, want %d", settled, wantSettled)
+	}
+
+	for _, tc := range []struct {
+		input string
+		want  *address.Address
+	}{
+		{
+			input: "271 spring st nw attn: regus",
+			want:  &address.Address{PrimaryNumber: "271", StreetName: "SPRING", StreetSuffix: "ST", Postdirectional: "NW"},
+		},
+		{
+			input: "1234 W US Hwy 50",
+			want:  &address.Address{PrimaryNumber: "1234", Predirectional: "W", StreetName: "US HIGHWAY 50"},
+		},
+	} {
+		c, ok := findCase(parsertest.UsAddressCases, tc.input)
+		if !ok {
+			t.Errorf("no UsAddressCases entry for %q", tc.input)
+			continue
+		}
+		if !c.WantFields.Equals(tc.want) {
+			t.Errorf("%q: WantFields = %+v, want %+v", tc.input, c.WantFields, tc.want)
+		}
+	}
+}
+
+func findCase(cases []parsertest.Case, input string) (parsertest.Case, bool) {
+	for _, c := range cases {
+		if c.Input == input {
+			return c, true
+		}
+	}
+	return parsertest.Case{}, false
 }
