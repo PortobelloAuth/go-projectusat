@@ -1,6 +1,7 @@
 package normalizer_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -792,6 +793,122 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 		}
 		if got.StreetSuffix != tc.wantSuffix {
 			t.Errorf("StreetSuffix for %q = %q, want %q", tc.streetName, got.StreetSuffix, tc.wantSuffix)
+		}
+	}
+}
+
+// go-projectusat#235 identifies a specific case where re-normalizing a normalized street name
+// causes it to change. We want to prevent that.
+func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
+	ctcases := slices.Collect(func(yield func(*address.Address) bool) {
+		streets := []string{
+			"CONNECTICUT",
+			"CONNECTICUT AVENUE",
+			"CT AVENUE",
+			"COURT",
+			"CT",
+			"CT HWY 50",
+		}
+		for _, name := range streets {
+			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
+			if strings.Contains(name, "HWY") {
+				in.StreetSuffix = ""
+				in.Region = "CT"
+				in.Postal = ""
+			}
+			if !yield(in) {
+				return
+			}
+		}
+	})
+	mtcases := slices.Collect(func(yield func(*address.Address) bool) {
+		streets := []string{
+			"MONTANA",
+			"MONTANA TREASURE AVENUE",
+			"MT AVENUE",
+			"MOUNT",
+			"MT",
+			"MT HWY 50",
+		}
+		for _, name := range streets {
+			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
+			if strings.Contains(name, "HWY") {
+				in.StreetSuffix = ""
+				in.Region = "MT"
+				in.Postal = ""
+			}
+			if !yield(in) {
+				return
+			}
+		}
+	})
+	necases := slices.Collect(func(yield func(*address.Address) bool) {
+		streets := []string{
+			"NEBRASKA",
+			"NE",
+			"NORTHEAST",
+			"NE HWY 50",
+		}
+		for _, name := range streets {
+			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
+			if strings.Contains(name, "HWY") {
+				in.StreetSuffix = ""
+				in.Region = "NE"
+				in.Postal = ""
+			}
+			if !yield(in) {
+				return
+			}
+		}
+	})
+	stcases := slices.Collect(func(yield func(*address.Address) bool) {
+		streets := []string{
+			"STATE",
+			"STATE LINE AVENUE",
+			"ST CLAIR AVENUE",
+			"SAINT",
+			"STREET",
+			"ST",
+			"ST HWY 50",
+		}
+		for _, name := range streets {
+			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
+			if strings.Contains(name, "HWY") {
+				in.StreetSuffix = ""
+			}
+			if !yield(in) {
+				return
+			}
+		}
+	})
+	controlcases := slices.Collect(func(yield func(*address.Address) bool) {
+		streets := []string{"NEW JERSEY", "HWY", "LOOP", "SOUTHWEST"}
+		for _, name := range streets {
+			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
+			if !yield(in) {
+				return
+			}
+		}
+	})
+
+	testcases := make([]*address.Address, 0)
+	testcases = append(testcases, ctcases...)
+	testcases = append(testcases, mtcases...)
+	testcases = append(testcases, necases...)
+	testcases = append(testcases, stcases...)
+	testcases = append(testcases, controlcases...)
+	n := normalizer.NewContentNomalizer()
+	for _, in := range testcases {
+		first, err := n.Normalize(in)
+		if err != nil {
+			t.Fatalf("%q: %v", in.StreetName, err)
+		}
+		second, err := n.Normalize(first)
+		if err != nil {
+			t.Fatalf("%q second: %v", in.StreetName, err)
+		}
+		if first.StreetName != second.StreetName {
+			t.Errorf("%q: first %q, second %q", in.StreetName, first.StreetName, second.StreetName)
 		}
 	}
 }
