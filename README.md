@@ -261,6 +261,12 @@ without newlines.
 keeping diacritics in a format with diacritics substituted or transliterated,
 without changing the source address data.
 
+## Where the standards are insufficient
+
+Project US@ and Pub 28 are silent, ambiguous or self-contradictory in places.
+[docs/spec-gaps.md](docs/spec-gaps.md) records each one and the decision this
+implementation made.
+
 ## Alternatives and related technologies
 
 There are several related technologies that could be used instead of or in
