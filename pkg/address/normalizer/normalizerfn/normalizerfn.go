@@ -504,6 +504,12 @@ func ExpandStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormal
 	parts := strings.Split(sn, " ")
 	changed := false
 	for i, snp := range parts {
+		// A region abbreviation is what AbbreviateRegionInStreetNameFn produced
+		// on an earlier pass; reading it back as a street type (CT as COURT)
+		// would make normalization flip on every pass (#235).
+		if ri, _ := region.Info(snp, false); ri != nil && ri.PossibleStreetName && ri.Short == snp {
+			continue
+		}
 		fullsuffix, err := streetsuffixes.NormalizeStreetSuffix(snp)
 		if err == nil {
 			parts[i] = fullsuffix
