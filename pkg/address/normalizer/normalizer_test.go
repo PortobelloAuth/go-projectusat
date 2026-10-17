@@ -827,6 +827,7 @@ func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
 			"MONTANA TREASURE AVENUE",
 			"MT AVENUE",
 			"MOUNT",
+			"MOUNT ZION",
 			"MT",
 			"MT HWY 50",
 		}
