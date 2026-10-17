@@ -1,38 +1,80 @@
-# Testing the memory impact of the default parser
+# Test Commands
 
-This directory contains two subdirectories with simple cli commands that run a suite
-of addresses through `goprojectusat.Normalize()`. One of them (`defaultparser`) uses
-the default parser. The other (`customparser`) uses a stub parser that always returns
-the same address. Each of them use `"runtime/pprof"` to write a profile describing
-their own memory usage.
+There are several test commands provided in this repository for testing various
+aspects of the code base.
 
-## Building
+## Testing a parser
+
+For instance, `test/cmd/corpusmeasure.go` is used to test a `parser.ParsingFunc`
+(aka a Custom Parser) to see how well it does against our corpus of test
+addresses. It can be copied and its `newParserUnderTest()` modified to
+instantiate the perser you want to test.
+
+```golang
+func newParserUnderTest() (parser.ParsingFunc, error) {
+  return acustomparser.New()
+}
+```
+
+Run it with
+
+```sh
+go run ./test/cmd/corpusmeasure
+```
+
+## Profiling performance
+
+`test/cmd/cpuprofile.go` is used to profile the library for hotspots. It is
+compiled as an executable, then run
+
+```sh
+~/dev/portobello/go-projectusat (main)% go build -o cpuprofile ./test/cmd/cpuprofile
+~/dev/portobello/go-projectusat (main)% ./cpuprofile -n 200
+warm-up (parser load + 1 parse): 68.280125ms
+226200 parses in 22.811369208s (100.846µs/parse)
+~/dev/portobello/go-projectusat (main)% ./cpuprofile -n 2000
+warm-up (parser load + 1 parse): 49.568625ms
+2262000 parses in 3m58.623445542s (105.492µs/parse)
+```
+
+Each time the executable is run it will create a file called `cpu_profile.prof`
+that can be inspected with `go tool pprof`.
+
+## Testing the memory impact of the default parser
+
+This directory contains two subdirectories with simple cli commands that run a
+suite of addresses through `goprojectusat.Normalize()`. One of them
+(`defaultparser`) uses the default parser. The other (`customparser`) uses a
+stub parser that always returns the same address. Each of them use
+`"runtime/pprof"` to write a profile describing their own memory usage.
+
+### Building
 
 ```sh
 go build -o "./customparser" ./test/cmd/customparser
 go build -o "./defaultparser" ./test/cmd/defaultparser
 ```
 
-## Running
+### Running
 
 ```sh
 ./customparser
 ./defaultparser
 ```
 
-## Reviewing
+### Reviewing
 
 ```sh
 go tool pprof customparser_mem_profile.prof 
 go tool pprof defaultparser_mem_profile.prof
 ```
 
-## Recorded results
+### Recorded results
 
-The resulting pprof memory profiles show that the `defaultparser` executable uses `~58MB`
-of memory while the `customparser` executable uses `~1MB` of memory. This is a good
-indication that our logic for preventing loading the default parser in to memory when it
-is not in use is working properly.
+The resulting pprof memory profiles show that the `defaultparser` executable
+uses `~58MB` of memory while the `customparser` executable uses `~1MB` of
+memory. This is a good indication that our logic for preventing loading the
+default parser in to memory when it is not in use is working properly.
 
 ```sh
 % go tool pprof customparser_mem_profile.prof 
@@ -86,11 +128,12 @@ Showing top 10 nodes out of 64
 (pprof) exit
 ```
 
-## Executable size
+### Executable size
 
 ```sh
 -rwxr-xr-x   1 user  staff    35M Oct 10 13:49 customparser
 -rwxr-xr-x   1 user  staff    35M Oct 10 13:50 defaultparser
 ```
 
-As expected, both executables are roughly the same size; each still contains the embedded files.
+As expected, both executables are roughly the same size; each still contains the
+embedded files.

@@ -969,8 +969,8 @@ func (p *Parser) cityZipsAgreement(r reference, postal, city, region string) (ag
 //
 // MatchZipAndStreet and MatchCityStateAndStreet are different filters over
 // different keys — one shard scoped by ZIP, the other by city and state —
-// so their false positives are independent: about 0.005^2 for both to be
-// spurious, against 0.005 for either alone. On the truth side the two are
+// so their false positives are independent: about 0.00075^2 for both to be
+// spurious, against 0.00075 for either alone. On the truth side the two are
 // almost perfectly correlated, since a street TIGER recorded for a ZIP is
 // almost always recorded for that ZIP's city too, so a second true adds
 // little evidence on its own. What it buys is corroboration: asking both and

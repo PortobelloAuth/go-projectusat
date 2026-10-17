@@ -23,15 +23,14 @@ pull request.
 ## v0.1.0 Alpha Status
 
 This library is currently in Alpha release status before version v0.1.0. We're
-being deliberately conservative about versioning to give ourselves room to
-adapt the API to necessary feedback. (At least one API change is currently in
-progress as of `v0.1.0-alpha.1`.)
+being deliberately conservative about versioning to give ourselves room to adapt
+the API to necessary feedback.
 
-However, `goprojectusat` appears to be _fully functional_ according to all of our
-internal testing. We need testing and feedback from potential users to determine
-if there are additional issues to address. This project is open source and built
-in public to facilitate feedback from potential users and support from potential
-backers.
+However, `goprojectusat` appears to be _fully functional_ according to all of
+our internal testing. We need testing and feedback from potential users to
+determine if there are additional issues to address. This project is open source
+and built in public to facilitate feedback from potential users and support from
+potential backers.
 
 ## Normalization of Input vs. Normalization for Comparison
 
@@ -71,6 +70,10 @@ abbreviations for these cases.)
 
 ## API
 
+Package documentation for the latest version is available at
+[https://pkg.go.dev/github.com/PortobelloAuth/go-projectusat](https://pkg.go.dev/github.com/PortobelloAuth/go-projectusat).
+A less comprehensive introduction is also included here.
+
 ### New()
 
 ```golang
@@ -99,21 +102,22 @@ if err != nil {
 
 ### Options (content vs exchange)
 
-**`USAt.Normalize(string)`** is the most comprehensive method on a `USAt` instance.
-It takes a string, parses it as an address, normalizes it, and reformats it all
-according to the [Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
+**`USAt.Normalize(string)`** is the most comprehensive method on a `USAt`
+instance. It takes a string, parses it as an address, normalizes it, and
+reformats it all according to the
+[Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
 Specification. It excercises the every aspect of `goprojectusat` and every
 `projectusat.Option` impacts how it works in some way.
 
-`USAt.Normalize(string)` defaults to using "content form" normalization options that
-are appropriate for storage: an exact controlled vocabulary, diacritic preservation,
-and secondary designators as their standard abbreviations (`APT`, `STE`, …). The
-**`WithContentNormalization()`** `projectusat.Option` allows a caller to explicitly
-declare the intent to use these options. It is strongly recommended for address
-intake and storage scenarios.
+`USAt.Normalize(string)` defaults to using "content form" normalization options
+that are appropriate for storage: an exact controlled vocabulary, diacritic
+preservation, and secondary designators as their standard abbreviations (`APT`,
+`STE`, …). The **`WithContentNormalization()`** `projectusat.Option` allows a
+caller to explicitly declare the intent to use these options. It is strongly
+recommended for address intake and storage scenarios.
 
-The **`WithMatchingNormalization()`** `projectusat.Option` allows `USAt.Normalize()` to
-be used for matching (aka exchange) scenarios. It enables:
+The **`WithMatchingNormalization()`** `projectusat.Option` allows
+`USAt.Normalize()` to be used for matching (aka exchange) scenarios. It enables:
 
 - `Fuzzy` — mild typos on region and street suffix via package `Fuzzy*` helpers
 - `SecondaryAsHash` — rewrite secondary designators to `#` for comparison only
@@ -126,61 +130,67 @@ secondary designator was not known by one of the parties or minor text variation
 is detected. More sophisticated workflows allow these options and others to be
 set individually.
 
-These 2 high-level `goprojectusat.Options` actualy set 3 values each, rather than
-just 1 as most other `goprojectusat.Options` do.
+These 2 high-level `goprojectusat.Options` actualy set 3 values each, rather
+than just 1 as most other `goprojectusat.Options` do.
 
 #### WithContentNormalization
 
-`WithContentNormalization()` explicitly sets the options recommended for "content form"
-normalization. These options that are appropriate for address intake and storage: an
-exact controlled vocabulary, diacritic preservation, and secondary designators as
-their standard abbreviations (`APT`, `STE`, …). These same options are used by default.
-However, using this Option clearly indicates the caller's intent to use content normalization.
+`WithContentNormalization()` explicitly sets the options recommended for
+"content form" normalization. These options that are appropriate for address
+intake and storage: an exact controlled vocabulary, diacritic preservation, and
+secondary designators as their standard abbreviations (`APT`, `STE`, …). These
+same options are used by default. However, using this Option clearly indicates
+the caller's intent to use content normalization.
 
 #### WithMatchingNormalization
 
-`WithMatchingNormalization()` sets the options recommended for "exchange form", also known as
-matching normalization. These options that are appropriate for address matching: fuzzy matching
-of certain vocabularies, diacritic substitution, and numbered secondary designators converted
-to `"#"`.
+`WithMatchingNormalization()` sets the options recommended for "exchange form",
+also known as matching normalization. These options that are appropriate for
+address matching: fuzzy matching of certain vocabularies, diacritic
+substitution, and numbered secondary designators converted to `"#"`.
 
 #### `WithFuzzyNormalization()`
 
-Some of `goprojectusat`'s normalization functions - particularly `streetsuffixes` and
-`region` - have support for fuzzy matching using Damerau-Levenshtein edit distance.
-`WithFuzzyNormalization()` allows this setting to be enabled.
+Some of `goprojectusat`'s normalization functions - particularly
+`streetsuffixes` and `region` - have support for fuzzy matching using
+Damerau-Levenshtein edit distance. `WithFuzzyNormalization()` allows this
+setting to be enabled.
 
 #### `WithSecondaryAsHash()`
 
 [Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
-allows the secondary designator of an address to be `"#"` when it is not known. As a
-result, any address with a numbers secondary designator may also be recorded with a
-`"#"` (unless the address also contains a Private Mailbox.) For a matching / exchange
-use case normalization must resolve to a single value in order to match.
-`WithSecondaryAsHash()` option normalizes a numbered secondary designator to `"#"` to
-facilitate such matching.
+allows the secondary designator of an address to be `"#"` when it is not known.
+As a result, any address with a numbered secondary designator may also be
+recorded with a `"#"` (unless the address also contains a Private Mailbox.) For
+a matching / exchange use case, normalization must resolve to a single value in
+order to match. The `WithSecondaryAsHash()` option normalizes a numbered
+secondary designator to `"#"` to facilitate such matching.
+
+Please note `WithSecondaryAsHash()` currently only effects the first secondary
+designator parsed. Addresses with multiple secondary designators - such as a
+building number and a street - may not be as easily matched.
 
 #### `WithDiacriticNormalization()`
 
 [Project US@](https://asapnet.org/wp-content/uploads/2022/03/Project_US_FINAL_Technical_Specification_Version_1.0.pdf)
-allows diacritics to be retained or substituted according to a table it supplies.
-`WithDiacriticNormalization()` allows the caller to specify how they would like
-the parser and normalizer to handle diacritic substitution.
+allows diacritics to be retained or substituted according to a table it
+supplies. `WithDiacriticNormalization()` allows the caller to specify how they
+would like the parser and normalizer to handle diacritic substitution.
 
 `DiacriticMode` is an enumeration with 3 possible values:
 
 - `diacritics.KeepDiacritics` does not change diacritics
 - `diacritics.SubstituteDiacritics` substitutes diacritics according to the
   ProjectUS@ specification
-- `diacritics.TransliterateDiacritics` transliterates diacritics, replacing
-  them with ASCII letter combinations that commonly represent them.
+- `diacritics.TransliterateDiacritics` transliterates diacritics, replacing them
+  with ASCII letter combinations that commonly represent them.
 
 #### `WithParsedAddressVerifier()`
 
-`WithParsedAddressVerifier()` provides a `parser.AddessVerifier` function to a USAt instance's
-internal parser. This function is called after an address has been parsed by the internal
-parser (which may be a custom address parser or `parser.ParsingFunc`) and before the
-internal address normalizer.
+`WithParsedAddressVerifier()` provides a `parser.AddessVerifier` function to a
+USAt instance's internal parser. This function is called after an address has
+been parsed by the internal parser (which may be a custom address parser or
+`parser.ParsingFunc`) and before the internal address normalizer.
 
 ```golang
 import (
@@ -202,12 +212,14 @@ return usat, nil
 
 #### `WithCustomAddressParser()`
 
-`WithCustomAddressParser()` allows passing in a `parser.ParsingFunc` to replace the core parsing
-function of a USAt instance. By default `goprojectusat.USAt` relies on a parser that uses
-[zipcity](https://github.com/poetic-systems/zipcity) to disambiguate between streets, cites,
-and regions. `zipcity`'s bloom filters are an efficient method for doing this without calling
-an API or running a database. However, they may not serve every use case. WithCustomAddressParser
-lets a caller use their own data store, API, or other custom parsing logic.
+`WithCustomAddressParser()` allows passing in a `parser.ParsingFunc` to replace
+the core parsing function of a USAt instance. By default `goprojectusat.USAt`
+relies on a parser that uses
+[zipcity](https://github.com/poetic-systems/zipcity) to disambiguate between
+streets, cites, and regions. `zipcity`'s bloom filters are an efficient method
+for doing this without calling an API or running a database. However, they may
+not serve every use case. WithCustomAddressParser lets a caller use their own
+data store, API, or other custom parsing logic.
 
 ```golang
 import (
@@ -232,15 +244,22 @@ if err != nil {
 return usat, nil
 ```
 
+A custom parsing function should be tested using a copy of
+[`test/cmd/corpusmeasure/corpusmeasure.go`](./test/cmd/corpusmeasure/corpusmeasure.go).
+This will give you an idea how well your parser is working against our corpus of
+test addresses. See ["Testing a parser"](./test/cmd/README.md#testing-a-parser)
+for more information on this process.
+
 #### `WithSingleLineFormatting()`
 
-`WithSingleLineFormatting()` specifies that addresses should be formatted without newlines.
+`WithSingleLineFormatting()` specifies that addresses should be formatted
+without newlines.
 
 #### `WithDiacriticFormatting()`
 
-`WithDiacriticFormatting()` allows formatting an address that has been parsed keeping diacritics
-in a format with diacritics substituted or transliterated, without changing the source address
-data.
+`WithDiacriticFormatting()` allows formatting an address that has been parsed
+keeping diacritics in a format with diacritics substituted or transliterated,
+without changing the source address data.
 
 ## Alternatives and related technologies
 
@@ -261,8 +280,8 @@ conjunction with Go Project US@.
   Employing it through
   [libpostal-rest](https://github.com/johnlonganecker/libpostal-rest) on a
   [docker image](https://github.com/johnlonganecker/libpostal-rest-docker) might
-  be a great way to tap in to that community. A parser that does so lives in
-  its own repository and plugs in through `ParsingFunc`.
+  be a great way to tap in to that community. A parser that does so lives in its
+  own repository and plugs in through `ParsingFunc`.
 - [Boostport address](https://github.com/Boostport/address) does address
   validation based on Google's published rules rather than normalization. It
   might pair well with a normalization library.
@@ -274,24 +293,24 @@ conjunction with Go Project US@.
 
 ### Address Verification Services
 
-There are many different address verification services that support US addresses.
-Examples include Smarty, Melissa, or USPS' own service. These generally license
-USPS' deliverability data; only the USPS can tell you if it will deliver to a
-given address. The licenses on this data generally do not allow it to be made
-available in an open source product and services built with it must meet strict
-requirements to ensure that the data is not misappropriated.
+There are many different address verification services that support US
+addresses. Examples include Smarty, Melissa, or USPS' own service. These
+generally license USPS' deliverability data; only the USPS can tell you if it
+will deliver to a given address. The licenses on this data generally do not
+allow it to be made available in an open source product and services built with
+it must meet strict requirements to ensure that the data is not misappropriated.
 
 One primary use case for `go-projectusat` is to serve as the address
 normalization component for `go-opm-core` (a privacy preserving entity matching
 library) and similar person or patient matching technologies. While per query
 network latency and per query monetary costs might be reasonable, calling an
 external service for address verification would create an additional entity with
-log containing exactly the personally identifiable information and personal health
-information `go-opm-core` is intended to keep from being broadcast to parties that
-do not already have it.
+access logs containing exactly the personally identifiable information and
+personal health information `go-opm-core` is intended to keep from being
+broadcast to parties that do not already have it.
 
 As documented in the sections on `WithParsedAddressVerifier()` and
 `WithCustomAddressParser()`, users who wish to do so may incorporate an external
 address verification service or data they have licensed from USPS in a custom
-verifier - run after parsing - or parser. Portobello Health Systems would be happy
-to provide service and support for such an implementation.
+verifier - run after parsing - or parser. Portobello Health Systems would be
+happy to provide service and support for such an implementation.

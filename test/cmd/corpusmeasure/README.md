@@ -1,10 +1,10 @@
 # Measuring a parser against the reference corpora
 
-`parsertest` (`pkg/address/parser/parsertest`) carries three corpora of
-address test cases — `SpecCases`, `HistoricalCases`, and `OursCases` — plus a
-runner, `Run`, that scores any `parser.ParsingFunc` against them. This
-directory is a small cli command that runs all three suites and prints
-pass/settled/total counts, plus every failing case, for one parser.
+`parsertest` (`pkg/address/parser/parsertest`) carries three corpora of address
+test cases — `SpecCases`, `HistoricalCases`, and `OursCases` — plus a runner,
+`Run`, that scores any `parser.ParsingFunc` against them. This directory is a
+small cli command that runs all three suites and prints pass/settled/total
+counts, plus every failing case, for one parser.
 
 ## Running
 
@@ -12,14 +12,13 @@ pass/settled/total counts, plus every failing case, for one parser.
 go run ./test/cmd/corpusmeasure
 ```
 
-This defaults to `zipcityembedded`, the parser go-projectusat uses by
-default.
+This defaults to `zipcityembedded`, the parser go-projectusat uses by default.
 
 ## Testing your own parser implementation
 
 `parsertest.Run` only needs a `parser.ParsingFunc` — anything with a
-`Parse(source string) (*address.Address, error)` method, or a plain func
-wrapped in `parser.ParsingFn`. To measure a different implementation, change
+`Parse(source string) (*address.Address, error)` method, or a plain func wrapped
+in `parser.ParsingFn`. To measure a different implementation, change
 `newParserUnderTest` in `corpusmeasure.go` to return it instead, e.g.:
 
 ```go
