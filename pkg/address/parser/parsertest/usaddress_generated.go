@@ -6,20 +6,22 @@ package parsertest
 //
 // Cases with WantFields, per fixture file:
 //
-//	labeled.xml                       109 /  146
+//	labeled.xml                       107 /  146
 //	multi_word_state_addresses.xml      5 /    5
 //	simple_address_patterns.xml         7 /    8
 //	us50_test_tagged.xml              646 /  687
-//	total                             767 /  846
+//	total                             765 /  846
 //
 // Cases without WantFields, by reason:
 //
+//	   1  negative case: LL is not a region
 //	  16  normalizer: Not a recognized PO Box street name
 //	   3  normalizer: not idempotent, a second pass changes the result
 //	   3  normalizer: predirectional
-//	   1  normalizer: region
 //	   4  normalizer: secondary designator
 //	   6  normalizer: street suffix
+//	   1  recipient run mixes business name, person and ATTN
+//	   1  recipient run mixes person and business name
 //	   2  usaddress tag CornerOf has no Address field
 //	   5  usaddress tag IntersectionSeparator has no Address field
 //	  19  usaddress tag LandmarkName has no Address field
@@ -265,34 +267,14 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:  "labeled.xml",
-		Input: "CORPORATE TRAVEL MICHAEL A CASOLO ATTN SHELIA LEWIS 77 w WACKER DR SUITE 1800 CHICAGO IL 60601",
-		WantFields: &address.Address{
-			PrimaryNumber:       "77",
-			Predirectional:      "W",
-			StreetName:          "WACKER",
-			StreetSuffix:        "DR",
-			SecondaryDesignator: "STE",
-			SecondaryNumber:     "1800",
-			City:                "CHICAGO",
-			Region:              "IL",
-			Postal:              "60601",
-		},
+		File:      "labeled.xml",
+		Input:     "CORPORATE TRAVEL MICHAEL A CASOLO ATTN SHELIA LEWIS 77 w WACKER DR SUITE 1800 CHICAGO IL 60601",
+		Unsettled: "recipient run mixes business name, person and ATTN",
 	},
 	{
-		File:  "labeled.xml",
-		Input: "MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606",
-		WantFields: &address.Address{
-			PrimaryNumber:       "30",
-			Predirectional:      "S",
-			StreetName:          "WACKER",
-			StreetSuffix:        "DR",
-			SecondaryDesignator: "STE",
-			SecondaryNumber:     "2200",
-			City:                "CHICAGO",
-			Region:              "IL",
-			Postal:              "60606",
-		},
+		File:      "labeled.xml",
+		Input:     "MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606",
+		Unsettled: "recipient run mixes person and business name",
 	},
 	{
 		File:  "labeled.xml",
@@ -309,7 +291,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:      "labeled.xml",
 		Input:     "LEXI HAGENSON 860 w Blackhawk 305 CHICAGO ll. 60642—2534",
-		Unsettled: "normalizer: region: Unrecognized state, possession, Canadian provice, or US Armed Forces region",
+		Unsettled: "negative case: LL is not a region",
 	},
 	{
 		File:  "labeled.xml",

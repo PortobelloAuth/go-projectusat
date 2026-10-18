@@ -80,6 +80,25 @@ var unsettledTags = map[string]bool{
 	"NotAddress":            true,
 }
 
+// knownUnsettled are inputs whose missing WantFields is a decision, not a
+// parse failure, keyed by input with the reason reported.
+//
+// Negative cases are inputs a fixture author built to be rejected.
+//
+// Recipient runs that mix a personal name, a business name and an attention
+// line are not decomposed. Project US@ v1.0 pp.34-35 removes ATTN lines but
+// keeps a business name, and nothing in the tags says where one ends and the
+// other begins, so guessing BusinessName here would be invented data. The two
+// below are the only Recipient runs in the fixtures that contain a business
+// name (audited for #240); the rest are person names, "ATTN: regus", and an
+// account number.
+var knownUnsettled = map[string]string{
+	"LEXI HAGENSON 860 w Blackhawk 305 CHICAGO ll. 60642—2534": "negative case: LL is not a region",
+
+	"CORPORATE TRAVEL MICHAEL A CASOLO ATTN SHELIA LEWIS 77 w WACKER DR SUITE 1800 CHICAGO IL 60601": "recipient run mixes business name, person and ATTN",
+	"MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606":           "recipient run mixes person and business name",
+}
+
 // generatedCase is one emitted entry: the fixture file, the input string, and
 // either a normalized WantFields or the reason there is none.
 type generatedCase struct {
@@ -109,6 +128,8 @@ func main() {
 			raw, reason := rawAddress(rec.Tags)
 			if raw == nil {
 				c.Unsettled = reason
+			} else if why, ok := knownUnsettled[rec.Input]; ok {
+				c.Unsettled = why
 			} else if normalized, err := n.Normalize(raw); err != nil {
 				c.Unsettled = "normalizer: " + err.Error()
 			} else if again, err := n.Normalize(normalized); err != nil || !again.Equals(normalized) {
