@@ -270,6 +270,15 @@ func rawAddress(tags []tag) (*address.Address, string) {
 			return nil, "usaddress tag " + t.Name + " is not in the mapping"
 		}
 	}
+	// A bare "# 234" is a numbered unit with the designator unknown, which
+	// Project US@ writes as designator "#". When a designator is already
+	// present ("# APT 3"), the "#" is redundant and is dropped.
+	if number, ok := strings.CutPrefix(a.SecondaryNumber, "#"); ok {
+		a.SecondaryNumber = strings.TrimSpace(number)
+		if a.SecondaryDesignator == "" {
+			a.SecondaryDesignator = "#"
+		}
+	}
 	if *a == (address.Address{}) {
 		return nil, "no address components outside Recipient"
 	}
