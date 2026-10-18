@@ -15,6 +15,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"go/format"
@@ -80,23 +81,94 @@ var unsettledTags = map[string]bool{
 	"NotAddress":            true,
 }
 
-// knownUnsettled are inputs whose missing WantFields is a decision, not a
-// parse failure, keyed by input with the reason reported.
-//
-// Negative cases are inputs a fixture author built to be rejected.
-//
-// Recipient runs that mix a personal name, a business name and an attention
-// line are not decomposed. Project US@ v1.0 pp.34-35 removes ATTN lines but
-// keeps a business name, and nothing in the tags says where one ends and the
-// other begins, so guessing BusinessName here would be invented data. The two
-// below are the only Recipient runs in the fixtures that contain a business
-// name (audited for #240); the rest are person names, "ATTN: regus", and an
-// account number.
-var knownUnsettled = map[string]string{
-	"LEXI HAGENSON 860 w Blackhawk 305 CHICAGO ll. 60642—2534": "negative case: LL is not a region",
+// overridesName is the checked-in file of per-case overrides, next to this
+// source. See loadOverrides.
+const overridesName = "overrides.json"
 
-	"CORPORATE TRAVEL MICHAEL A CASOLO ATTN SHELIA LEWIS 77 w WACKER DR SUITE 1800 CHICAGO IL 60601": "recipient run mixes business name, person and ATTN",
-	"MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606":           "recipient run mixes person and business name",
+// override replaces what the generator would emit for one input, and says why.
+// With no Want the case is left unsettled with Reason as the report text: the
+// missing WantFields is a decision, not a parse failure. With a Want those
+// fields are the expected answer instead of the normalizer's.
+//
+// Prefer fixing the normalizer, which fixes every input and not one; an
+// override is for a fixture the normalizer cannot be right about, such as a
+// negative case a fixture author built to be rejected, or a Recipient run that
+// mixes a business name with a person (Project US@ v1.0 pp.34-35 removes ATTN
+// lines but keeps a business name, and nothing in the tags says where one ends,
+// so guessing BusinessName would be invented data). Each entry needs a Reason
+// for the reviewer of the diff that adds it (go-projectusat#241).
+type override struct {
+	Input  string      `json:"input"`
+	Reason string      `json:"reason"`
+	Want   *wantFields `json:"want,omitempty"`
+}
+
+// wantFields is the JSON form of an expected address.Address, named after its
+// fields. POBox stands in for Type, the only type the mapping produces.
+type wantFields struct {
+	POBox               bool   `json:"poBox,omitempty"`
+	BusinessName        string `json:"businessName,omitempty"`
+	PrimaryNumber       string `json:"primaryNumber,omitempty"`
+	Predirectional      string `json:"predirectional,omitempty"`
+	StreetName          string `json:"streetName,omitempty"`
+	StreetSuffix        string `json:"streetSuffix,omitempty"`
+	Postdirectional     string `json:"postdirectional,omitempty"`
+	SecondaryDesignator string `json:"secondaryDesignator,omitempty"`
+	SecondaryNumber     string `json:"secondaryNumber,omitempty"`
+	City                string `json:"city,omitempty"`
+	Region              string `json:"region,omitempty"`
+	Postal              string `json:"postal,omitempty"`
+	Country             string `json:"country,omitempty"`
+}
+
+func (w wantFields) address() *address.Address {
+	a := &address.Address{
+		BusinessName:        w.BusinessName,
+		PrimaryNumber:       w.PrimaryNumber,
+		Predirectional:      w.Predirectional,
+		StreetName:          w.StreetName,
+		StreetSuffix:        w.StreetSuffix,
+		Postdirectional:     w.Postdirectional,
+		SecondaryDesignator: w.SecondaryDesignator,
+		SecondaryNumber:     w.SecondaryNumber,
+		City:                w.City,
+		Region:              w.Region,
+		Postal:              w.Postal,
+		Country:             w.Country,
+	}
+	if w.POBox {
+		a.Type = &pobox.POBoxAddress{}
+	}
+	return a
+}
+
+// loadOverrides reads overridesName, keyed by input. It fails on an unknown
+// field, a missing reason, or a repeated input, so a typo cannot silently
+// leave a case un-overridden.
+func loadOverrides(path string) (map[string]override, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	dec := json.NewDecoder(f)
+	dec.DisallowUnknownFields()
+	var list []override
+	if err := dec.Decode(&list); err != nil {
+		return nil, fmt.Errorf("%s: %w", filepath.Base(path), err)
+	}
+	overrides := map[string]override{}
+	for _, o := range list {
+		if o.Reason == "" {
+			return nil, fmt.Errorf("%s: override for %q has no reason", filepath.Base(path), o.Input)
+		}
+		if _, dup := overrides[o.Input]; dup {
+			return nil, fmt.Errorf("%s: %q is overridden twice", filepath.Base(path), o.Input)
+		}
+		overrides[o.Input] = o
+	}
+	return overrides, nil
 }
 
 // generatedCase is one emitted entry: the fixture file, the input string, and
@@ -116,6 +188,12 @@ func main() {
 	pkgDir := filepath.Join(filepath.Dir(self), "..", "..")
 	fixtureDir := filepath.Join(pkgDir, "testdata", "usaddress")
 
+	overrides, err := loadOverrides(filepath.Join(filepath.Dir(self), overridesName))
+	if err != nil {
+		log.Fatalf("usaddressgenerator: %v", err)
+	}
+	used := map[string]bool{}
+
 	n := normalizer.NewContentNomalizer()
 	var cases []generatedCase
 	for _, name := range fixtureFiles {
@@ -128,8 +206,13 @@ func main() {
 			raw, reason := rawAddress(rec.Tags)
 			if raw == nil {
 				c.Unsettled = reason
-			} else if why, ok := knownUnsettled[rec.Input]; ok {
-				c.Unsettled = why
+			} else if o, ok := overrides[rec.Input]; ok {
+				used[rec.Input] = true
+				if o.Want == nil {
+					c.Unsettled = o.Reason
+				} else {
+					c.WantFields = o.Want.address()
+				}
 			} else if normalized, err := n.Normalize(raw); err != nil {
 				c.Unsettled = "normalizer: " + err.Error()
 			} else if again, err := n.Normalize(normalized); err != nil || !again.Equals(normalized) {
@@ -142,6 +225,12 @@ func main() {
 				c.WantFields = normalized
 			}
 			cases = append(cases, c)
+		}
+	}
+
+	for _, input := range slices.Sorted(maps.Keys(overrides)) {
+		if !used[input] {
+			log.Fatalf("usaddressgenerator: %s: %q matches no settleable fixture case; remove it", overridesName, input)
 		}
 	}
 

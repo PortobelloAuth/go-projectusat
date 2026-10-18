@@ -1,0 +1,14 @@
+[
+  {
+    "input": "LEXI HAGENSON 860 w Blackhawk 305 CHICAGO ll. 60642—2534",
+    "reason": "negative case: LL is not a region"
+  },
+  {
+    "input": "CORPORATE TRAVEL MICHAEL A CASOLO ATTN SHELIA LEWIS 77 w WACKER DR SUITE 1800 CHICAGO IL 60601",
+    "reason": "recipient run mixes business name, person and ATTN"
+  },
+  {
+    "input": "MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606",
+    "reason": "recipient run mixes person and business name"
+  }
+]

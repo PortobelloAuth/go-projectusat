@@ -95,6 +95,15 @@ case is left unsettled for any of these reasons:
   vocabulary (region, directionals, street suffix, secondary designator) does
   not recognize the value, or when the PO Box normalizer does not recognize the
   box street line.
+- **A reviewed override.** `internal/usaddressgenerator/overrides.json` holds
+  per-input overrides, each with a mandatory `reason`. With no `want` the case
+  is left unsettled and the reason is reported; with a `want` (fields named as in
+  `address.Address`, `poBox` for the PO Box type) that address replaces the
+  normalizer's. Fix the normalizer first, since that fixes every input; an
+  override is for a fixture no normalizer could be right about, such as a
+  negative case or a recipient run that mixes a business and a person. The
+  generator fails on an unknown field, a missing reason, a repeated input, or an
+  input that matches no case.
 - **The normalizer is not idempotent on the value.** If normalizing the
   normalized address again changes it, the record cannot tell which pass is
   right, so it asserts neither.
