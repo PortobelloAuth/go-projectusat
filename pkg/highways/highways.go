@@ -224,7 +224,7 @@ var highwayLeads = map[string]bool{
 	"FARM": true, "HWY": true, "HIGHWAY": true, "FM": true,
 	"INTERSTATE": true, "I": true, "IH": true, "US": true, "CR": true,
 	"COUNTY": true, "CNTY": true, "TSR": true, "TOWNSHIP": true,
-	"RANCH": true, "STATE": true, "ST": true, "SR": true, "RD": true,
+	"RANCH": true, "PARK": true, "STATE": true, "ST": true, "SR": true, "RD": true,
 	"ROAD": true, "RT": true, "RTE": true, "ROUTE": true, "EXPRESSWAY": true,
 }
 
@@ -435,6 +435,12 @@ func matchHighwayCore(tokens []string) ([]string, bool) {
 		return withRouteAndSuffixes([]string{"RANCH", "ROAD"}, tokens[2:]), true
 	}
 
+	// --- Park ---
+	// PARK (RD|ROAD) N
+	if tokens[0] == "PARK" && len(tokens) >= 3 && isRoad(tokens[1]) && isRouteID(tokens[2]) {
+		return withRouteAndSuffixes([]string{"PARK", "ROAD"}, tokens[2:]), true
+	}
+
 	// --- State highway / road / route ---
 	// STATE|ST (HWY|HIGHWAY|RD|ROAD|RT|RTE|ROUTE) N
 	if isStateWord(tokens[0]) && len(tokens) >= 3 {
@@ -581,7 +587,7 @@ func isRouteID(t string) bool {
 	switch t {
 	case "HWY", "HIGHWAY", "RD", "ROAD", "RT", "RTE", "ROUTE",
 		"BYP", "BYPASS", "FRONTAGE", "COUNTY", "CNTY", "STATE", "ST",
-		"TOWNSHIP", "RANCH", "US", "FM", "INTERSTATE", "EXPRESSWAY",
+		"TOWNSHIP", "RANCH", "PARK", "US", "FM", "INTERSTATE", "EXPRESSWAY",
 		"SR", "CR", "TSR", "IH", "I":
 		return false
 	}

@@ -1,9 +1,13 @@
 package highways
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
+	"github.com/PortobelloAuth/go-projectusat/pkg/region"
 )
 
 // maxSpan bounds how many tokens a highway name can cover: four for the
@@ -69,6 +73,7 @@ func Claims(tokens []token.Token) []claim.Claim {
 			if err != nil {
 				continue
 			}
+			normalized = inRegion(normalized, tokens[start+length:])
 
 			// Both checks are filters with no side effects, so their order
 			// does not change which spans are claimed. The recognizer goes
@@ -112,4 +117,26 @@ func splitsCompoundDirectional(tokens []token.Token, start, end int) bool {
 	}
 
 	return false
+}
+
+// inRegion reads a highway name in the region its address is in, which is the
+// last region named after it. PR leads Puerto Rico's highways everywhere but
+// Texas, where it is the state's Park Road: PR 462 in LEONARD TX is PARK ROAD
+// 462, and a Texas address cannot be on a Puerto Rico highway (#238).
+func inRegion(name string, after []token.Token) string {
+	if route, ok := strings.CutPrefix(name, "PR HIGHWAY "); ok && lastRegion(after) == "TX" {
+		return "PARK ROAD " + route
+	}
+	return name
+}
+
+// lastRegion returns the code of the last region named in tokens, or "" when
+// none is.
+func lastRegion(tokens []token.Token) string {
+	for _, t := range slices.Backward(tokens) {
+		if r, err := region.NormalizeRegion(t.Text); err == nil {
+			return r
+		}
+	}
+	return ""
 }
