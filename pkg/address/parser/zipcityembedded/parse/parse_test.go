@@ -935,7 +935,7 @@ func TestALeadingSecondaryLeavesAnAddressThatMeansWhatItSaysAlone(t *testing.T) 
 
 // PR leads Puerto Rico's own highways, PR HIGHWAY 2, the way KY leads
 // Kentucky's. In a mainland address it is not that: PR 462 in Texas is a Park
-// or Private Road depending on the state, so it stays as written (#238).
+// or Private Road, so it stays as written (#238).
 func TestPRIsAHighwayOnlyInPuertoRico(t *testing.T) {
 	p, err := parse.New()
 	if err != nil {
