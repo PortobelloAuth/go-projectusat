@@ -932,3 +932,34 @@ func TestALeadingSecondaryLeavesAnAddressThatMeansWhatItSaysAlone(t *testing.T) 
 		})
 	}
 }
+
+// PR is two designators. In Puerto Rico it leads the commonwealth's own
+// highways, PR HIGHWAY 2, the way KY leads Kentucky's. In Texas it is the
+// state's Park Road, which TxDOT signs PR 462 and which a Texas address cannot
+// mean as Puerto Rico. The last line decides which (#238); the long form is
+// read as itself, so the Texas reading is a fixed point.
+func TestPRIsReadByTheRegionOfTheLastLine(t *testing.T) {
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+
+	for _, tc := range []struct {
+		in, street string
+	}{
+		{"519 PR 462, LEONARD TX 75452", "PARK ROAD 462"},
+		{"519 PR 462\nLEONARD TX 75452", "PARK ROAD 462"},
+		{"519 PARK ROAD 462\nLEONARD TX 75452", "PARK ROAD 462"},
+		{"519 PARK RD 462\nLEONARD TX 75452", "PARK ROAD 462"},
+		{"123 PR 2\nSAN JUAN PR 00901", "PR HIGHWAY 2"},
+	} {
+		a, err := p.Parse(tc.in)
+		if err != nil {
+			t.Errorf("Parse(%q): %v", tc.in, err)
+			continue
+		}
+		if a.StreetName != tc.street {
+			t.Errorf("Parse(%q).StreetName = %q, want %q", tc.in, a.StreetName, tc.street)
+		}
+	}
+}

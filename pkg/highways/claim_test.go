@@ -1,6 +1,7 @@
 package highways_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
@@ -155,6 +156,25 @@ func TestClaimsAreOrderedLongestFirst(t *testing.T) {
 	}
 	if claims[0].Parts[0].Value != "HIGHWAY 11 BYP" {
 		t.Errorf("got %q, want the bypass abbreviated as a suffix", claims[0].Parts[0].Value)
+	}
+}
+
+// PR is Puerto Rico's highway everywhere but Texas, where it is the state's
+// Park Road. The last region in the address is the one that decides (#238).
+func TestClaimsReadPRInTheRegionOfTheAddress(t *testing.T) {
+	for _, tc := range []struct{ in, span, want string }{
+		{"519 PR 462 LEONARD TX 75452", "PR 462", "PARK ROAD 462"},
+		{"519 PR 462, LEONARD, TEXAS", "PR 462", "PARK ROAD 462"},
+		{"123 PR 2\nSAN JUAN PR 00901", "PR 2", "PR HIGHWAY 2"},
+		{"123 PR 2 AUSTIN CO", "PR 2", "PR HIGHWAY 2"},
+		{"123 PR 2", "PR 2", "PR HIGHWAY 2"},
+	} {
+		tokens := token.Tokenize(tc.in)
+		got := flatten(tokens, highways.Claims(tokens))
+		want := reading{tc.span, claim.PartStreetName, claim.ConfidenceStrong, tc.want}
+		if !slices.Contains(got, want) {
+			t.Errorf("Claims(%q) = %+v, want it to include %+v", tc.in, got, want)
+		}
 	}
 }
 
