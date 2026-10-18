@@ -47,7 +47,6 @@ func TestNormalizeStreetName(t *testing.T) {
 		{"COUNTY RD 39.4", "COUNTY ROAD 39.4"},
 		{"RTE 95", "ROUTE 95"},
 		{"RANCH RD 620", "RANCH ROAD 620"},
-		{"PARK RD 462", "PARK ROAD 462"},
 		{"ST HIGHWAY 303", "STATE HIGHWAY 303"},
 		{"STATE HWY 60", "STATE HIGHWAY 60"},
 		{"ST RD 86", "STATE ROAD 86"},

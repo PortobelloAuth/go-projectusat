@@ -73,7 +73,9 @@ func Claims(tokens []token.Token) []claim.Claim {
 			if err != nil {
 				continue
 			}
-			normalized = inRegion(normalized, tokens[start+length:])
+			if outsidePuertoRico(normalized, tokens[start+length:]) {
+				continue
+			}
 
 			// Both checks are filters with no side effects, so their order
 			// does not change which spans are claimed. The recognizer goes
@@ -119,15 +121,17 @@ func splitsCompoundDirectional(tokens []token.Token, start, end int) bool {
 	return false
 }
 
-// inRegion reads a highway name in the region its address is in, which is the
-// last region named after it. PR leads Puerto Rico's highways everywhere but
-// Texas, where it is the state's Park Road: PR 462 in LEONARD TX is PARK ROAD
-// 462, and a Texas address cannot be on a Puerto Rico highway (#238).
-func inRegion(name string, after []token.Token) string {
-	if route, ok := strings.CutPrefix(name, "PR HIGHWAY "); ok && lastRegion(after) == "TX" {
-		return "PARK ROAD " + route
+// outsidePuertoRico reports whether name is a Puerto Rico highway in an address
+// whose last region is a different one. PR leads Puerto Rico's highways, but in
+// a mainland address it is an ambiguous street type (PARK ROAD or PRIVATE ROAD
+// by state), so the highway reading is dropped and PR 462 in LEONARD TX stays
+// as written (#238). Without a region the reading stands.
+func outsidePuertoRico(name string, after []token.Token) bool {
+	if !strings.HasPrefix(name, "PR HIGHWAY ") {
+		return false
 	}
-	return name
+	r := lastRegion(after)
+	return r != "" && r != "PR"
 }
 
 // lastRegion returns the code of the last region named in tokens, or "" when

@@ -159,21 +159,24 @@ func TestClaimsAreOrderedLongestFirst(t *testing.T) {
 	}
 }
 
-// PR is Puerto Rico's highway everywhere but Texas, where it is the state's
-// Park Road. The last region in the address is the one that decides (#238).
-func TestClaimsReadPRInTheRegionOfTheAddress(t *testing.T) {
-	for _, tc := range []struct{ in, span, want string }{
-		{"519 PR 462 LEONARD TX 75452", "PR 462", "PARK ROAD 462"},
-		{"519 PR 462, LEONARD, TEXAS", "PR 462", "PARK ROAD 462"},
-		{"123 PR 2\nSAN JUAN PR 00901", "PR 2", "PR HIGHWAY 2"},
-		{"123 PR 2 AUSTIN CO", "PR 2", "PR HIGHWAY 2"},
-		{"123 PR 2", "PR 2", "PR HIGHWAY 2"},
+// PR leads Puerto Rico's highways. A mainland region after it means the
+// address is not in Puerto Rico, so the highway reading is dropped (#238).
+func TestClaimsReadPRAsAHighwayOnlyOutsideTheMainland(t *testing.T) {
+	for _, tc := range []struct {
+		in, span, name string
+		highway        bool
+	}{
+		{"519 PR 462 LEONARD TX 75452", "PR 462", "PR HIGHWAY 462", false},
+		{"519 PR 462, LEONARD, TEXAS", "PR 462", "PR HIGHWAY 462", false},
+		{"123 PR 2 AUSTIN CO", "PR 2", "PR HIGHWAY 2", false},
+		{"123 PR 2\nSAN JUAN PR 00901", "PR 2", "PR HIGHWAY 2", true},
+		{"123 PR 2", "PR 2", "PR HIGHWAY 2", true},
 	} {
 		tokens := token.Tokenize(tc.in)
 		got := flatten(tokens, highways.Claims(tokens))
-		want := reading{tc.span, claim.PartStreetName, claim.ConfidenceStrong, tc.want}
-		if !slices.Contains(got, want) {
-			t.Errorf("Claims(%q) = %+v, want it to include %+v", tc.in, got, want)
+		want := reading{tc.span, claim.PartStreetName, claim.ConfidenceStrong, tc.name}
+		if slices.Contains(got, want) != tc.highway {
+			t.Errorf("Claims(%q) = %+v, want highway reading %v", tc.in, got, tc.highway)
 		}
 	}
 }

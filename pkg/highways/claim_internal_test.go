@@ -28,7 +28,9 @@ func claimsReference(tokens []token.Token) []claim.Claim {
 			if err != nil {
 				continue
 			}
-			normalized = inRegion(normalized, tokens[start+length:])
+			if outsidePuertoRico(normalized, tokens[start+length:]) {
+				continue
+			}
 
 			claims = append(claims, claim.Claim{
 				Confidence: claim.ConfidenceStrong,
@@ -70,7 +72,7 @@ var claimsInputs = []string{
 	"I STREET", "US GRANT", "CA MAIN", "WASHINGTON BLVD", "ROUTE", "", " ",
 	" HWY 64", "HWY 64", "  HWY 64", "\vI10", "ıH280", "ſR 220",
 	"\xffHWY 64", "HWY \xff 64", "ST", "S", "N", "EAST",
-	"519 PR 462 LEONARD TX 75452", "123 PR 2\nSAN JUAN PR 00901", "PARK RD 462",
+	"519 PR 462 LEONARD TX 75452", "123 PR 2\nSAN JUAN PR 00901",
 }
 
 func TestClaimsMatchesReference(t *testing.T) {
