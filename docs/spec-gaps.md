@@ -61,9 +61,13 @@ directional, a city word, a street suffix.
 `NormalizeStreetName` applies its steps in a fixed order, and the order is the
 decision (`pkg/address/normalizer/normalizerfn.go`). Region abbreviation runs
 last so that its output is never handed to a step that might reinterpret it:
-`NEBRASKA` must not become `NORTHEAST`, and `MONTANA TREASURE AVENUE` must
-settle on `MT TREASURE AVE` rather than round-trip to `MOUNT TREASURE AVE`
-([#165](https://github.com/PortobelloAuth/go-projectusat/issues/165)). The
+`NEBRASKA` must not become `NORTHEAST`
+([#165](https://github.com/PortobelloAuth/go-projectusat/issues/165)). A head
+word whose abbreviation the city-word step would read back (`MONTANA` to `MT`
+to `MOUNT`) is left spelled out, so `MONTANA TREASURE AVENUE` stays
+`MONTANA TREASURE AVE` and normalization is idempotent
+([#235](https://github.com/PortobelloAuth/go-projectusat/issues/235)); `MONTANA`
+is the default reading of a head `MT` until the data says otherwise. The
 city-word step reads a head-position `ST`/`STE`/`MT`/`FT` as
 `SAINT`/`SAINTE`/`MOUNT`/`FORT`
 ([#114](https://github.com/PortobelloAuth/go-projectusat/issues/114)).
