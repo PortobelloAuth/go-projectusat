@@ -959,3 +959,83 @@ func TestPRIsAHighwayOnlyInPuertoRico(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#231, #232, #233: a directional, ordinal or suffix fused to a
+// number is split off only where the street data holds the street that
+// results. Where it does not, the token is read as written: 123A is a real
+// primary number, and nothing here may take that away.
+func TestItSplitsAFusedNumberOnlyWhereTheStreetDataHasTheStreet(t *testing.T) {
+	cases := []struct {
+		source                                string
+		primary, predirectional, name, suffix string
+	}{
+		// #231: an ordinal street name fused to its suffix.
+		{"250 E 133RDST, BRONX, NY 10454", "250", "E", "133RD", "ST"},
+		{"250 E 133ST, BRONX, NY 10454", "250", "E", "133RD", "ST"},
+		// #232: a directional or a street name fused to the primary number.
+		{"400E 30ST, NEW YORK, NY 10016", "400", "E", "30TH", "ST"},
+		{"199HENRY ST, BROOKLYN, NY 11201", "199", "", "HENRY", "ST"},
+		// #233: a directional fused to a numbered street.
+		{"60 E135TH ST, NEW YORK, NY 10037", "60", "E", "135TH", "ST"},
+		{"70 E115 ST, NEW YORK, NY 10029", "70", "E", "115TH", "ST"},
+		// Controls: already split, and a lettered primary number the data
+		// gives no reason to split.
+		{"60 E 135TH ST, NEW YORK, NY 10037", "60", "E", "135TH", "ST"},
+		{"123A HENRY ST, BROOKLYN, NY 11201", "123A", "", "HENRY", "ST"},
+		// The street as typed is one the data has (E 30TH ST is found as a
+		// directional variant of 30TH ST), so there is nothing for a split to
+		// promote and 400E stands.
+		{"400E 30TH ST, NEW YORK, NY 10016", "400E", "", "30TH", "ST"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.PrimaryNumber != tc.primary || got.Predirectional != tc.predirectional || got.StreetName != tc.name || got.StreetSuffix != tc.suffix {
+			t.Errorf("%q: got %q|%q|%q|%q, want %q|%q|%q|%q", tc.source,
+				got.PrimaryNumber, got.Predirectional, got.StreetName, got.StreetSuffix,
+				tc.primary, tc.predirectional, tc.name, tc.suffix)
+		}
+	}
+}
+
+// go-projectusat#235: a conflicted abbreviation in a street name (MT, ST, CT,
+// NE, DR) is spelled out before the read only where zipcity's conflicted
+// abbreviation filter supports exactly one spelling beside its neighbors.
+// Anything else is left as written, for the normalizer to settle on the
+// abbreviation.
+func TestItSpellsOutAConflictedAbbreviationOnlyWhereTheNameDataSettlesIt(t *testing.T) {
+	cases := []struct {
+		source, name string
+	}{
+		{"1 MT VERNON AVE, WASHINGTON, DC 20001", "MOUNT VERNON"},
+		{"1 MT ZION RD, WASHINGTON, DC 20001", "MOUNT ZION"},
+		{"1 ST CLAIR AVE, CLEVELAND, OH 44114", "SAINT CLAIR"},
+		// No reading, or more than one: left as written.
+		{"1 MT TREASURE AVE, WASHINGTON, DC 20001", "MT TREASURE"},
+		{"1 MT SKY AVE, WASHINGTON, DC 20001", "MT SKY"},
+		{"1 MONTANA SKY AVE, WASHINGTON, DC 20001", "MONTANA SKY"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.StreetName != tc.name {
+			t.Errorf("%q: street name %q, want %q", tc.source, got.StreetName, tc.name)
+		}
+	}
+}

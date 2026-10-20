@@ -15,6 +15,7 @@ package parse
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -129,6 +130,8 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	if best == nil {
 		return nil, ErrNoReading
 	}
+	tokens = p.spellOut(tokens, best)
+	tokens = p.unfuse(tokens, best)
 	p.streetWindow(tokens, best)
 	return best.Address, nil
 }
@@ -325,6 +328,284 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 		*best = *window
 		return
 	}
+}
+
+// spellOut spells out a conflicted abbreviation in the street name — MT, ST,
+// CT, NE, DR — where the name data settles which word it stands for, re-reads
+// the tokens with that word written in full, and returns the tokens it read.
+//
+// go-projectusat#235. MT TREASURE is MONTANA TREASURE and MT VERNON is MOUNT
+// VERNON, and nothing in the token tells the two apart, so no rule in the
+// normalizer can be both right and idempotent. zipcity's conflicted
+// abbreviation filter can: it lists the spellings the data has seen the word
+// stand for beside its neighbors. A word is rewritten only where exactly one
+// listed spelling is longer than the word itself, so this only ever spells an
+// abbreviation out — never MONTANA into MOUNT — and a word the data has seen
+// either way, or not at all, is left as written for the normalizer, which
+// keeps the abbreviation.
+//
+// Only the word heading the street name is asked about, which is where MOUNT,
+// SAINT and FORT sit and where the normalizer's own head rule looks. Further
+// in, a conflicted word is far more often a suffix or a directional the name
+// absorbed — SPRING ST NW, COUNTY ROAD NE — and spelling it out there breaks
+// the standard's own p.17 example.
+//
+// The re-read is kept unless the street the data recognized as written is
+// lost by spelling it out.
+func (p *Parser) spellOut(tokens []token.Token, best *address.CandidateAddress) []token.Token {
+	spelled := slices.Clone(tokens)
+	changed := false
+	for _, i := range heads(best, claim.PartStreetName) {
+		var next string
+		if slices.Contains(covered(best, claim.PartStreetName), i+1) {
+			next = strings.ToUpper(tokens[i+1].Text)
+		}
+		word := strings.ToUpper(tokens[i].Text)
+		readings, err := p.zipcity.ConflictedAbbreviationReadings(word, "", next)
+		if err != nil {
+			return tokens
+		}
+		// zipcity answers a spelling (COURT) with the readings of its
+		// abbreviation (CT COURT CONNECTICUT), and does not export which word
+		// is the abbreviation. Every one its filter knows is two letters, so a
+		// longer word is already spelled out and is not one to rewrite.
+		if len(word) != 2 {
+			continue
+		}
+		longer := slices.DeleteFunc(readings, func(r string) bool { return len(r) <= len(word) })
+		if len(longer) == 1 {
+			spelled[i].Text = longer[0]
+			changed = true
+		}
+	}
+	if !changed {
+		return tokens
+	}
+
+	reread := p.readLine(spelled, true)
+	if reread == nil {
+		return tokens
+	}
+	r := reference{}
+	if p.agrees(r, best.Address) && !p.agrees(r, reread.Address) {
+		return tokens
+	}
+	*best = *reread
+	return spelled
+}
+
+// fusedNumber is a number with letters run onto its end: 400E, 199HENRY,
+// 133ST, 133RDST. fusedDirectional is a directional run onto the front of a
+// number: E135TH, E115.
+var (
+	fusedNumber      = regexp.MustCompile(`^(\d+)([A-Z]+)$`)
+	fusedDirectional = regexp.MustCompile(`^(NE|NW|SE|SW|N|S|E|W)(\d+)([A-Z]*)$`)
+)
+
+// unfuse splits a directional, a street name or a suffix off a number it was
+// typed against, where the street data holds the street that results, and
+// returns the tokens it read.
+//
+// go-projectusat#231, #232 and #233. 400E 30ST is 400 E 30TH ST, 199HENRY ST
+// is 199 HENRY ST, and E135TH ST is E 135TH ST, but 123A is a primary number
+// as written and nothing in the token says which is which. The data does: a
+// split is taken only when the reading as typed is not a street zipcity
+// recognizes and the split reading is, which is streetWindow's rule — data
+// promotes and never rejects. A split never fires against a street the data
+// already has, and where the data has nothing to say the tokens stand.
+//
+// Each fused token in the primary number or street name offers its splits,
+// and the combinations are re-read with the most splits first, up to
+// maxUnfused re-reads.
+func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []token.Token {
+	if !recognizable(best.Address) {
+		return tokens
+	}
+	r := reference{}
+	if p.agrees(r, best.Address) {
+		return tokens
+	}
+
+	var choices []fused
+	for _, i := range covered(best, claim.PartPrimaryNumber, claim.PartStreetName) {
+		if words := splits(tokens[i].Text); len(words) > 0 {
+			choices = append(choices, fused{i, words})
+		}
+	}
+	// A directional leading a primary number is the Wisconsin grid form
+	// (N165 W2123) and is written that way on purpose; only a street name
+	// has a directional fused onto it by mistake (E135TH).
+	choices = slices.DeleteFunc(choices, func(f fused) bool {
+		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(covered(best, claim.PartStreetName), f.at)
+	})
+
+	// Combinations grow as a power of the fused tokens; past a few there is no
+	// typo left to recover, only a run of codes.
+	if len(choices) > maxFused {
+		return tokens
+	}
+
+	// Every combination of one split or none per token, the most splits first.
+	var combinations [][]int
+	var walk func(picked []int)
+	walk = func(picked []int) {
+		if len(picked) == len(choices) {
+			combinations = append(combinations, slices.Clone(picked))
+			return
+		}
+		for k := range len(choices[len(picked)].words) + 1 {
+			walk(append(picked, k))
+		}
+	}
+	walk(nil)
+	sort.SliceStable(combinations, func(a, b int) bool {
+		return splitCount(combinations[a], choices) > splitCount(combinations[b], choices)
+	})
+
+	reads := 0
+	for _, c := range combinations {
+		if splitCount(c, choices) == 0 || reads == maxUnfused {
+			break
+		}
+		reads++
+		split := tokens
+		for n := len(choices) - 1; n >= 0; n-- {
+			if c[n] < len(choices[n].words) {
+				split = splice(split, choices[n].at, choices[n].words[c[n]])
+			}
+		}
+		reread := p.readLine(split, true)
+		if reread == nil || !recognizable(reread.Address) || !p.agrees(r, reread.Address) {
+			continue
+		}
+		*best = *reread
+		return split
+	}
+	return tokens
+}
+
+// maxUnfused caps the re-reads unfuse makes for one address, and maxFused the
+// fused tokens it will consider.
+const (
+	maxUnfused = 8
+	maxFused   = 3
+)
+
+// fused is a token unfuse may split, at its index, with the ways to split it.
+type fused struct {
+	at    int
+	words [][]string
+}
+
+// splitCount is how many tokens a combination splits; index len(words) is the
+// token left as typed.
+func splitCount(c []int, choices []fused) int {
+	n := 0
+	for i, k := range c {
+		if k < len(choices[i].words) {
+			n++
+		}
+	}
+	return n
+}
+
+// splits lists the ways a fused token can be written as two, or none where it
+// is not fused. An ordinal (133RD, 1ST) is not fused.
+func splits(text string) [][]string {
+	if m := fusedDirectional.FindStringSubmatch(text); m != nil {
+		if m[3] == "" {
+			return [][]string{{m[1], m[2]}, {m[1], ordinal(m[2])}}
+		}
+		return [][]string{{m[1], m[2] + m[3]}}
+	}
+	m := fusedNumber.FindStringSubmatch(text)
+	if m == nil || ordinal(m[1]) == text {
+		return nil
+	}
+	if th := ordinal(m[1]); strings.HasPrefix(text, th) {
+		return [][]string{{th, text[len(th):]}}
+	}
+	return [][]string{{m[1], m[2]}, {ordinal(m[1]), m[2]}}
+}
+
+// ordinal writes a number as the ordinal street names use: 1ST, 2ND, 13TH.
+func ordinal(n string) string {
+	tens, ones := "", n[len(n)-1:]
+	if len(n) > 1 {
+		tens = n[len(n)-2 : len(n)-1]
+	}
+	switch {
+	case tens == "1":
+		return n + "TH"
+	case ones == "1":
+		return n + "ST"
+	case ones == "2":
+		return n + "ND"
+	case ones == "3":
+		return n + "RD"
+	}
+	return n + "TH"
+}
+
+// splice replaces the token at i with one token per word, on the same line and
+// after the same comma, renumbering the positions after it on that line.
+func splice(tokens []token.Token, i int, words []string) []token.Token {
+	out := slices.Clone(tokens[:i])
+	for k, w := range words {
+		t := tokens[i]
+		t.Text, t.Position = w, t.Position+k
+		if k > 0 {
+			t.FollowsComma = -1
+		}
+		out = append(out, t)
+	}
+	for _, t := range tokens[i+1:] {
+		if t.Line == tokens[i].Line {
+			t.Position += len(words) - 1
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// covered lists, in order, the token indices a reading's claims assign to any
+// of parts.
+func covered(best *address.CandidateAddress, parts ...claim.Part) []int {
+	var at []int
+	for _, c := range best.Claims {
+		for _, part := range c.Parts {
+			if !slices.Contains(parts, part.Part) {
+				continue
+			}
+			for i := part.Start; i < part.Start+part.Length; i++ {
+				if !slices.Contains(at, i) {
+					at = append(at, i)
+				}
+			}
+		}
+	}
+	slices.Sort(at)
+	return at
+}
+
+// heads lists the first token index of each claim part a reading assigns to
+// part.
+func heads(best *address.CandidateAddress, part claim.Part) []int {
+	var at []int
+	for _, c := range best.Claims {
+		for _, cp := range c.Parts {
+			if cp.Part == part {
+				at = append(at, cp.Start)
+			}
+		}
+	}
+	return at
+}
+
+// agrees reports whether zipcity recognizes a reading's street.
+func (p *Parser) agrees(r reference, a *address.Address) bool {
+	ans, ok := p.streetAgreement(r, a)
+	return ok && ans == agrees
 }
 
 // recognizable reports whether a reading's street names a place zipcity could
