@@ -774,8 +774,10 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 		wantSuffix   string
 	}{
 		{"MONTANA TREASURE", "AVENUE", "MT TREASURE", "AVE"},
-		// A literal MT (not derived from a region) still expands to MOUNT.
-		{"MT VERNON", "", "MOUNT VERNON", ""},
+		// A literal MT is left as MT: MOUNT VERNON and MONTANA TREASURE are
+		// both MT here, and the parser, not the normalizer, spells MT out
+		// where zipcity's name data says which it is (#235).
+		{"MT VERNON", "", "MT VERNON", ""},
 	} {
 		got, err := n.Normalize(&address.Address{
 			PrimaryNumber: "8100",

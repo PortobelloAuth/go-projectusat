@@ -489,6 +489,17 @@ func ExpandCityInStreetNameFn(sn string, o normalizeroptions.AddressNormalizatio
 	// parser that puts the direction in the name.
 	// TODO: adjust this hueristic is to allow MT ST HELENS ST to become
 	// MOUNT SAINT HELENS ST
+	//
+	// Not where the head word is a region abbreviation that
+	// AbbreviateRegionInStreetNameFn writes: MT is MONTANA as
+	// often as MOUNT, the word alone cannot say which, and
+	// reading the normalizer's own MT back as MOUNT flips
+	// MONTANA TREASURE on every pass (#235). The parser spells
+	// MT out from zipcity's name data where that data settles
+	// it; what reaches here as MT stays MT.
+	if ri, _ := region.Info(parts[0], false); len(parts) > 1 && ri != nil && ri.PossibleStreetName && ri.Short == parts[0] {
+		return sn, nil
+	}
 	if !OnlyDirectionsFollow(parts) {
 		if full, err := cityabbreviations.Expand(parts[0]); err == nil {
 			parts[0] = full
