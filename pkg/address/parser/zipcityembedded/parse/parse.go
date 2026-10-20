@@ -432,9 +432,10 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 			choices = append(choices, fused{i, words})
 		}
 	}
-	// A directional leading a primary number is the Wisconsin grid form
-	// (N165 W2123) and is written that way on purpose; only a street name
-	// has a directional fused onto it by mistake (E135TH).
+	// The Wisconsin grid form is two space-separated tokens, each a directional
+	// leading a number (N165 W2123), and both are the primary number as written,
+	// so they are not split; only a street name has a directional fused onto it
+	// by mistake (E135TH).
 	choices = slices.DeleteFunc(choices, func(f fused) bool {
 		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(covered(best, claim.PartStreetName), f.at)
 	})
