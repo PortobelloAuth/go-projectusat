@@ -543,16 +543,6 @@ func AbbreviateRegionInStreetNameFn(sn string, o AddressNormalizationOptions) (s
 
 			regioninfo, _ := region.Info(snphrase, false)
 			if regioninfo != nil && regioninfo.PossibleStreetName {
-				// Leave a head word spelled out when ExpandCityInStreetNameFn
-				// would read its abbreviation as a city word: MONTANA
-				// TREASURE must not become MT TREASURE, which the next pass
-				// expands to MOUNT TREASURE (#235). MONTANA is the default
-				// reading until the data says otherwise.
-				if i == 0 && len(parts) > 1 && !OnlyDirectionsFollow(parts) {
-					if _, err := cityabbreviations.Expand(regioninfo.Short); err == nil {
-						break
-					}
-				}
 				snp = regioninfo.Short
 				changed = true
 

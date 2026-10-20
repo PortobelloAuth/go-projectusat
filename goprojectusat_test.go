@@ -39,7 +39,7 @@ var csharpParityCases = []NormalizeTestCase{
 	{"8004 CT Drive", "8004 CONNECTICUT DR", "state"},
 	{"8006 CT CT", "8006 CONNECTICUT CT", "state"},
 	{"8011 WY WY", "8011 WYOMING WAY", "state"},
-	{"8100 Montana Treasure Avenue", "8100 MONTANA TREASURE AVE", "state-part"},
+	{"8100 Montana Treasure Avenue", "8100 MT TREASURE AVE", "state-part"},
 	{"8103 South Carolina county road 22", "8103 SC COUNTY ROAD 22", "state-part"},
 	{"8105 TN 431", "8105 TN HIGHWAY 431", "hwy"},
 	{"8007 EAST KENTUCKY KEY", "8007 E KENTUCKY KY", "state"},

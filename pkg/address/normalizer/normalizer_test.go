@@ -772,7 +772,7 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 		wantName     string
 		wantSuffix   string
 	}{
-		{"MONTANA TREASURE", "AVENUE", "MONTANA TREASURE", "AVE"},
+		{"MONTANA TREASURE", "AVENUE", "MT TREASURE", "AVE"},
 		// A literal MT (not derived from a region) still expands to MOUNT.
 		{"MT VERNON", "", "MOUNT VERNON", ""},
 	} {
