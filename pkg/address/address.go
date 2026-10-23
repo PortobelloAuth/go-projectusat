@@ -88,14 +88,14 @@ type Address struct {
 	parserMarker interface{}
 }
 
-// SetParser is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It
-// sets an unexported field to a passed in unexported private sentinel value that a parser can use with CheckParser
+// SetParserMarker is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It
+// sets an unexported field to a passed in unexported private sentinel value that a parser can use with CheckParserMarker
 // to check if it created this address.
 func (a *Address) SetParserMarker(p interface{}) {
 	a.parserMarker = p
 }
 
-// CheckParser is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It is
+// CheckParserMarker is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It is
 // used to check the unexported parserMarker against a sentinel value so a parser can check whether it has
 // created the address or not. This enables Normalize() to check whether it should pass the address through the
 // parser or not.

@@ -106,5 +106,5 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		return nil, fmt.Errorf("normalized address type does not match input type")
 	}
 
-	return out, nil
+	return out.Clone(), nil
 }

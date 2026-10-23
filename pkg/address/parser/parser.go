@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/zipcityembedded"
 )
@@ -71,6 +73,8 @@ func New(opts ...AddressParsingOptions) (*Parser, error) {
 	}, nil
 }
 
+var NoValidatedAddress = fmt.Errorf("No validated address")
+
 func (p *Parser) Parse(source string) (*address.Address, error) {
 	addr, err := p.parser(source)
 	if err != nil {
@@ -79,6 +83,9 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	vaddr, err := p.verifier(addr)
 	if err != nil {
 		return nil, err
+	}
+	if vaddr == nil {
+		return nil, NoValidatedAddress
 	}
 	vaddr.SetParserMarker(p.sentinel)
 	return vaddr, nil
