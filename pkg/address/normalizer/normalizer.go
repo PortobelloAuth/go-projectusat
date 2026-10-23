@@ -6,37 +6,28 @@ import (
 	"regexp"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 var whitespace = regexp.MustCompile(`\s+`)
-
-// AddressNormalizationOptions controls exchange/matching variants of normalization.
-// Zero value is content form (the same settings used by NewContentNormalizer).
-type AddressNormalizationOptions struct {
-	// Fuzzy enables FuzzyNormalize* for region and street suffix.
-	Fuzzy bool
-	// SecondaryAsHash rewrites secondary designators to "#" for matching
-	// (not correct for content storage; for exchange/matching only).
-	SecondaryAsHash bool
-	DiacriticMode   diacritics.DiacriticMode
-}
 
 // NormalizingAddressType is an interface describing an AddressType that has a
 // Normalize() method because it implements its own Normalization rules. It may
 // or may not choose to employ normalization from shared address components, etc.
 type NormalizingAddressType interface {
 	address.AddressType
-	Normalize(a *address.Address, o AddressNormalizationOptions) (*address.Address, error)
+	Normalize(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error)
 }
 
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
 type Normalizer struct {
-	Options AddressNormalizationOptions
+	Options normalizeroptions.AddressNormalizationOptions
 }
 
-func NewNomalizer(opts AddressNormalizationOptions) *Normalizer {
+func NewNomalizer(opts normalizeroptions.AddressNormalizationOptions) *Normalizer {
 	return &Normalizer{
 		Options: opts,
 	}
@@ -62,7 +53,7 @@ func NewContentNomalizer() *Normalizer {
 // directionals, street suffix, secondary designator) returns an error.
 func NewMatchingNomalizer() *Normalizer {
 	return &Normalizer{
-		Options: AddressNormalizationOptions{
+		Options: normalizeroptions.AddressNormalizationOptions{
 			// Fuzzy:           true,  // TODO: decide whether we really want this to be true or false
 			SecondaryAsHash: true,
 			DiacriticMode:   diacritics.SubstituteDiacritics,
@@ -87,8 +78,8 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		return normalized, nil
 	}
 
-	out, err := normalizeAddressFn(a, n.Options)
-	if err != nil && !errors.Is(err, Done) {
+	out, err := normalizerfn.NormalizeAddressFn(a, n.Options)
+	if err != nil && !errors.Is(err, normalizerfn.Done) {
 		return nil, err
 	}
 

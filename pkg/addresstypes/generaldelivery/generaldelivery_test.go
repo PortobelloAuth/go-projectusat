@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/generaldelivery"
 )
 
@@ -148,7 +148,7 @@ func TestNormalizeAddsTheDashNineNineNineNineAddOnToABareZip(t *testing.T) {
 				Postal:     c.postal,
 			}
 
-			got, err := gd.Normalize(in, normalizer.AddressNormalizationOptions{})
+			got, err := gd.Normalize(in, normalizeroptions.AddressNormalizationOptions{})
 			if err != nil {
 				t.Fatalf("Normalize(%q) error = %v, want nil", c.postal, err)
 			}
@@ -171,7 +171,7 @@ func TestNormalizeRejectsAStreetNameThatIsNotGeneralDelivery(t *testing.T) {
 		Postal:     "33602",
 	}
 
-	if _, err := gd.Normalize(in, normalizer.AddressNormalizationOptions{}); err == nil {
+	if _, err := gd.Normalize(in, normalizeroptions.AddressNormalizationOptions{}); err == nil {
 		t.Fatal("Normalize error = nil, want an error")
 	}
 }
@@ -186,7 +186,7 @@ func TestNormalizeRejectsAnAddressOfTheWrongType(t *testing.T) {
 		Postal:     "33602",
 	}
 
-	if _, err := gd.Normalize(in, normalizer.AddressNormalizationOptions{}); err == nil {
+	if _, err := gd.Normalize(in, normalizeroptions.AddressNormalizationOptions{}); err == nil {
 		t.Fatal("Normalize error = nil, want an error")
 	}
 }
@@ -202,7 +202,7 @@ func TestNormalizeRunsTheTypeSpecificStreetNameNormalization(t *testing.T) {
 		Postal:     "33602",
 	}
 
-	got, err := gd.Normalize(in, normalizer.AddressNormalizationOptions{})
+	got, err := gd.Normalize(in, normalizeroptions.AddressNormalizationOptions{})
 	if err != nil {
 		t.Fatalf("Normalize error = %v, want nil", err)
 	}

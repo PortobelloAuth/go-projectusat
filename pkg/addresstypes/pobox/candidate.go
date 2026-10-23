@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/lastline"
@@ -48,7 +49,7 @@ func (p *POBoxAddress) FormatStreetLine(a *address.Address) string {
 	return textutil.JoinNonEmpty(" ", a.StreetName, a.PrimaryNumber, a.Detail)
 }
 
-func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+func (p *POBoxAddress) Normalize(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if _, ok := a.Type.(*POBoxAddress); !ok {
 		return nil, fmt.Errorf("address is not a *POBoxAddress")
 	}
@@ -71,7 +72,7 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizer.AddressNormali
 	return out, nil
 }
 
-func normalizePOBoxStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+func normalizePOBoxStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := NormalizeStreetName(a.StreetName)
 		if err != nil {
@@ -82,14 +83,14 @@ func normalizePOBoxStreetNameFn(a *address.Address, o normalizer.AddressNormaliz
 	return a, nil
 }
 
-var normalizePOBoxStreetLine = normalizer.ComposeNormalizationFn(
-	normalizer.NormalizePrimaryNumberFn,
+var normalizePOBoxStreetLine = normalizerfn.ComposeNormalizationFn(
+	normalizerfn.NormalizePrimaryNumberFn,
 	normalizePOBoxStreetNameFn,
 )
 
-var normalizePOBoxAddressFn = normalizer.ComposeNormalizationFn(
-	normalizer.NormalizeLastLine,
-	normalizer.NormalizeOtherParts,
+var normalizePOBoxAddressFn = normalizerfn.ComposeNormalizationFn(
+	normalizerfn.NormalizeLastLine,
+	normalizerfn.NormalizeOtherParts,
 	normalizePOBoxStreetLine,
 )
 

@@ -4,7 +4,8 @@ import (
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
@@ -337,7 +338,7 @@ func normalizedStreet(t *testing.T, source string) (*address.Address, string) {
 		t.Fatalf("%q: no reading", source)
 	}
 
-	out, err := (&puertorico.PuertoRicoAddress{}).Normalize(top.Address, normalizer.AddressNormalizationOptions{})
+	out, err := (&puertorico.PuertoRicoAddress{}).Normalize(top.Address, normalizeroptions.AddressNormalizationOptions{})
 	if err != nil {
 		t.Fatalf("%q: Normalize: %v", source, err)
 	}
@@ -408,8 +409,8 @@ func TestTheDirectionalClaimLandsInTheField(t *testing.T) {
 // generic normalizer (#165): MONTANA abbreviates to MT and must not then be
 // read back as MOUNT by ExpandCityInStreetNameFn.
 func TestRegionAbbreviationRunsLast(t *testing.T) {
-	got, err := puertorico.NormalizePuertoRicoStreetName("MONTANA TREASURE", normalizer.AddressNormalizationOptions{})
-	if err != nil && err != normalizer.Done {
+	got, err := puertorico.NormalizePuertoRicoStreetName("MONTANA TREASURE", normalizeroptions.AddressNormalizationOptions{})
+	if err != nil && err != normalizerfn.Done {
 		t.Fatalf("NormalizePuertoRicoStreetName: %v", err)
 	}
 	if got != "MT TREASURE" {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/generaldelivery"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
@@ -284,7 +285,7 @@ func TestNormalizerWithOptionsSecondaryAsHash(t *testing.T) {
 	}
 
 	// Exchange/matching form rewrites to #.
-	n := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{SecondaryAsHash: true})
+	n := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{SecondaryAsHash: true})
 	got, err := n.Normalize(in)
 	if err != nil {
 		t.Fatalf("NormalizeWithOptions: %v", err)
@@ -362,7 +363,7 @@ func TestNormalizerWithOptionsSecondaryAsHashNotNumbered(t *testing.T) {
 	}
 
 	// Exchange/matching form rewrites to #.
-	n := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{SecondaryAsHash: true})
+	n := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{SecondaryAsHash: true})
 	got, err := n.Normalize(in)
 	if err != nil {
 		t.Fatalf("NormalizeWithOptions: %v", err)
@@ -391,12 +392,12 @@ func TestNormalizerWithOptionsFuzzy(t *testing.T) {
 	if _, err := cn.Normalize(in); err == nil {
 		t.Fatal("expected error without Fuzzy for mild typos")
 	}
-	zn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{})
+	zn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{})
 	if _, err := zn.Normalize(in); err == nil {
 		t.Fatal("expected error with zero Options for mild typos")
 	}
 
-	fn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{Fuzzy: true})
+	fn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{Fuzzy: true})
 	got, err := fn.Normalize(in)
 	if err != nil {
 		t.Fatalf("Fuzzy: unexpected error: %v", err)
@@ -420,7 +421,7 @@ func TestNormalizerWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// Default / empty: preserve diacritics (content form).
-	zn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{})
+	zn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{})
 	preserved, err := zn.Normalize(in)
 	if err != nil {
 		t.Fatalf("empty DiacriticMode: %v", err)
@@ -431,7 +432,7 @@ func TestNormalizerWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// substitute: strip Project US@ diacritics then re-upper (Substitute returns lower).
-	dsn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{DiacriticMode: diacritics.SubstituteDiacritics})
+	dsn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{DiacriticMode: diacritics.SubstituteDiacritics})
 	sub, err := dsn.Normalize(in)
 	if err != nil {
 		t.Fatalf("substitute: %v", err)
@@ -447,7 +448,7 @@ func TestNormalizerWithOptionsDiacriticMode(t *testing.T) {
 	}
 
 	// transliterate: anyascii path then upper.
-	dtn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{DiacriticMode: diacritics.TransliterateDiacritics})
+	dtn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{DiacriticMode: diacritics.TransliterateDiacritics})
 	tr, err := dtn.Normalize(in)
 	if err != nil {
 		t.Fatalf("transliterate: %v", err)
@@ -477,7 +478,7 @@ func TestContentNormalizerIsZeroOptions(t *testing.T) {
 	}
 	cn := normalizer.NewContentNomalizer()
 	a, err1 := cn.Normalize(in)
-	zn := normalizer.NewNomalizer(normalizer.AddressNormalizationOptions{})
+	zn := normalizer.NewNomalizer(normalizeroptions.AddressNormalizationOptions{})
 	b, err2 := zn.Normalize(in)
 	if err1 != nil || err2 != nil {
 		t.Fatalf("errors: Normalize=%v WithOptions=%v", err1, err2)

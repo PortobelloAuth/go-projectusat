@@ -19,7 +19,8 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/generaldelivery"
@@ -1101,15 +1102,14 @@ func streetForQuery(a *address.Address) string {
 	// An unreadable vocabulary word is the normalizer declining to rewrite
 	// the street, not a reason to decline to ask about it: the fields as
 	// written are still the best rendering available.
-	if normalized, err := queryNormalizer.Normalize(street); err == nil {
+	// NormalizeStreetLine renders the street parts the way Pub 28 expects it
+	// and zipcity stores it.
+	o := *normalizeroptions.Content()
+	if normalized, err := normalizerfn.NormalizeStreetLine(street, o); err == nil {
 		street = normalized
 	}
 	return textutil.JoinNonEmpty(" ", street.Predirectional, street.StreetName, street.StreetSuffix, street.Postdirectional)
 }
-
-// queryNormalizer renders a street the way the caller will write it. It holds
-// no state between calls.
-var queryNormalizer = normalizer.NewContentNomalizer()
 
 // answerFor turns a bloom filter's boolean into the agreement it represents.
 func answerFor(present bool) agreement {

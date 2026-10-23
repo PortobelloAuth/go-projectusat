@@ -10,6 +10,7 @@ import (
 	goprojectusat "github.com/PortobelloAuth/go-projectusat"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/parsertest"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
@@ -161,7 +162,7 @@ func TestNormalize(t *testing.T) {
 // USAt against the old behaviour rather than against itself.
 func legacyNormalize(source string, opts ...goprojectusat.USAtNormalizeOption) (string, error) {
 	popts := &parser.AddressParsingOptions{}
-	nopts := &normalizer.AddressNormalizationOptions{}
+	nopts := &normalizeroptions.AddressNormalizationOptions{}
 	fopts := &address.FormatOptions{}
 	for _, fn := range opts {
 		err := fn(popts, nopts, fopts)

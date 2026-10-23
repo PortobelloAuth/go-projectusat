@@ -1,11 +1,13 @@
-package normalizer
+package normalizerfn
 
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/businesswords"
 	"github.com/PortobelloAuth/go-projectusat/pkg/cityabbreviations"
 	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
@@ -17,16 +19,18 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
+var whitespace = regexp.MustCompile(`\s+`)
+
 // Done exists as a sentinel error to allow for early returns from complex compositions
 // of normalization functions without requiring a special status type. In that regard it
 // is somewhat analogous to EOF for IO streams.
 var Done = fmt.Errorf("normalization complete")
 
 // An AddressNormalizationFn takes an Address and normalizes some aspect of it
-type AddressNormalizationFn func(a *address.Address, o AddressNormalizationOptions) (*address.Address, error)
+type AddressNormalizationFn func(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error)
 
 func ComposeNormalizationFn(fns ...AddressNormalizationFn) AddressNormalizationFn {
-	return func(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+	return func(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 		out := a.Clone()
 		var err error
 		for _, fn := range fns {
@@ -57,7 +61,7 @@ Consumers will likely use LastLine, Other (optionally), and either StreetLine or
 make it up
 */
 
-var normalizeAddressFn = ComposeNormalizationFn(
+var NormalizeAddressFn = ComposeNormalizationFn(
 	NormalizeLastLine,
 	NormalizeOtherParts,
 	NormalizeStreetLine,
@@ -91,7 +95,7 @@ var NormalizeStreetLine = ComposeNormalizationFn(
 	NormalizeDirectionals,
 )
 
-func NormalizeBusinessNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeBusinessNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.BusinessName) > 0 {
 		out, err := textutil.FreeTextField(a.BusinessName, o.DiacriticMode)
 
@@ -149,7 +153,7 @@ func AbbreviateBusinessWords(bn string) string {
 	return bn
 }
 
-func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeAreaFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Area) > 0 {
 		out, err := textutil.FreeTextField(a.Area, o.DiacriticMode)
 		if err != nil {
@@ -161,7 +165,7 @@ func NormalizeAreaFn(a *address.Address, o AddressNormalizationOptions) (*addres
 	return a, nil
 }
 
-func NormalizePostalStationFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizePostalStationFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.PostalStation) > 0 {
 		out, err := textutil.FreeTextField(a.PostalStation, o.DiacriticMode)
 		if err != nil {
@@ -173,7 +177,7 @@ func NormalizePostalStationFn(a *address.Address, o AddressNormalizationOptions)
 	return a, nil
 }
 
-func NormalizeDetailFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeDetailFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Detail) > 0 {
 		out, err := textutil.FreeTextField(a.Detail, o.DiacriticMode)
 		if err != nil {
@@ -184,7 +188,7 @@ func NormalizeDetailFn(a *address.Address, o AddressNormalizationOptions) (*addr
 	return a, nil
 }
 
-func NormalizeStreetNameFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		// TODO: break NormalizeStreetName up in to composable
 		out, err := NormalizeStreetName(a.StreetName, o)
@@ -196,7 +200,7 @@ func NormalizeStreetNameFn(a *address.Address, o AddressNormalizationOptions) (*
 	return a, nil
 }
 
-func NormalizePrimaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizePrimaryNumberFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.PrimaryNumber) > 0 {
 		out, err := textutil.FreeTextField(a.PrimaryNumber, o.DiacriticMode)
 		if err != nil {
@@ -207,7 +211,7 @@ func NormalizePrimaryNumberFn(a *address.Address, o AddressNormalizationOptions)
 	return a, nil
 }
 
-func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeSecondaryDesignatorFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	out := a.Clone()
 	v := textutil.BaseField(a.SecondaryDesignator)
 	if v == "" {
@@ -235,7 +239,7 @@ func NormalizeSecondaryDesignatorFn(a *address.Address, o AddressNormalizationOp
 	return out, nil
 }
 
-func NormalizePredirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizePredirectionalFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Predirectional)
 	if v == "" {
 		a.Predirectional = v
@@ -251,7 +255,7 @@ func NormalizePredirectionalFn(a *address.Address, o AddressNormalizationOptions
 	return a, nil
 }
 
-func NormalizePostdirectionalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizePostdirectionalFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Postdirectional)
 	if v == "" {
 		a.Postdirectional = v
@@ -267,7 +271,7 @@ func NormalizePostdirectionalFn(a *address.Address, o AddressNormalizationOption
 	return a, nil
 }
 
-func NormalizeStreetSuffixFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeStreetSuffixFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.StreetSuffix)
 	if v == "" {
 		a.StreetSuffix = v
@@ -289,7 +293,7 @@ func NormalizeStreetSuffixFn(a *address.Address, o AddressNormalizationOptions) 
 	return a, nil
 }
 
-func NormalizeSecondaryNumberFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeSecondaryNumberFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.SecondaryNumber) > 0 {
 		out, err := textutil.FreeTextField(a.SecondaryNumber, o.DiacriticMode)
 		if err != nil {
@@ -300,7 +304,7 @@ func NormalizeSecondaryNumberFn(a *address.Address, o AddressNormalizationOption
 	return a, nil
 }
 
-func NormalizeCityFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeCityFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.City) == 0 {
 		return a, nil
 	}
@@ -328,7 +332,7 @@ func NormalizeCityFn(a *address.Address, o AddressNormalizationOptions) (*addres
 	return a, nil
 }
 
-func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeRegionFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	v := textutil.BaseField(a.Region)
 	if v != "" {
 		var err error
@@ -346,7 +350,7 @@ func NormalizeRegionFn(a *address.Address, o AddressNormalizationOptions) (*addr
 	return a, nil
 }
 
-func NormalizePostalFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizePostalFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Postal) == 0 {
 		return a, nil
 	}
@@ -359,7 +363,7 @@ func NormalizePostalFn(a *address.Address, o AddressNormalizationOptions) (*addr
 	return a, nil
 }
 
-func NormalizeCountryFn(a *address.Address, o AddressNormalizationOptions) (*address.Address, error) {
+func NormalizeCountryFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.Country) == 0 {
 		return a, nil
 	}
@@ -388,11 +392,11 @@ func NormalizeCountryFn(a *address.Address, o AddressNormalizationOptions) (*add
 // - street suffix expansion (within street name, not street suffix field)
 // - highway street name normalization
 
-type StringNormalizationFn func(sn string, o AddressNormalizationOptions) (string, error)
+type StringNormalizationFn func(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error)
 type StreetNameNormalizationFn StringNormalizationFn
 
 func ComposeStreetNameNormalizationFn(fns ...StreetNameNormalizationFn) StreetNameNormalizationFn {
-	return func(sn string, o AddressNormalizationOptions) (string, error) {
+	return func(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 		out := sn[:]
 		var err error
 		for _, fn := range fns {
@@ -409,7 +413,7 @@ func ComposeStreetNameNormalizationFn(fns ...StreetNameNormalizationFn) StreetNa
 	}
 }
 
-func NormalizeTextFn(sn string, o AddressNormalizationOptions) (string, error) {
+func NormalizeTextFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - uppercase
 	// - diacritic fold
 	// - UNKNOWN removal
@@ -427,7 +431,7 @@ func NormalizeTextFn(sn string, o AddressNormalizationOptions) (string, error) {
 	return out, nil
 }
 
-func OnlyRegionStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func OnlyRegionStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - single-word region replacement (prefers full state names)
 	regioninfo, _ := region.Info(sn, false)
 	if regioninfo != nil && regioninfo.PossibleStreetName {
@@ -438,7 +442,7 @@ func OnlyRegionStreetNameFn(sn string, o AddressNormalizationOptions) (string, e
 	return sn, nil
 }
 
-func OnlySingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func OnlySingleLetterStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - early return for single letter street name
 	if len(sn) == 1 {
 		return sn, Done
@@ -447,7 +451,7 @@ func OnlySingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (str
 	return sn, nil
 }
 
-func PrefixAndSingleLetterStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func PrefixAndSingleLetterStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - “suffix-first” single letter preference (AVENUE D)
 	parts := strings.Split(sn, " ")
 	if len(parts) == 2 && len(parts[1]) == 1 {
@@ -460,7 +464,7 @@ func PrefixAndSingleLetterStreetNameFn(sn string, o AddressNormalizationOptions)
 	return sn, nil
 }
 
-func ExpandCityInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func ExpandCityInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - city name expansion (Saint, Sainte, Fort, Mount)
 	parts := strings.Split(sn, " ")
 
@@ -495,7 +499,7 @@ func ExpandCityInStreetNameFn(sn string, o AddressNormalizationOptions) (string,
 	return sn, nil
 }
 
-func ExpandStreetTypeInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func ExpandStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - street suffix expansion (within street name, not street suffix field)
 	parts := strings.Split(sn, " ")
 	changed := false
@@ -514,7 +518,7 @@ func ExpandStreetTypeInStreetNameFn(sn string, o AddressNormalizationOptions) (s
 	return sn, nil
 }
 
-func AbbreviateRegionInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func AbbreviateRegionInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - region name abbreviation (when other words are also present)
 	regioninfo, _ := region.Info(sn, false)
 	if regioninfo != nil && regioninfo.PossibleStreetName {
@@ -557,7 +561,7 @@ func AbbreviateRegionInStreetNameFn(sn string, o AddressNormalizationOptions) (s
 	return sn, nil
 }
 
-func ExpandDirectionalsInStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func ExpandDirectionalsInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - single word directional abbreviation expansion (within street name, not directional fields)
 	// - directional abbreviation expansion (within street name, not directional fields)
 	parts := strings.Split(sn, " ")
@@ -589,7 +593,7 @@ func ExpandDirectionalsInStreetNameFn(sn string, o AddressNormalizationOptions) 
 	return sn, nil
 }
 
-func NormalizeHighwayStreetNameFn(sn string, o AddressNormalizationOptions) (string, error) {
+func NormalizeHighwayStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
 	// - highway street name normalization
 	// An error means the name is not a highway, which is common.
 	hw, err := highways.NormalizeStreetName(sn)

@@ -7,20 +7,21 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
 
 // Export the primary interfaces for the package
 
-type USAtNormalizeOption func(*parser.AddressParsingOptions, *normalizer.AddressNormalizationOptions, *address.FormatOptions) error
+type USAtNormalizeOption func(*parser.AddressParsingOptions, *normalizeroptions.AddressNormalizationOptions, *address.FormatOptions) error
 
 // WithParsedAddressVerifier provides a `parser.AddessVerifier` function to a USAt instance's
 // internal parser. This function is called after an address has been parsed by the internal
 // parser (which may be a custom address parser or `parser.ParsingFunc`) and before the
 // internal address normalizer.
 func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		popts.Verifier = v
 		return nil
 	}
@@ -33,7 +34,7 @@ func WithParsedAddressVerifier(v parser.AddressVerifier) USAtNormalizeOption {
 // an API or running a database. However, they may not serve every use case. WithCustomAddressParser
 // lets a caller use their own data store, API, or other custom parsing logic.
 func WithCustomAddressParser(cp parser.ParsingFunc) USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		popts.CustomParser = cp
 		return nil
 	}
@@ -43,7 +44,7 @@ func WithCustomAddressParser(cp parser.ParsingFunc) USAtNormalizeOption {
 // it - particularly `streetsuffixes` and `region` - have support for fuzzy matching using
 // Damerau-Levenshtein edit distance.
 func WithFuzzyNormalization() USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.Fuzzy = true
 		return nil
 	}
@@ -59,7 +60,7 @@ func WithFuzzyNormalization() USAtNormalizeOption {
 // NOTE: for addresses with multiple secodary units (i.e. BLDG 5 STE 110) only the first
 // will be normalized to `"#"`. This is not likely to be the desired behavior.
 func WithSecondaryAsHash() USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.SecondaryAsHash = true
 		return nil
 	}
@@ -77,7 +78,7 @@ func WithSecondaryAsHash() USAtNormalizeOption {
 //   - `diacritics.TransliterateDiacritics` transliterates diacritics, replacing
 //     them with ASCII letter combinations that commonly represent them.
 func WithDiacriticNormalization(d diacritics.DiacriticMode) USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		nopts.DiacriticMode = d
 		return nil
 	}
@@ -89,10 +90,11 @@ func WithDiacriticNormalization(d diacritics.DiacriticMode) USAtNormalizeOption 
 // their standard abbreviations (`APT`, `STE`, …). These same options are used by default.
 // However, using this Option clearly indicates the caller's intent to use content normalization.
 func WithContentNormalization() USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
-		nopts.Fuzzy = false
-		nopts.SecondaryAsHash = false
-		nopts.DiacriticMode = diacritics.KeepDiacritics
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+		c := normalizeroptions.Content()
+		nopts.Fuzzy = c.Fuzzy
+		nopts.SecondaryAsHash = c.SecondaryAsHash
+		nopts.DiacriticMode = c.DiacriticMode
 		return nil
 	}
 }
@@ -102,17 +104,18 @@ func WithContentNormalization() USAtNormalizeOption {
 // of certain vocabularies, diacritic substitution, and numbered secondary designators converted
 // to `"#"`.
 func WithMatchingNormalization() USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
-		nopts.Fuzzy = true
-		nopts.SecondaryAsHash = true
-		nopts.DiacriticMode = diacritics.SubstituteDiacritics
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+		m := normalizeroptions.Matching()
+		nopts.Fuzzy = m.Fuzzy
+		nopts.SecondaryAsHash = m.SecondaryAsHash
+		nopts.DiacriticMode = m.DiacriticMode
 		return nil
 	}
 }
 
 // WithSingleLineFormatting specifies that addresses should be formatted without newlines.
 func WithSingleLineFormatting() USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		fopts.SingleLine = true
 		return nil
 	}
@@ -122,7 +125,7 @@ func WithSingleLineFormatting() USAtNormalizeOption {
 // in a format with diacritics substituted or transliterated, without changing the source address
 // data.
 func WithDiacriticFormatting(d diacritics.DiacriticMode) USAtNormalizeOption {
-	return func(popts *parser.AddressParsingOptions, nopts *normalizer.AddressNormalizationOptions, fopts *address.FormatOptions) error {
+	return func(popts *parser.AddressParsingOptions, nopts *normalizeroptions.AddressNormalizationOptions, fopts *address.FormatOptions) error {
 		fopts.DiacriticMode = d
 		return nil
 	}
@@ -157,7 +160,7 @@ type Option = USAtNormalizeOption
 // parser, the default parser's state is never loaded at all.
 func New(opts ...Option) (*USAt, error) {
 	popts := parser.AddressParsingOptions{}
-	nopts := normalizer.AddressNormalizationOptions{}
+	nopts := normalizeroptions.AddressNormalizationOptions{}
 	fopts := address.FormatOptions{}
 	for _, fn := range opts {
 		if err := fn(&popts, &nopts, &fopts); err != nil {

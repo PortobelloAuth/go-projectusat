@@ -3,7 +3,8 @@ package puertorico_test
 import (
 	"testing"
 
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/puertorico"
@@ -191,8 +192,8 @@ func TestExpandPuertoRicoDirectionalsInStreetName(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizer.AddressNormalizationOptions{})
-			if err != nil && err != normalizer.Done {
+			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizeroptions.AddressNormalizationOptions{})
+			if err != nil && err != normalizerfn.Done {
 				t.Fatalf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) returned error %v", tc.in, err)
 			}
 			if got != tc.want {

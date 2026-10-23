@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
-	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
 
@@ -162,7 +163,7 @@ func (g *GeneralDeliveryAddress) FormatStreetLine(a *address.Address) string {
 // (p.22, quoted above). An existing ZIP+4 is left alone, and an address with
 // no ZIP at all stays ZIP-less: this fills in what the address already has,
 // it does not invent a ZIP the caller never supplied.
-func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if _, ok := a.Type.(*GeneralDeliveryAddress); !ok {
 		return nil, fmt.Errorf("address is not a *GeneralDeliveryAddress")
 	}
@@ -187,7 +188,7 @@ func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizer.Addr
 	return out, nil
 }
 
-func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizer.AddressNormalizationOptions) (*address.Address, error) {
+func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := Normalize(a.StreetName)
 		if err != nil {
@@ -198,8 +199,8 @@ func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizer.Addre
 	return a, nil
 }
 
-var normalizeGeneralDeliveryAddressFn = normalizer.ComposeNormalizationFn(
-	normalizer.NormalizeLastLine,
-	normalizer.NormalizeOtherParts,
+var normalizeGeneralDeliveryAddressFn = normalizerfn.ComposeNormalizationFn(
+	normalizerfn.NormalizeLastLine,
+	normalizerfn.NormalizeOtherParts,
 	normalizeGeneralDeliveryStreetNameFn,
 )

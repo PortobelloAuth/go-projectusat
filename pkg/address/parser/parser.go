@@ -10,6 +10,10 @@ import (
 // issue.
 type AddressVerifier func(*address.Address) (*address.Address, error)
 
+func IdentityVerifier(a *address.Address) (*address.Address, error) {
+	return a, nil
+}
+
 // AddressParsingOptions controls how address parsing is done.
 // The zero value has no Verifier function
 type AddressParsingOptions struct {
@@ -24,10 +28,6 @@ type ParsingFn func(source string) (*address.Address, error)
 
 func (pf ParsingFn) Parse(source string) (*address.Address, error) {
 	return pf(source)
-}
-
-func IdentityVerifier(a *address.Address) (*address.Address, error) {
-	return a, nil
 }
 
 // Parser is used to parse a string in to a Project US@ structured
@@ -72,5 +72,9 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.verifier(addr)
+	vaddr, err := p.verifier(addr)
+	if err != nil {
+		return nil, err
+	}
+	return vaddr, nil
 }
