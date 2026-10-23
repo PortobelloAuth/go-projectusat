@@ -82,6 +82,25 @@ type Address struct {
 	Postal string // ZIP, ZIP+4, or Canadian postal code
 
 	Country string // optional; often blank for domestic
+
+	// parserMarker potentially stores a sentinel value that a parser can use
+	// to check if it created this address.
+	parserMarker interface{}
+}
+
+// SetParser is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It
+// sets an unexported field to a passed in unexported private sentinel value that a parser can use with CheckParser
+// to check if it created this address.
+func (a *Address) SetParserMarker(p interface{}) {
+	a.parserMarker = p
+}
+
+// CheckParser is only intended for use by "github.com/PortobelloAuth/go-projectusat/pkg/address/parser". It is
+// used to check the unexported parserMarker against a sentinel value so a parser can check whether it has
+// created the address or not. This enables Normalize() to check whether it should pass the address through the
+// parser or not.
+func (a *Address) CheckParserMarker(p interface{}) bool {
+	return a.parserMarker == p
 }
 
 // Equals reports whether two addresses say the same thing. A nil address

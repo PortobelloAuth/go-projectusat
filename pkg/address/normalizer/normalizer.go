@@ -26,6 +26,8 @@ type Normalizer struct {
 	Options normalizeroptions.AddressNormalizationOptions
 }
 
+// NewParsingNomalizer creates a Normalizer that is coupled to a Parser. It will check whether
+// an address it recieves was parsed by the Parser and, if not, format and reparse it.
 func NewParsingNomalizer(p *parser.Parser, opts normalizeroptions.AddressNormalizationOptions) *Normalizer {
 	return &Normalizer{
 		parser:  p,

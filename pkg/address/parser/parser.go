@@ -30,9 +30,12 @@ func (pf ParsingFn) Parse(source string) (*address.Address, error) {
 	return pf(source)
 }
 
+type sentinel struct{}
+
 // Parser is used to parse a string in to a Project US@ structured
 // patient address.
 type Parser struct {
+	sentinel *sentinel
 	verifier AddressVerifier
 	parser   ParsingFn
 }
@@ -62,6 +65,7 @@ func New(opts ...AddressParsingOptions) (*Parser, error) {
 	}
 
 	return &Parser{
+		sentinel: &sentinel{},
 		verifier: v,
 		parser:   p,
 	}, nil
@@ -76,9 +80,10 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	if err != nil {
 		return nil, err
 	}
+	vaddr.SetParserMarker(p.sentinel)
 	return vaddr, nil
 }
 
 func (p *Parser) IsOurs(a *address.Address) bool {
-	return true
+	return a.CheckParserMarker(p.sentinel)
 }
