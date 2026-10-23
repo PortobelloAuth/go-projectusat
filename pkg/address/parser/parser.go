@@ -78,3 +78,7 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	}
 	return vaddr, nil
 }
+
+func (p *Parser) IsOurs(a *address.Address) bool {
+	return true
+}

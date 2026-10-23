@@ -175,7 +175,7 @@ func New(opts ...Option) (*USAt, error) {
 
 	return &USAt{
 		parser:     p,
-		normalizer: normalizer.NewNomalizer(nopts),
+		normalizer: normalizer.NewParsingNomalizer(p, nopts),
 		format:     fopts,
 	}, nil
 }

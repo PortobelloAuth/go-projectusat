@@ -3,15 +3,13 @@ package normalizer
 import (
 	"errors"
 	"fmt"
-	"regexp"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizerfn"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
 )
-
-var whitespace = regexp.MustCompile(`\s+`)
 
 // NormalizingAddressType is an interface describing an AddressType that has a
 // Normalize() method because it implements its own Normalization rules. It may
@@ -24,7 +22,15 @@ type NormalizingAddressType interface {
 // Address is a Project US@ structured patient address.
 // Empty string means unknown / not present.
 type Normalizer struct {
+	parser  *parser.Parser
 	Options normalizeroptions.AddressNormalizationOptions
+}
+
+func NewParsingNomalizer(p *parser.Parser, opts normalizeroptions.AddressNormalizationOptions) *Normalizer {
+	return &Normalizer{
+		parser:  p,
+		Options: opts,
+	}
 }
 
 func NewNomalizer(opts normalizeroptions.AddressNormalizationOptions) *Normalizer {
@@ -41,7 +47,7 @@ func NewNomalizer(opts normalizeroptions.AddressNormalizationOptions) *Normalize
 // vocabulary (region, directionals, street suffix, secondary designator) returns an
 // error.
 func NewContentNomalizer() *Normalizer {
-	return &Normalizer{}
+	return NewNomalizer(*normalizeroptions.Content())
 }
 
 // NewMatchingNomalizer returns a Normalizer with options appropriate for normalizing
@@ -52,18 +58,27 @@ func NewContentNomalizer() *Normalizer {
 // optional fields stay blank. Unrecognized non-empty controlled vocabulary (region,
 // directionals, street suffix, secondary designator) returns an error.
 func NewMatchingNomalizer() *Normalizer {
-	return &Normalizer{
-		Options: normalizeroptions.AddressNormalizationOptions{
-			// Fuzzy:           true,  // TODO: decide whether we really want this to be true or false
-			SecondaryAsHash: true,
-			DiacriticMode:   diacritics.SubstituteDiacritics,
-		},
-	}
+	return NewNomalizer(*normalizeroptions.Matching())
 }
 
 // Normalize applies the Normalizer's AddressNormalizationOptions to the Address
 func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
-	// TODO: how do we detect when the submitted address has the wrong address type?
+	// If our parser didn't parse the address, we'll reparse it to ensure that
+	// the address has the correct address type and values in the correct fields.
+	if n.parser != nil && !n.parser.IsOurs(a) {
+		// If our parser didn't build the address, format it and reparse it
+		f, err := a.Format(address.FormatOptions{
+			SingleLine:    false,
+			DiacriticMode: diacritics.KeepDiacritics,
+		})
+		if err != nil {
+			return nil, err
+		}
+		a, err = n.parser.Parse(f)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// If the address type is an AddressNormalizingType (it implements its own Normalization
 	// rules) employ that Normalization instead of the default.
