@@ -1,6 +1,8 @@
 package region_test
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
@@ -199,5 +201,27 @@ func TestAPhraseOnOneLineIsStillClaimed(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected NEW YORK on its own line to still be claimed")
+	}
+}
+
+// NE is NEBRASKA and NORTHEAST. Nothing in the string says which, so both are
+// offered as street names and the street data picks (#110). A directional that
+// is not also a state abbreviation gets no extra claim.
+func TestClaimsOffersBothNEReadings(t *testing.T) {
+	var streetNames []string
+	for _, c := range region.Claims(token.Tokenize("123 NE ST")) {
+		if c.Parts[0].Part == claim.PartStreetName {
+			streetNames = append(streetNames, c.Parts[0].Value)
+		}
+	}
+	sort.Strings(streetNames)
+	if got := strings.Join(streetNames, ","); got != "NEBRASKA,NORTHEAST" {
+		t.Errorf("NE street-name readings = %q, want NEBRASKA,NORTHEAST", got)
+	}
+
+	for _, c := range region.Claims(token.Tokenize("123 WY ST")) {
+		if c.Parts[0].Part == claim.PartStreetName && c.Parts[0].Value != "WYOMING" {
+			t.Errorf("WY should only be read as WYOMING, got %+v", c)
+		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 )
 
 // maxSpan is the longest region name in the vocabulary, measured in tokens
@@ -76,6 +77,21 @@ func Claims(tokens []token.Token) []claim.Claim {
 						Value:  info.Primary,
 					}},
 				})
+
+				// NE is NORTHEAST as much as NEBRASKA, and nothing in the
+				// string says which. Both are offered as street names and the
+				// street data decides (#110).
+				if direction, err := directionals.NormalizeDirectional(candidate); err == nil {
+					claims = append(claims, claim.Claim{
+						Confidence: claim.ConfidenceLikely,
+						Parts: []claim.ClaimPart{{
+							Start:  start,
+							Length: length,
+							Part:   claim.PartStreetName,
+							Value:  direction,
+						}},
+					})
+				}
 			}
 
 			if info.PossibleCountry {

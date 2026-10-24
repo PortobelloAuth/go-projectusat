@@ -160,6 +160,12 @@ var OursCases = []Case{
 	},
 	{
 		Source: "ours",
+		Note:   "go-projectusat#110: NEBRASKA written out stays NEBRASKA",
+		Input:  "123 NEBRASKA AVE, PORTLAND, OR 97201",
+		Want:   "123 NEBRASKA AVE\nPORTLAND OR 97201",
+	},
+	{
+		Source: "ours",
 		Note:   "last-line-only address",
 		Input:  "Ogden, UT 84401",
 		Want:   "OGDEN UT 84401",
