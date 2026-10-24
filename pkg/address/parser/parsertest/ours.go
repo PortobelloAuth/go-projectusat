@@ -166,6 +166,12 @@ var OursCases = []Case{
 	},
 	{
 		Source: "ours",
+		Note:   "go-projectusat#110: NORTHEAST written out stays NORTHEAST (Aaron's counterexample)",
+		Input:  "841 Northeast Ave, Tallmadge, OH 44278",
+		Want:   "841 NORTHEAST AVE\nTALLMADGE OH 44278",
+	},
+	{
+		Source: "ours",
 		Note:   "last-line-only address",
 		Input:  "Ogden, UT 84401",
 		Want:   "OGDEN UT 84401",
