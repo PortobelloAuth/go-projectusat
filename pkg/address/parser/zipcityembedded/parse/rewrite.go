@@ -1,0 +1,424 @@
+package parse
+
+import (
+	"regexp"
+	"slices"
+	"sort"
+	"strings"
+
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/claim"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/token"
+)
+
+// firmLine reports the topmost physical line as a business name, or "" where
+// none applies.
+//
+// Step 3ii of #17: everything before the last line is address lines, and the
+// topmost of them is the firm. ordinarystreet (and every other address type)
+// reads that topmost line as leftover rather than street, exactly as
+// documented — nothing downstream should try to place tokens a reading left
+// unaccounted for back into that same reading. But a firm name is not part of
+// the reading; it is a fact about the input the reading was never going to
+// carry, which is why Address has its own field for it. So this runs after
+// choose, not inside it: it looks for a leftover run that is the whole first
+// line and nothing more, which is the one shape leftover tokens can take
+// without implicating the reading choose already made.
+//
+// A two line input (street, last line) has nothing above the street to be a
+// firm, so this only fires from three lines up.
+func firmLine(tokens []token.Token, best *address.CandidateAddress) string {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Line < 2 {
+		return ""
+	}
+
+	var topLine int
+	for _, t := range tokens {
+		if t.Line != 0 {
+			break
+		}
+		topLine++
+	}
+	if topLine == 0 {
+		return ""
+	}
+
+	for _, span := range best.Leftover {
+		if span.Start == 0 && span.Length == topLine {
+			return token.Join(tokens[:topLine])
+		}
+	}
+	return ""
+}
+
+// streetWindow slides the left edge of the street right, one token at a time,
+// and takes the first window the data recognizes, rewriting best in place.
+//
+// Step 7 of #17. The right edge is already fixed — the last line closed it in
+// step 2 and step 6 closed it again at the secondary designator — so the only
+// thing left undecided about the street is where it begins. The grammar
+// anchors that at the first token of the address lines and offers no other
+// reading: every candidate ordinarystreet builds for 411 N CENTRAL AVE
+// preceded by two other words puts those two words inside the street name.
+// Measured; it is the same shape leadingSecondary found and the reason both
+// of these are re-reads rather than tie-breaks.
+//
+// Data promotes and never rejects, which here means three things. It runs
+// only with reference data on. It runs only when the grammar's own reading is
+// not one zipcity recognizes, so a street the data has seen is never slid off
+// in favour of a shorter one it has also seen. And it takes a window only on
+// an agrees — a contradiction, a split answer, or a question zipcity declined
+// all leave the grammar's reading exactly where it was. Where the data has
+// nothing to say, and against the TIGER gaps that are the normal case for a
+// small ZIP Code, nothing here fires at all and the grammar decides.
+//
+// What the window slides past is not discarded. The tokens ahead of the
+// street are the shape firmLine already reads as a firm name, so they land in
+// BusinessName — but only where the reading has not already found one, since
+// a firm on its own line above is the better claim on that field.
+func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddress) {
+	if !recognizable(best.Address) {
+		return
+	}
+	r := reference{}
+	if ans, ok := p.streetAgreement(r, best.Address); ok && ans == agrees {
+		return
+	}
+
+	for start, end := 1, token.LineEnd(tokens, 0); start < end; start++ {
+		window := p.readLine(tokens[start:], false)
+		if window == nil || !recognizable(window.Address) {
+			continue
+		}
+		if ans, ok := p.streetAgreement(r, window.Address); !ok || ans != agrees {
+			continue
+		}
+		if window.Address.BusinessName == "" {
+			window.Address.BusinessName = token.Join(tokens[:start])
+		}
+		*best = *window
+		return
+	}
+}
+
+// spellOut spells out a conflicted abbreviation in the street name — MT, ST,
+// CT, NE, DR — where the name data settles which word it stands for, re-reads
+// the tokens with that word written in full, and returns the tokens it read.
+//
+// go-projectusat#235. MT TREASURE is MONTANA TREASURE and MT VERNON is MOUNT
+// VERNON, and nothing in the token tells the two apart, so no rule in the
+// normalizer can be both right and idempotent. zipcity's conflicted
+// abbreviation filter can: it lists the spellings the data has seen the word
+// stand for beside its neighbors. A word is rewritten only where exactly one
+// listed spelling is longer than the word itself, so this only ever spells an
+// abbreviation out — never MONTANA into MOUNT — and a word the data has seen
+// either way, or not at all, is left as written for the normalizer, which
+// keeps the abbreviation.
+//
+// Every word of the street name is asked about, each beside its neighbors in
+// the name: MT TREASURE is MONTANA TREASURE, ROCKY MT is ROCKY MOUNT, and
+// SPRING ST NW is SPRING STREET NORTHWEST. A word the data has seen as the
+// suffix or directional it is, or not at all, has no single longer reading and
+// is left alone.
+//
+// The re-read is kept unless the street the data recognized as written is
+// lost by spelling it out.
+func (p *Parser) spellOut(tokens []token.Token, best *address.CandidateAddress) []token.Token {
+	spelled := slices.Clone(tokens)
+	changed := false
+	name := covered(best, claim.PartStreetName)
+	for _, i := range name {
+		var prev, next string
+		if slices.Contains(name, i-1) {
+			prev = strings.ToUpper(tokens[i-1].Text)
+		}
+		if slices.Contains(name, i+1) {
+			next = strings.ToUpper(tokens[i+1].Text)
+		}
+		word := strings.ToUpper(tokens[i].Text)
+		readings, err := p.zipcity.ConflictedAbbreviationReadings(word, prev, next)
+		if err != nil {
+			return tokens
+		}
+		// Readings come back abbreviation first. A word that is among them
+		// without leading them is already a spelling (COURT of CT COURT
+		// CONNECTICUT), not one to rewrite. A word the data has only seen
+		// spelled out is absent from them (MT beside ZION: MOUNT), and that is
+		// the abbreviation.
+		if i := slices.Index(readings, word); i > 0 {
+			continue
+		}
+		longer := slices.DeleteFunc(readings, func(r string) bool { return len(r) <= len(word) })
+		if len(longer) == 1 {
+			spelled[i].Text = longer[0]
+			changed = true
+		}
+	}
+	if !changed {
+		return tokens
+	}
+
+	reread := p.readLine(spelled, true)
+	if reread == nil {
+		return tokens
+	}
+	r := reference{}
+	if p.agrees(r, best.Address) && !p.agrees(r, reread.Address) {
+		return tokens
+	}
+	*best = *reread
+	return spelled
+}
+
+// fusedNumber is a number with letters run onto its end: 400E, 199HENRY,
+// 133ST, 133RDST; fusedPredirectional is one whose letters are a directional:
+// 400E. fusedDirectional is a directional run onto the front of a number:
+// E135TH, E115.
+var (
+	fusedNumber         = regexp.MustCompile(`^(\d+)([A-Z]+)$`)
+	fusedPredirectional = regexp.MustCompile(`^(\d+)(NE|NW|SE|SW|N|S|E|W)$`)
+	fusedDirectional    = regexp.MustCompile(`^(NE|NW|SE|SW|N|S|E|W)(\d+)([A-Z]*)$`)
+)
+
+// unfuse splits a directional, a street name or a suffix off a number it was
+// typed against, where the street data holds the street that results, and
+// returns the tokens it read.
+//
+// go-projectusat#231, #232 and #233. 400E 30ST is 400 E 30TH ST, 199HENRY ST
+// is 199 HENRY ST, and E135TH ST is E 135TH ST, but 123A is a primary number
+// as written and nothing in the token says which is which. The data does: a
+// split is taken only where zipcity recognizes the street it results in. Data
+// promotes and never rejects, so where the data has nothing to say the tokens
+// stand.
+//
+// Where the street as typed is already one the data has, only a directional
+// run onto the primary number is split off, and only into a predirectional
+// the data has on that street: 400E 30TH ST is 400 E 30TH ST because E 30TH
+// ST exists. The data does not track primary numbers, so it has no evidence
+// for 400E and some for E.
+//
+// Each fused token in the primary number or street name offers its splits,
+// and the combinations are re-read with the most splits first, up to
+// maxUnfused re-reads.
+func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []token.Token {
+	if !recognizable(best.Address) {
+		return tokens
+	}
+	r := reference{}
+	typed := p.agrees(r, best.Address)
+	primary := covered(best, claim.PartPrimaryNumber)
+
+	var choices []fused
+	var predirectional string
+	for _, i := range covered(best, claim.PartPrimaryNumber, claim.PartStreetName) {
+		words := splits(tokens[i].Text)
+		if typed {
+			words = nil
+			if m := fusedPredirectional.FindStringSubmatch(tokens[i].Text); m != nil && slices.Contains(primary, i) {
+				words, predirectional = [][]string{{m[1], m[2]}}, m[2]
+			}
+		}
+		if len(words) > 0 {
+			choices = append(choices, fused{i, words})
+		}
+	}
+	// A primary number led by a directional is the Wisconsin grid form (N165;
+	// see grid), so it is not split; only a street name has a directional
+	// fused onto it by mistake (E135TH).
+	choices = slices.DeleteFunc(choices, func(f fused) bool {
+		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(covered(best, claim.PartStreetName), f.at)
+	})
+
+	// Combinations grow as a power of the fused tokens; past a few there is no
+	// typo left to recover, only a run of codes.
+	if len(choices) > maxFused {
+		return tokens
+	}
+
+	// Every combination of one split or none per token, the most splits first.
+	var combinations [][]int
+	var walk func(picked []int)
+	walk = func(picked []int) {
+		if len(picked) == len(choices) {
+			combinations = append(combinations, slices.Clone(picked))
+			return
+		}
+		for k := range len(choices[len(picked)].words) + 1 {
+			walk(append(picked, k))
+		}
+	}
+	walk(nil)
+	sort.SliceStable(combinations, func(a, b int) bool {
+		return splitCount(combinations[a], choices) > splitCount(combinations[b], choices)
+	})
+
+	reads := 0
+	for _, c := range combinations {
+		if splitCount(c, choices) == 0 || reads == maxUnfused {
+			break
+		}
+		reads++
+		split := tokens
+		for n := len(choices) - 1; n >= 0; n-- {
+			if c[n] < len(choices[n].words) {
+				split = splice(split, choices[n].at, choices[n].words[c[n]])
+			}
+		}
+		reread := p.readLine(split, true)
+		if reread == nil || !recognizable(reread.Address) || !p.agrees(r, reread.Address) {
+			continue
+		}
+		if typed && reread.Address.Predirectional != predirectional {
+			continue
+		}
+		*best = *reread
+		return split
+	}
+	return tokens
+}
+
+// maxUnfused caps the re-reads unfuse makes for one address, and maxFused the
+// fused tokens it will consider.
+const (
+	maxUnfused = 8
+	maxFused   = 3
+)
+
+// fused is a token unfuse may split, at its index, with the ways to split it.
+type fused struct {
+	at    int
+	words [][]string
+}
+
+// splitCount is how many tokens a combination splits; index len(words) is the
+// token left as typed.
+func splitCount(c []int, choices []fused) int {
+	n := 0
+	for i, k := range c {
+		if k < len(choices[i].words) {
+			n++
+		}
+	}
+	return n
+}
+
+// splits lists the ways a fused token can be written as two, or none where it
+// is not fused. An ordinal (133RD, 1ST) is not fused.
+func splits(text string) [][]string {
+	if m := fusedDirectional.FindStringSubmatch(text); m != nil {
+		if m[3] == "" {
+			return [][]string{{m[1], m[2]}, {m[1], ordinal(m[2])}}
+		}
+		return [][]string{{m[1], m[2] + m[3]}}
+	}
+	m := fusedNumber.FindStringSubmatch(text)
+	if m == nil || ordinal(m[1]) == text {
+		return nil
+	}
+	if th := ordinal(m[1]); strings.HasPrefix(text, th) {
+		return [][]string{{th, text[len(th):]}}
+	}
+	return [][]string{{m[1], m[2]}, {ordinal(m[1]), m[2]}}
+}
+
+// ordinal writes a number as the ordinal street names use: 1ST, 2ND, 13TH.
+func ordinal(n string) string {
+	tens, ones := "", n[len(n)-1:]
+	if len(n) > 1 {
+		tens = n[len(n)-2 : len(n)-1]
+	}
+	switch {
+	case tens == "1":
+		return n + "TH"
+	case ones == "1":
+		return n + "ST"
+	case ones == "2":
+		return n + "ND"
+	case ones == "3":
+		return n + "RD"
+	}
+	return n + "TH"
+}
+
+// splice replaces the token at i with one token per word, on the same line and
+// after the same comma, renumbering the positions after it on that line.
+func splice(tokens []token.Token, i int, words []string) []token.Token {
+	out := slices.Clone(tokens[:i])
+	for k, w := range words {
+		t := tokens[i]
+		t.Text, t.Position = w, t.Position+k
+		if k > 0 {
+			t.FollowsComma = -1
+		}
+		out = append(out, t)
+	}
+	for _, t := range tokens[i+1:] {
+		if t.Line == tokens[i].Line {
+			t.Position += len(words) - 1
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// gridHalf is one half of the Wisconsin grid form: a directional and a number,
+// N165 or W2123.
+var gridHalf = regexp.MustCompile(`^(?i)([NSEW])\d+$`)
+
+// grid joins the Wisconsin grid form written as two tokens, N165 W2123, into
+// the one token Project US@ and Pub 28 write, N165W2123. The pair must lead
+// its line and run on both axes, one half N or S and the other E or W.
+func grid(tokens []token.Token) []token.Token {
+	for i := 0; i+1 < len(tokens); i++ {
+		a, b := tokens[i], tokens[i+1]
+		ma, mb := gridHalf.FindStringSubmatch(a.Text), gridHalf.FindStringSubmatch(b.Text)
+		if a.Position != 0 || b.Line != a.Line || b.FollowsComma != -1 || ma == nil || mb == nil ||
+			strings.ContainsAny(ma[1], "NSns") == strings.ContainsAny(mb[1], "NSns") {
+			continue
+		}
+		out := slices.Clone(tokens[:i+1])
+		out[i].Text = a.Text + b.Text
+		for _, t := range tokens[i+2:] {
+			if t.Line == a.Line {
+				t.Position--
+			}
+			out = append(out, t)
+		}
+		return out
+	}
+	return tokens
+}
+
+// covered lists, in order, the token indices a reading's claims assign to any
+// of parts.
+func covered(best *address.CandidateAddress, parts ...claim.Part) []int {
+	var at []int
+	for _, c := range best.Claims {
+		for _, part := range c.Parts {
+			if !slices.Contains(parts, part.Part) {
+				continue
+			}
+			for i := part.Start; i < part.Start+part.Length; i++ {
+				if !slices.Contains(at, i) {
+					at = append(at, i)
+				}
+			}
+		}
+	}
+	slices.Sort(at)
+	return at
+}
+
+// heads lists the first token index of each claim part a reading assigns to
+// part.
+func heads(best *address.CandidateAddress, part claim.Part) []int {
+	var at []int
+	for _, c := range best.Claims {
+		for _, cp := range c.Parts {
+			if cp.Part == part {
+				at = append(at, cp.Start)
+			}
+		}
+	}
+	return at
+}
