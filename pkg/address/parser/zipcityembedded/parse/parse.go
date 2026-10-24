@@ -344,32 +344,37 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 // either way, or not at all, is left as written for the normalizer, which
 // keeps the abbreviation.
 //
-// Only the word heading the street name is asked about, which is where MOUNT,
-// SAINT and FORT sit and where the normalizer's own head rule looks. Further
-// in, a conflicted word is far more often a suffix or a directional the name
-// absorbed — SPRING ST NW, COUNTY ROAD NE — and spelling it out there breaks
-// the standard's own p.17 example.
+// Every word of the street name is asked about, each beside its neighbors in
+// the name: MT TREASURE is MONTANA TREASURE, ROCKY MT is ROCKY MOUNT, and
+// SPRING ST NW is SPRING STREET NORTHWEST. A word the data has seen as the
+// suffix or directional it is, or not at all, has no single longer reading and
+// is left alone.
 //
 // The re-read is kept unless the street the data recognized as written is
 // lost by spelling it out.
 func (p *Parser) spellOut(tokens []token.Token, best *address.CandidateAddress) []token.Token {
 	spelled := slices.Clone(tokens)
 	changed := false
-	for _, i := range heads(best, claim.PartStreetName) {
-		var next string
-		if slices.Contains(covered(best, claim.PartStreetName), i+1) {
+	name := covered(best, claim.PartStreetName)
+	for _, i := range name {
+		var prev, next string
+		if slices.Contains(name, i-1) {
+			prev = strings.ToUpper(tokens[i-1].Text)
+		}
+		if slices.Contains(name, i+1) {
 			next = strings.ToUpper(tokens[i+1].Text)
 		}
 		word := strings.ToUpper(tokens[i].Text)
-		readings, err := p.zipcity.ConflictedAbbreviationReadings(word, "", next)
+		readings, err := p.zipcity.ConflictedAbbreviationReadings(word, prev, next)
 		if err != nil {
 			return tokens
 		}
-		// zipcity answers a spelling (COURT) with the readings of its
-		// abbreviation (CT COURT CONNECTICUT), and does not export which word
-		// is the abbreviation. Every one its filter knows is two letters, so a
-		// longer word is already spelled out and is not one to rewrite.
-		if len(word) != 2 {
+		// Readings come back abbreviation first. A word that is among them
+		// without leading them is already a spelling (COURT of CT COURT
+		// CONNECTICUT), not one to rewrite. A word the data has only seen
+		// spelled out is absent from them (MT beside ZION: MOUNT), and that is
+		// the abbreviation.
+		if i := slices.Index(readings, word); i > 0 {
 			continue
 		}
 		longer := slices.DeleteFunc(readings, func(r string) bool { return len(r) <= len(word) })

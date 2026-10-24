@@ -1018,6 +1018,11 @@ func TestItSpellsOutAConflictedAbbreviationOnlyWhereTheNameDataSettlesIt(t *test
 		{"1 MT VERNON AVE, WASHINGTON, DC 20001", "MOUNT VERNON"},
 		{"1 MT ZION RD, WASHINGTON, DC 20001", "MOUNT ZION"},
 		{"1 ST CLAIR AVE, CLEVELAND, OH 44114", "SAINT CLAIR"},
+		// Not only the head: a conflicted word further into the name.
+		{"1 ROCKY MT RD, WASHINGTON, DC 20001", "ROCKY MOUNT"},
+		// Already spelled out, or a suffix the name absorbed: left alone.
+		{"1 MOUNT VERNON AVE, WASHINGTON, DC 20001", "MOUNT VERNON"},
+		{"1 CONNECTICUT AVE, WASHINGTON, DC 20001", "CONNECTICUT"},
 		// No reading, or more than one: left as written.
 		{"1 MT TREASURE AVE, WASHINGTON, DC 20001", "MT TREASURE"},
 		{"1 MT SKY AVE, WASHINGTON, DC 20001", "MT SKY"},
