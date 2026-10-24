@@ -1128,3 +1128,43 @@ func TestAStreetTheZipHoldsIsNotSlidOffForAnUnknownCityName(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#231 and #233: a bare number, or an ordinal that may have its
+// street suffix run onto it, settles to the ordinal the data holds (#231:
+// normalize toward what the data holds). E 121 ST, E 121ST, E121ST and 219E
+// 121ST are one street, and the data holds it in one form.
+func TestABareNumberSettlesToTheOrdinalTheDataHolds(t *testing.T) {
+	cases := []struct {
+		source                                string
+		primary, predirectional, name, suffix string
+	}{
+		{"219 E 121 ST\nNEW YORK, NY 10035", "219", "E", "121ST", "ST"},
+		{"219 E 121ST\nNEW YORK, NY 10035", "219", "E", "121ST", "ST"},
+		{"219 E121ST\nNEW YORK, NY 10035", "219", "E", "121ST", "ST"},
+		{"219E 121ST\nNEW YORK, NY 10035", "219", "E", "121ST", "ST"},
+		{"400 E 30 ST\nNEW YORK, NY 10016", "400", "E", "30TH", "ST"},
+		// A city name the data does not know does not veto a street the ZIP
+		// holds: NY, NY reads as NEW YORK, NY does.
+		{"541 W 143 ST\nNY, NY 10031", "541", "W", "143RD", "ST"},
+		{"541 W 143 ST\nNEW YORK, NY 10031", "541", "W", "143RD", "ST"},
+		// Control: already the form the data holds.
+		{"219 E 121ST ST\nNEW YORK, NY 10035", "219", "E", "121ST", "ST"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.PrimaryNumber != tc.primary || got.Predirectional != tc.predirectional || got.StreetName != tc.name || got.StreetSuffix != tc.suffix {
+			t.Errorf("%q: got %q|%q|%q|%q, want %q|%q|%q|%q", tc.source,
+				got.PrimaryNumber, got.Predirectional, got.StreetName, got.StreetSuffix,
+				tc.primary, tc.predirectional, tc.name, tc.suffix)
+		}
+	}
+}

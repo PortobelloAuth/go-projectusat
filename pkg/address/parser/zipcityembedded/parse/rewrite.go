@@ -212,8 +212,12 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 
 	var choices []fused
 	var predirectional string
+	name := covered(best, claim.PartStreetName)
 	for _, i := range covered(best, claim.PartPrimaryNumber, claim.PartStreetName) {
 		words := splits(tokens[i].Text)
+		if slices.Contains(name, i) {
+			words = append(words, ordinals(tokens[i].Text)...)
+		}
 		if typed {
 			words = nil
 			if m := fusedPredirectional.FindStringSubmatch(tokens[i].Text); m != nil && slices.Contains(primary, i) {
@@ -228,7 +232,7 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 	// see grid), so it is not split; only a street name has a directional
 	// fused onto it by mistake (E135TH).
 	choices = slices.DeleteFunc(choices, func(f fused) bool {
-		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(covered(best, claim.PartStreetName), f.at)
+		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(name, f.at)
 	})
 
 	// Combinations grow as a power of the fused tokens; past a few there is no
@@ -267,7 +271,7 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 			}
 		}
 		reread := p.readLine(split, true)
-		if reread == nil || !recognizable(reread.Address) || !p.agrees(r, reread.Address) {
+		if reread == nil || !recognizable(reread.Address) || !p.held(r, reread.Address) {
 			continue
 		}
 		if typed && reread.Address.Predirectional != predirectional {
@@ -277,6 +281,17 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 		return split
 	}
 	return tokens
+}
+
+// held reports whether the data holds a reading's street for its ZIP Code:
+// agrees, or the ZIP holds it and only the city name is the suspect, the case
+// streetWindow already leaves alone. NY, NY 10030 and NEW YORK, NY 10030 are
+// one W 143RD ST, and a split the ZIP confirms is not one the city name can
+// veto, or the same street settles one way under one city name and another
+// under the other.
+func (p *Parser) held(r reference, a *address.Address) bool {
+	ans, ok := p.streetAgreement(r, a)
+	return ok && (ans == agrees || ans == missingInCity)
 }
 
 // maxUnfused caps the re-reads unfuse makes for one address, and maxFused the
@@ -321,6 +336,39 @@ func splits(text string) [][]string {
 		return [][]string{{th, text[len(th):]}}
 	}
 	return [][]string{{m[1], m[2]}, {ordinal(m[1]), m[2]}}
+}
+
+// bareNumber is a street name word that is only digits: the 121 of E 121 ST.
+var bareNumber = regexp.MustCompile(`^\d+$`)
+
+// ordinals lists the readings of a street name word that settle a number to
+// the ordinal the data holds, or none where the word is not a number.
+//
+// go-projectusat#231 and #233. E 121 ST, E 121ST and E121ST are one street,
+// and the data holds it as E 121ST ST and in no other form. A bare number is
+// written as its ordinal: 121 is 121ST. And an ordinal whose own suffix is ST
+// may be the ordinal with the street suffix run onto it, since 121ST and 121
+// ST are written alike: 121ST is 121ST ST. A directional run onto the front
+// (E121ST) is offered both with the split splits already makes. Nothing in
+// the token says which reading is meant, so, like every split here, one is
+// taken only where the data holds the street it results in (#231: normalize
+// toward what the data holds).
+func ordinals(text string) [][]string {
+	if bareNumber.MatchString(text) {
+		return [][]string{{ordinal(text)}}
+	}
+	d := ""
+	if m := fusedDirectional.FindStringSubmatch(text); m != nil {
+		d, text = m[1], m[2]+m[3]
+	}
+	m := fusedNumber.FindStringSubmatch(text)
+	if m == nil || m[2] != "ST" || ordinal(m[1]) != text {
+		return nil
+	}
+	if d != "" {
+		return [][]string{{d, text, "ST"}}
+	}
+	return [][]string{{text, "ST"}}
 }
 
 // ordinal writes a number as the ordinal street names use: 1ST, 2ND, 13TH.
