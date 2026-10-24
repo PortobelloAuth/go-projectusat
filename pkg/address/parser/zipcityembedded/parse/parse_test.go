@@ -1069,3 +1069,36 @@ func TestItJoinsTheWisconsinGridForm(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#257: NE, NORTHEAST, NORTH EAST, N EAST and N E after a
+// highway name are one compound directional and read as the postdirectional,
+// not as a lettered route.
+func TestItReadsATrailingCompoundDirectionalAfterAHighwayAsThePostdirectional(t *testing.T) {
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, dir := range []string{"NE", "NORTHEAST", "NORTH EAST", "N EAST", "N E"} {
+		source := "123 COUNTY ROAD " + dir + "\nTAMPA FL 33602"
+		got, err := p.Parse(source)
+		if err != nil {
+			t.Errorf("%q: %v", source, err)
+			continue
+		}
+		if got.StreetName != "COUNTY ROAD" || got.Postdirectional != "NE" {
+			t.Errorf("%q: got %q|%q, want COUNTY ROAD|NE", source, got.StreetName, got.Postdirectional)
+		}
+	}
+}
+
+// go-projectusat#257: COUNTY ROAD NE as a street name and COUNTY ROAD with
+// postdirectional NE are the same words, so they ask zipcity the same key and
+// get the same answer. The data cannot tell them apart; only the tie-break in
+// choose does, which is why it takes the split reading.
+func TestTheDataCannotTellALetteredRouteFromAPostdirectional(t *testing.T) {
+	whole := &address.Address{StreetName: "COUNTY ROAD NE"}
+	split := &address.Address{StreetName: "COUNTY ROAD", Postdirectional: "NE"}
+	if a, b := parse.StreetForQuery(whole), parse.StreetForQuery(split); a != b {
+		t.Errorf("the readings ask different keys, %q and %q, so the data can tell them apart", a, b)
+	}
+}
