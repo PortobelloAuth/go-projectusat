@@ -59,7 +59,7 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizeroptions.Address
 	out := a.Clone()
 
 	var err error
-	if out, err = normalizePOBoxAddressFn(out, o); err != nil {
+	if out, err = normalizePOBoxAddressFn(out, normalizeroptions.NewFnOptions(a, o)); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func (p *POBoxAddress) Normalize(a *address.Address, o normalizeroptions.Address
 	return out, nil
 }
 
-func normalizePOBoxStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
+func normalizePOBoxStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := NormalizeStreetName(a.StreetName)
 		if err != nil {

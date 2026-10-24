@@ -409,7 +409,7 @@ func TestTheDirectionalClaimLandsInTheField(t *testing.T) {
 // generic normalizer (#165): MONTANA abbreviates to MT and must not then be
 // read back as MOUNT by ExpandCityInStreetNameFn.
 func TestRegionAbbreviationRunsLast(t *testing.T) {
-	got, err := puertorico.NormalizePuertoRicoStreetName("MONTANA TREASURE", normalizeroptions.AddressNormalizationOptions{})
+	got, err := puertorico.NormalizePuertoRicoStreetName("MONTANA TREASURE", normalizeroptions.AddressNormalizationFnOptions{})
 	if err != nil && err != normalizerfn.Done {
 		t.Fatalf("NormalizePuertoRicoStreetName: %v", err)
 	}

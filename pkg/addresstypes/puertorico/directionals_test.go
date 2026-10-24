@@ -192,7 +192,7 @@ func TestExpandPuertoRicoDirectionalsInStreetName(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizeroptions.AddressNormalizationOptions{})
+			got, err := puertorico.ExpandPuertoRicoDirectionalsInStreetNameFn(tc.in, normalizeroptions.AddressNormalizationFnOptions{})
 			if err != nil && err != normalizerfn.Done {
 				t.Fatalf("ExpandPuertoRicoDirectionalsInStreetNameFn(%q) returned error %v", tc.in, err)
 			}

@@ -1435,7 +1435,7 @@ func streetForQuery(a *address.Address) string {
 	// written are still the best rendering available.
 	// NormalizeStreetLine renders the street parts the way Pub 28 expects it
 	// and zipcity stores it.
-	o := *normalizeroptions.Content()
+	o := normalizeroptions.NewFnOptions(street, *normalizeroptions.Content())
 	if normalized, err := normalizerfn.NormalizeStreetLine(street, o); err == nil {
 		street = normalized
 	}
