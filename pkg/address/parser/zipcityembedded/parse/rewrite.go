@@ -81,7 +81,9 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 		return
 	}
 	r := reference{}
-	if ans, ok := p.streetAgreement(r, best.Address); ok && ans == agrees {
+	// The ZIP holds the street and the city name does not: the street is read
+	// right and the city is the suspect, so there is nothing to slide past.
+	if ans, ok := p.streetAgreement(r, best.Address); ok && (ans == agrees || ans == missingInCity) {
 		return
 	}
 

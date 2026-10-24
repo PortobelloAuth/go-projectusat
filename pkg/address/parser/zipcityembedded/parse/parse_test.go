@@ -1102,3 +1102,29 @@ func TestTheDataCannotTellALetteredRouteFromAPostdirectional(t *testing.T) {
 		t.Errorf("the readings ask different keys, %q and %q, so the data can tell them apart", a, b)
 	}
 }
+
+// go-projectusat#230: a city the data does not know by that name (NY, BK,
+// BKLYN) must not make the street window slide past the house number when the
+// ZIP holds the street. The street is read right; the city is the suspect.
+func TestAStreetTheZipHoldsIsNotSlidOffForAnUnknownCityName(t *testing.T) {
+	cases := []struct{ source, primary, name string }{
+		{"541 WEST 133RD ST\nNY, NY 10027", "541", "133RD"},
+		{"227 MADISON ST\nBK, NY 10002", "227", "MADISON"},
+		{"2297 PITKIN AVE\nBKLYN, NY 11207", "2297", "PITKIN"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.PrimaryNumber != tc.primary || got.StreetName != tc.name || got.BusinessName != "" {
+			t.Errorf("%q: got %q|%q|%q, want %q|%q|", tc.source, got.PrimaryNumber, got.StreetName, got.BusinessName, tc.primary, tc.name)
+		}
+	}
+}
