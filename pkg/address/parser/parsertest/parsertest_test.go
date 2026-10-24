@@ -174,6 +174,7 @@ func TestCasesComposition(t *testing.T) {
 		wantSpec       = 49 * 2       // one fixed-point and one reaches case per Incorrect/Correct pair
 		wantHistorical = 55*3 + 3 + 4 // csharpParity multiline and single line + gridHistorical + saintHistorical
 		wantOurs       = 20
+		wantHte        = 90
 		wantUsAddress  = 146 + 5 + 8 + 687 // labeled + multi_word_state_addresses + simple_address_patterns + us50_test_tagged
 	)
 
@@ -186,10 +187,13 @@ func TestCasesComposition(t *testing.T) {
 	if got := len(parsertest.OursCases); got != wantOurs {
 		t.Errorf("len(OursCases) = %d, want %d", got, wantOurs)
 	}
+	if got := len(parsertest.HteCases); got != wantHte {
+		t.Errorf("len(HteCases) = %d, want %d", got, wantHte)
+	}
 	if got := len(parsertest.UsAddressCases); got != wantUsAddress {
 		t.Errorf("len(UsAddressCases) = %d, want %d", got, wantUsAddress)
 	}
-	if want := wantSpec + wantHistorical + wantOurs + wantUsAddress; len(parsertest.Cases) != want {
+	if want := wantSpec + wantHistorical + wantOurs + wantHte + wantUsAddress; len(parsertest.Cases) != want {
 		t.Errorf("len(Cases) = %d, want %d", len(parsertest.Cases), want)
 	}
 }
