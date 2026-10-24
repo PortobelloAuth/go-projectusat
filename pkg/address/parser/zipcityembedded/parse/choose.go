@@ -157,6 +157,18 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 
 		a := scored[i].candidate.Address
 		b := scored[j].candidate.Address
+		// A trailing directional is the postdirectional unless the street's
+		// own data says it belongs to the name (go-projectusat#257): NE,
+		// NORTHEAST, N EAST and N E after COUNTY ROAD are one directional,
+		// not a lettered route. Where two readings are the same words and
+		// differ only in whether that directional was split off, take the
+		// split one; data has already had its say in the score above.
+		if splitOff(a, b) {
+			return true
+		}
+		if splitOff(b, a) {
+			return false
+		}
 		// prefer the candidate that respects directionals
 		idirectionals := unsplitDirectional(a.StreetName, false) + unsplitDirectional(a.StreetName, true)
 		jdirectionals := unsplitDirectional(b.StreetName, false) + unsplitDirectional(b.StreetName, true)
@@ -164,6 +176,25 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 	})
 
 	return scored[0].candidate
+}
+
+// splitOff reports whether split is the same street as whole with whole's
+// trailing directional read as the postdirectional instead of as a word of the
+// name.
+func splitOff(split, whole *address.Address) bool {
+	if split.Postdirectional == "" || whole.Postdirectional != "" {
+		return false
+	}
+	tail, ok := strings.CutPrefix(whole.StreetName, split.StreetName+" ")
+	if !ok {
+		return false
+	}
+	want, err := directionals.NormalizeDirectional(split.Postdirectional)
+	if err != nil {
+		return false
+	}
+	dir, err := directionals.NormalizeDirectional(tail)
+	return err == nil && dir == want
 }
 
 func unsplitDirectional(streetname string, post bool) int {

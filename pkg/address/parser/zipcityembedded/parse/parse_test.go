@@ -1069,3 +1069,24 @@ func TestItJoinsTheWisconsinGridForm(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#257: NE, NORTHEAST, NORTH EAST, N EAST and N E after a
+// highway name are one compound directional and read as the postdirectional,
+// not as a lettered route.
+func TestItReadsATrailingCompoundDirectionalAfterAHighwayAsThePostdirectional(t *testing.T) {
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, dir := range []string{"NE", "NORTHEAST", "NORTH EAST", "N EAST", "N E"} {
+		source := "123 COUNTY ROAD " + dir + "\nTAMPA FL 33602"
+		got, err := p.Parse(source)
+		if err != nil {
+			t.Errorf("%q: %v", source, err)
+			continue
+		}
+		if got.StreetName != "COUNTY ROAD" || got.Postdirectional != "NE" {
+			t.Errorf("%q: got %q|%q, want COUNTY ROAD|NE", source, got.StreetName, got.Postdirectional)
+		}
+	}
+}
