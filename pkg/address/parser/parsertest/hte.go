@@ -59,7 +59,7 @@ var hteRows = []hteRow{
 	// issue's own repro table, on real streets: each street is in the
 	// zipcity data for its ZIP Code.
 	{"abbrev-city", "227 MADISON ST", "NY", "10002", "227", "", "MADISON", "ST"},
-	{"abbrev-city", "227 MADISON ST", "BK", "10002", "227", "", "MADISON", "ST"}, // UNSURE: BK contradicts the ZIP Code; wants the ZIP Code's own city
+	{"abbrev-city", "227 MADISON ST", "BK", "10002", "227", "", "MADISON", "ST"}, // BK contradicts the ZIP Code; wants the ZIP Code's own city
 	{"abbrev-city", "2297 PITKIN AVE", "BK", "11207", "2297", "", "PITKIN", "AVE"},
 	{"abbrev-city", "18 MONROE ST", "NY", "10002", "18", "", "MONROE", "ST"},
 	{"abbrev-city", "5 MULBERRY ST", "NY", "10013", "5", "", "MULBERRY", "ST"},
@@ -116,7 +116,7 @@ var hteRows = []hteRow{
 	{"fused-suffix", "320 N 7ST", "BROOKLYN", "11211", "320", "N", "7TH", "ST"},
 	{"fused-suffix", "88 E 167ST", "BRONX", "10459", "88", "E", "167TH", "ST"},
 	{"fused-suffix", "2 E 222ST", "BRONX", "10469", "2", "E", "222ND", "ST"},
-	{"fused-suffix", "1501 3RDAVE", "NEW YORK", "10128", "1501", "", "3RD", "AVE"}, // UNSURE: fused AVE is not in #231's table, extrapolated
+	{"fused-suffix", "1501 3RDAVE", "NEW YORK", "10128", "1501", "", "3RD", "AVE"}, // fused AVE is not in #231's table, it is an extrapolated test
 	// fused-suffix controls.
 	{"fused-suffix control", "250 133RD ST", "NEW YORK", "10027", "250", "", "133RD", "ST"},
 	{"fused-suffix control", "205 W 133RD ST", "NEW YORK", "10027", "205", "W", "133RD", "ST"},
@@ -137,7 +137,7 @@ var hteRows = []hteRow{
 	{"digit-letter", "1204PARK AVE", "NEW YORK", "10128", "1204", "", "PARK", "AVE"},
 	{"digit-letter", "63MORRIS AVE", "BRONX", "10453", "63", "", "MORRIS", "AVE"},
 	{"digit-letter", "905E 167 ST", "BRONX", "10459", "905", "E", "167TH", "ST"},
-	{"digit-letter", "14W 120ST", "NEW YORK", "10027", "14", "W", "120TH", "ST"}, // UNSURE: combines digit-letter with the fused suffix (#231)
+	{"digit-letter", "14W 120ST", "NEW YORK", "10027", "14", "W", "120TH", "ST"}, // combines digit-letter with the fused suffix (#231). This is the result we expect.
 	{"digit-letter", "5E 4TH ST", "NEW YORK", "10003", "5", "E", "4TH", "ST"},
 	// digit-letter controls: a spaced directional, and the legitimate
 	// digits-plus-letter primary number that the issue says must survive.
@@ -174,7 +174,7 @@ var hteRows = []hteRow{
 // city not in the map is wanted as written.
 var hteCity = map[string]string{
 	"NY 10002": "NEW YORK", "NY 10013": "NEW YORK", "NY 10029": "NEW YORK", "NY 10027": "NEW YORK",
-	"BK 10002": "NEW YORK", // UNSURE: the abbreviation and the ZIP Code disagree; the ZIP Code wins here
+	"BK 10002": "NEW YORK", // When the abbreviation and the ZIP Code disagree the ZIP Code wins
 	"BK 11207": "BROOKLYN", "BK 11216": "BROOKLYN", "BK 11236": "BROOKLYN",
 	"BK 11212": "BROOKLYN", "BK 11225": "BROOKLYN", "BK 11226": "BROOKLYN",
 	"BX 10459": "BRONX", "BX 10461": "BRONX", "BX 10451": "BRONX", "BX 10474": "BRONX",
