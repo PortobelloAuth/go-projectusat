@@ -121,7 +121,7 @@ func New() (*Parser, error) {
 // claims, then ask each address type for its reading of the whole. Only the
 // final choice among readings belongs to this package.
 func (p *Parser) Parse(source string) (*address.Address, error) {
-	tokens := token.Tokenize(source)
+	tokens := grid(token.Tokenize(source))
 	if len(tokens) == 0 {
 		return nil, ErrNoReading
 	}
@@ -400,11 +400,13 @@ func (p *Parser) spellOut(tokens []token.Token, best *address.CandidateAddress) 
 }
 
 // fusedNumber is a number with letters run onto its end: 400E, 199HENRY,
-// 133ST, 133RDST. fusedDirectional is a directional run onto the front of a
-// number: E135TH, E115.
+// 133ST, 133RDST; fusedPredirectional is one whose letters are a directional:
+// 400E. fusedDirectional is a directional run onto the front of a number:
+// E135TH, E115.
 var (
-	fusedNumber      = regexp.MustCompile(`^(\d+)([A-Z]+)$`)
-	fusedDirectional = regexp.MustCompile(`^(NE|NW|SE|SW|N|S|E|W)(\d+)([A-Z]*)$`)
+	fusedNumber         = regexp.MustCompile(`^(\d+)([A-Z]+)$`)
+	fusedPredirectional = regexp.MustCompile(`^(\d+)(NE|NW|SE|SW|N|S|E|W)$`)
+	fusedDirectional    = regexp.MustCompile(`^(NE|NW|SE|SW|N|S|E|W)(\d+)([A-Z]*)$`)
 )
 
 // unfuse splits a directional, a street name or a suffix off a number it was
@@ -414,10 +416,15 @@ var (
 // go-projectusat#231, #232 and #233. 400E 30ST is 400 E 30TH ST, 199HENRY ST
 // is 199 HENRY ST, and E135TH ST is E 135TH ST, but 123A is a primary number
 // as written and nothing in the token says which is which. The data does: a
-// split is taken only when the reading as typed is not a street zipcity
-// recognizes and the split reading is, which is streetWindow's rule — data
-// promotes and never rejects. A split never fires against a street the data
-// already has, and where the data has nothing to say the tokens stand.
+// split is taken only where zipcity recognizes the street it results in. Data
+// promotes and never rejects, so where the data has nothing to say the tokens
+// stand.
+//
+// Where the street as typed is already one the data has, only a directional
+// run onto the primary number is split off, and only into a predirectional
+// the data has on that street: 400E 30TH ST is 400 E 30TH ST because E 30TH
+// ST exists. The data does not track primary numbers, so it has no evidence
+// for 400E and some for E.
 //
 // Each fused token in the primary number or street name offers its splits,
 // and the combinations are re-read with the most splits first, up to
@@ -427,20 +434,26 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 		return tokens
 	}
 	r := reference{}
-	if p.agrees(r, best.Address) {
-		return tokens
-	}
+	typed := p.agrees(r, best.Address)
+	primary := covered(best, claim.PartPrimaryNumber)
 
 	var choices []fused
+	var predirectional string
 	for _, i := range covered(best, claim.PartPrimaryNumber, claim.PartStreetName) {
-		if words := splits(tokens[i].Text); len(words) > 0 {
+		words := splits(tokens[i].Text)
+		if typed {
+			words = nil
+			if m := fusedPredirectional.FindStringSubmatch(tokens[i].Text); m != nil && slices.Contains(primary, i) {
+				words, predirectional = [][]string{{m[1], m[2]}}, m[2]
+			}
+		}
+		if len(words) > 0 {
 			choices = append(choices, fused{i, words})
 		}
 	}
-	// The Wisconsin grid form is two space-separated tokens, each a directional
-	// leading a number (N165 W2123), and both are the primary number as written,
-	// so they are not split; only a street name has a directional fused onto it
-	// by mistake (E135TH).
+	// A primary number led by a directional is the Wisconsin grid form (N165;
+	// see grid), so it is not split; only a street name has a directional
+	// fused onto it by mistake (E135TH).
 	choices = slices.DeleteFunc(choices, func(f fused) bool {
 		return fusedDirectional.MatchString(tokens[f.at].Text) && !slices.Contains(covered(best, claim.PartStreetName), f.at)
 	})
@@ -482,6 +495,9 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 		}
 		reread := p.readLine(split, true)
 		if reread == nil || !recognizable(reread.Address) || !p.agrees(r, reread.Address) {
+			continue
+		}
+		if typed && reread.Address.Predirectional != predirectional {
 			continue
 		}
 		*best = *reread
@@ -572,6 +588,34 @@ func splice(tokens []token.Token, i int, words []string) []token.Token {
 		out = append(out, t)
 	}
 	return out
+}
+
+// gridHalf is one half of the Wisconsin grid form: a directional and a number,
+// N165 or W2123.
+var gridHalf = regexp.MustCompile(`^(?i)([NSEW])\d+$`)
+
+// grid joins the Wisconsin grid form written as two tokens, N165 W2123, into
+// the one token Project US@ and Pub 28 write, N165W2123. The pair must lead
+// its line and run on both axes, one half N or S and the other E or W.
+func grid(tokens []token.Token) []token.Token {
+	for i := 0; i+1 < len(tokens); i++ {
+		a, b := tokens[i], tokens[i+1]
+		ma, mb := gridHalf.FindStringSubmatch(a.Text), gridHalf.FindStringSubmatch(b.Text)
+		if a.Position != 0 || b.Line != a.Line || b.FollowsComma != -1 || ma == nil || mb == nil ||
+			strings.ContainsAny(ma[1], "NSns") == strings.ContainsAny(mb[1], "NSns") {
+			continue
+		}
+		out := slices.Clone(tokens[:i+1])
+		out[i].Text = a.Text + b.Text
+		for _, t := range tokens[i+2:] {
+			if t.Line == a.Line {
+				t.Position--
+			}
+			out = append(out, t)
+		}
+		return out
+	}
+	return tokens
 }
 
 // covered lists, in order, the token indices a reading's claims assign to any

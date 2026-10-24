@@ -963,7 +963,7 @@ func TestPRIsAHighwayOnlyInPuertoRico(t *testing.T) {
 // go-projectusat#231, #232, #233: a directional, ordinal or suffix fused to a
 // number is split off only where the street data holds the street that
 // results. Where it does not, the token is read as written: 123A is a real
-// primary number, and nothing here may take that away.
+// primary number, and the data has nothing to say otherwise.
 func TestItSplitsAFusedNumberOnlyWhereTheStreetDataHasTheStreet(t *testing.T) {
 	cases := []struct {
 		source                                string
@@ -982,10 +982,10 @@ func TestItSplitsAFusedNumberOnlyWhereTheStreetDataHasTheStreet(t *testing.T) {
 		// gives no reason to split.
 		{"60 E 135TH ST, NEW YORK, NY 10037", "60", "E", "135TH", "ST"},
 		{"123A HENRY ST, BROOKLYN, NY 11201", "123A", "", "HENRY", "ST"},
-		// The street as typed is one the data has (E 30TH ST is found as a
-		// directional variant of 30TH ST), so there is nothing for a split to
-		// promote and 400E stands.
-		{"400E 30TH ST, NEW YORK, NY 10016", "400E", "", "30TH", "ST"},
+		// 30TH ST as typed is a street the data has, but so is E 30TH ST, and
+		// the data has no evidence for 400E as a primary number, so the E is
+		// split off as the predirectional.
+		{"400E 30TH ST, NEW YORK, NY 10016", "400", "E", "30TH", "ST"},
 	}
 
 	p, err := parse.New()
@@ -1041,6 +1041,31 @@ func TestItSpellsOutAConflictedAbbreviationOnlyWhereTheNameDataSettlesIt(t *test
 		}
 		if got.StreetName != tc.name {
 			t.Errorf("%q: street name %q, want %q", tc.source, got.StreetName, tc.name)
+		}
+	}
+}
+
+// The Wisconsin grid form written as two tokens is read as the one token
+// Project US@ and Pub 28 write.
+func TestItJoinsTheWisconsinGridForm(t *testing.T) {
+	cases := []struct{ source, primary, name string }{
+		{"N165 W2123 TARTAN CT, JACKSON, WI 53037", "N165W2123", "TARTAN"},
+		{"N165W2123 TARTAN CT, JACKSON, WI 53037", "N165W2123", "TARTAN"},
+		{"W156 N11500 PILGRIM RD, GERMANTOWN, WI 53022", "W156N11500", "PILGRIM"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.PrimaryNumber != tc.primary || got.StreetName != tc.name {
+			t.Errorf("%q: got %q|%q, want %q|%q", tc.source, got.PrimaryNumber, got.StreetName, tc.primary, tc.name)
 		}
 	}
 }

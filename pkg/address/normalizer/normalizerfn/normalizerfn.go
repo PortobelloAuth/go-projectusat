@@ -488,7 +488,8 @@ func ExpandCityInStreetNameFn(sn string, o normalizeroptions.AddressNormalizatio
 	// a saint — E ST NW in Washington is read that way by a
 	// parser that puts the direction in the name.
 	// TODO: adjust this hueristic is to allow MT ST HELENS ST to become
-	// MOUNT SAINT HELENS ST
+	// MOUNT SAINT HELENS ST. The MT rule below returns before ST is
+	// reached, so the TODO has to get past it too.
 	//
 	// Not where the head word is a region abbreviation that
 	// AbbreviateRegionInStreetNameFn writes: MT is MONTANA as
