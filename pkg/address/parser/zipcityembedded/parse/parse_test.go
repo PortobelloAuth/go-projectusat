@@ -1090,3 +1090,15 @@ func TestItReadsATrailingCompoundDirectionalAfterAHighwayAsThePostdirectional(t 
 		}
 	}
 }
+
+// go-projectusat#257: COUNTY ROAD NE as a street name and COUNTY ROAD with
+// postdirectional NE are the same words, so they ask zipcity the same key and
+// get the same answer. The data cannot tell them apart; only the tie-break in
+// choose does, which is why it takes the split reading.
+func TestTheDataCannotTellALetteredRouteFromAPostdirectional(t *testing.T) {
+	whole := &address.Address{StreetName: "COUNTY ROAD NE"}
+	split := &address.Address{StreetName: "COUNTY ROAD", Postdirectional: "NE"}
+	if a, b := parse.StreetForQuery(whole), parse.StreetForQuery(split); a != b {
+		t.Errorf("the readings ask different keys, %q and %q, so the data can tell them apart", a, b)
+	}
+}
