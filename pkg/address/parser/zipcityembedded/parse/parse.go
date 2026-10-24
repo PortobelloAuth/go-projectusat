@@ -377,6 +377,12 @@ func (p *Parser) spellOut(tokens []token.Token, best *address.CandidateAddress) 
 		if i := slices.Index(readings, word); i > 0 {
 			continue
 		}
+		// A directional ending the name beside a reading of itself is the
+		// postdirectional the spec abbreviates (COUNTY ROAD NE, p.17), not a
+		// word of the name; the data has seen COUNTY ROAD NORTHEAST too.
+		if _, err := directionals.AbbreviateDirectional(word); err == nil && prev != "" && next == "" && slices.Contains(readings, word) {
+			continue
+		}
 		longer := slices.DeleteFunc(readings, func(r string) bool { return len(r) <= len(word) })
 		if len(longer) == 1 {
 			spelled[i].Text = longer[0]

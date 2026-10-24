@@ -1023,6 +1023,8 @@ func TestItSpellsOutAConflictedAbbreviationOnlyWhereTheNameDataSettlesIt(t *test
 		// Already spelled out, or a suffix the name absorbed: left alone.
 		{"1 MOUNT VERNON AVE, WASHINGTON, DC 20001", "MOUNT VERNON"},
 		{"1 CONNECTICUT AVE, WASHINGTON, DC 20001", "CONNECTICUT"},
+		// A postdirectional ending the name (p.17): left for the normalizer.
+		{"COUNTY ROAD NE, TAMPA, FL 33602", "COUNTY ROAD NE"},
 		// No reading, or more than one: left as written.
 		{"1 MT TREASURE AVE, WASHINGTON, DC 20001", "MT TREASURE"},
 		{"1 MT SKY AVE, WASHINGTON, DC 20001", "MT SKY"},
