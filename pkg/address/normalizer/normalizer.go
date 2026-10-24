@@ -95,7 +95,7 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		return normalized, nil
 	}
 
-	out, err := normalizerfn.NormalizeAddressFn(a, n.Options)
+	out, err := normalizerfn.NormalizeAddressFn(a, normalizeroptions.NewFnOptions(a, n.Options))
 	if err != nil && !errors.Is(err, normalizerfn.Done) {
 		return nil, err
 	}

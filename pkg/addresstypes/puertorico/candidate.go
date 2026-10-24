@@ -51,7 +51,7 @@ func (p *PuertoRicoAddress) FormatStreetLine(a *address.Address) string {
 	return ordinary.FormatStreetLine()
 }
 
-func PrefixAndSingleLetterStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
+func PrefixAndSingleLetterStreetNameFn(sn string, o normalizeroptions.AddressNormalizationFnOptions) (string, error) {
 	// - “suffix-first” single letter preference (AVENIDA D, CALLE C)
 	parts := strings.Split(sn, " ")
 	if len(parts) == 2 && len(parts[1]) == 1 {
@@ -64,7 +64,7 @@ func PrefixAndSingleLetterStreetNameFn(sn string, o normalizeroptions.AddressNor
 	return sn, nil
 }
 
-func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
+func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationFnOptions) (string, error) {
 	// - street suffix expansion (within street name, not street suffix field)
 	parts := strings.Split(sn, " ")
 	changed := false
@@ -91,7 +91,7 @@ func ExpandPuertoRicoStreetTypeInStreetNameFn(sn string, o normalizeroptions.Add
 // counterparts (PR #175 review): the generic step reads English only, so it
 // would leave NOROESTE unrecognized, and p.25 forbids expanding a Spanish
 // directional to its English row anyway.
-func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationOptions) (string, error) {
+func ExpandPuertoRicoDirectionalsInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationFnOptions) (string, error) {
 	parts := strings.Split(sn, " ")
 	newparts := make([]string, 0)
 	changed := false
@@ -170,7 +170,7 @@ func abbreviatePRDirectional(field, v string) (string, error) {
 // ExpandPuertoRicoStreetTypeInStreetNameFn replace their generic
 // counterparts: the generic step reads English only, so it rejects NO and SO
 // outright. Pre- and postdirectionals are ABBREVIATED (go-projectusat#154).
-func normalizePRDirectionals(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
+func normalizePRDirectionals(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	pre, err := abbreviatePRDirectional("predirectional", a.Predirectional)
 	if err != nil {
 		return nil, err
@@ -187,7 +187,7 @@ func normalizePRDirectionals(a *address.Address, o normalizeroptions.AddressNorm
 	return a, nil
 }
 
-func normalizePRStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
+func normalizePRStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := NormalizePuertoRicoStreetName(a.StreetName, o)
 		if err != nil {
@@ -198,7 +198,7 @@ func normalizePRStreetNameFn(a *address.Address, o normalizeroptions.AddressNorm
 	return a, nil
 }
 
-func normalizePRSecondaryDesignatorFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
+func normalizePRSecondaryDesignatorFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	if len(a.SecondaryDesignator) > 0 {
 		out, err := NormalizeSecondary(a.SecondaryDesignator)
 		if err != nil {
@@ -246,7 +246,7 @@ func (p *PuertoRicoAddress) Normalize(a *address.Address, o normalizeroptions.Ad
 	out := a.Clone()
 
 	var err error
-	if out, err = normalizePRAddressFn(out, o); err != nil {
+	if out, err = normalizePRAddressFn(out, normalizeroptions.NewFnOptions(a, o)); err != nil {
 		return nil, err
 	}
 

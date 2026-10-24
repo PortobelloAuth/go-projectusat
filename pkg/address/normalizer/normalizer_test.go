@@ -778,6 +778,9 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 		// both MT here, and the parser, not the normalizer, spells MT out
 		// where zipcity's name data says which it is (#235).
 		{"MT VERNON", "", "MT VERNON", ""},
+		// A region spelled out mid-name abbreviates and stays abbreviated.
+		{"WESTERN MONTANA DIVIDE", "RD", "WESTERN MT DIVIDE", "RD"},
+		{"LOWER CONNECTICUT COUNTRY", "RD", "LOWER CT COUNTRY", "RD"},
 	} {
 		got, err := n.Normalize(&address.Address{
 			PrimaryNumber: "8100",
@@ -796,6 +799,13 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 		if got.StreetSuffix != tc.wantSuffix {
 			t.Errorf("StreetSuffix for %q = %q, want %q", tc.streetName, got.StreetSuffix, tc.wantSuffix)
 		}
+		again, err := n.Normalize(got)
+		if err != nil {
+			t.Fatalf("Normalize(streetName=%q) second pass: unexpected error: %v", got.StreetName, err)
+		}
+		if again.StreetName != got.StreetName {
+			t.Errorf("StreetName for %q changed on a second pass: %q -> %q", tc.streetName, got.StreetName, again.StreetName)
+		}
 	}
 }
 
@@ -810,6 +820,7 @@ func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
 			"COURT",
 			"CT",
 			"CT HWY 50",
+			"LOWER CONNECTICUT COUNTRY",
 		}
 		for _, name := range streets {
 			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}
@@ -834,6 +845,7 @@ func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
 			"ROCKY MOUNT", // Rocky Mount, NC and Rocky Mount, VA
 			"MT",
 			"MT HWY 50",
+			"WESTERN MONTANA DIVIDE",
 		}
 		for _, name := range streets {
 			in := &address.Address{PrimaryNumber: "1", StreetName: name, StreetSuffix: "AVE", Postdirectional: "NW", City: "WASHINGTON", Region: "DC", Postal: "20008"}

@@ -171,7 +171,7 @@ func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizeroptio
 	out := a.Clone()
 
 	var err error
-	if out, err = normalizeGeneralDeliveryAddressFn(out, o); err != nil {
+	if out, err = normalizeGeneralDeliveryAddressFn(out, normalizeroptions.NewFnOptions(a, o)); err != nil {
 		return nil, err
 	}
 
@@ -188,7 +188,7 @@ func (g *GeneralDeliveryAddress) Normalize(a *address.Address, o normalizeroptio
 	return out, nil
 }
 
-func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationOptions) (*address.Address, error) {
+func normalizeGeneralDeliveryStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
 		out, err := Normalize(a.StreetName)
 		if err != nil {
