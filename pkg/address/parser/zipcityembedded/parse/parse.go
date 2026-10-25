@@ -124,6 +124,7 @@ func (p *Parser) Parse(source string) (*address.Address, error) {
 	if best == nil {
 		return nil, ErrNoReading
 	}
+	tokens = p.respace(tokens, best)
 	tokens = p.spellOut(tokens, best)
 	tokens = p.unfuse(tokens, best)
 	p.streetWindow(tokens, best)

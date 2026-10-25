@@ -283,6 +283,147 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 	return tokens
 }
 
+// respace closes up or opens one space inside a street name, where the street
+// data holds the street that results better than it holds the street as
+// typed, and returns the tokens it read.
+//
+// go-projectusat#231. BLUEJAY DR and BLUE JAY DR are one street, and so are
+// EASTCHESTER RD and EAST CHESTER RD, but the data holds each in one form and
+// nothing in the tokens says which. So, like unfuse, a reading is taken only
+// where the data holds the street it results in (#231: normalize toward what
+// the data holds). A predirectional is a word of the street like any other
+// here: EAST of EAST CHESTER may be the front of EASTCHESTER.
+//
+// Every space a word could be split at, and every space between two words, is
+// offered, so a word of ten letters is asked about eight times, and a false
+// positive somewhere among them is not rare. What keeps one from deciding is
+// that a reading must be held exactly for its ZIP Code, not by a directional
+// variant (each Match asks up to seventeen keys; see zipcity's Match), and
+// held better than the street as typed (see holding),
+// and better than every other respacing: two readings held alike are the data
+// unable to say, and the tokens stand. And the space is one inside the name
+// (see inside), so a respacing that makes a suffix or a directional of part of
+// a word is not one: BLACKPOOL COURT is not a street named BLACKP OOL COURT,
+// nor SOUTH AVE the street SO UTH AVE, however the filters answer.
+func (p *Parser) respace(tokens []token.Token, best *address.CandidateAddress) []token.Token {
+	if !recognizable(best.Address) {
+		return tokens
+	}
+	r := reference{}
+	typed := p.holding(r, best.Address)
+	if typed == heldBoth {
+		return tokens
+	}
+	street := covered(best, claim.PartPredirectional, claim.PartStreetName)
+
+	var found []token.Token
+	var reading *address.CandidateAddress
+	top, tied := typed, false
+	for _, respaced := range respacings(tokens, street) {
+		reread := p.readLine(respaced, true)
+		if reread == nil || !recognizable(reread.Address) || !inside(best.Address, reread.Address) {
+			continue
+		}
+		h := p.holding(r, reread.Address)
+		if !p.exactInZip(r, reread.Address) {
+			h = heldNot
+		}
+		switch {
+		case h > top:
+			found, reading, top, tied = respaced, reread, h, false
+		case h == top && found != nil:
+			tied = true
+		}
+	}
+	if found == nil || tied {
+		return tokens
+	}
+	*best = *reading
+	return found
+}
+
+// exactInZip reports whether the ZIP Code's street filter holds a reading's
+// street as written, without trying its directional variants.
+func (p *Parser) exactInZip(r reference, a *address.Address) bool {
+	m := zip5.FindStringSubmatch(a.Postal)
+	if m == nil {
+		return false
+	}
+	street := streetForQuery(a)
+	present, err := r.check("zip street exact "+m[1]+" "+street, func() (bool, error) {
+		return p.zipcity.CheckZipAndStreet(m[1], street)
+	})
+	return err == nil && present
+}
+
+// inside reports whether a respacing kept within the street name: the suffix
+// and postdirectional are as typed, and so is the predirectional, unless the
+// name took it in (EAST CHESTER RD is EASTCHESTER RD).
+func inside(typed, respaced *address.Address) bool {
+	return respaced.StreetSuffix == typed.StreetSuffix &&
+		respaced.Postdirectional == typed.Postdirectional &&
+		(respaced.Predirectional == typed.Predirectional || respaced.Predirectional == "")
+}
+
+// holding is how well the data holds a reading's street: for its ZIP Code and
+// city name both, for its ZIP Code alone (see held), or not at all.
+type holding int
+
+const (
+	heldNot holding = iota
+	heldZip
+	heldBoth
+)
+
+func (p *Parser) holding(r reference, a *address.Address) holding {
+	switch ans, ok := p.streetAgreement(r, a); {
+	case ok && ans == agrees:
+		return heldBoth
+	case ok && ans == missingInCity:
+		return heldZip
+	}
+	return heldNot
+}
+
+// word is a run of letters respace may split or join; numbers are unfuse's.
+var word = regexp.MustCompile(`^[A-Z]+$`)
+
+// respacings lists the tokens with one space closed up between two adjacent
+// words of the street, or one opened inside a word of it, leaving at least
+// two letters either side.
+func respacings(tokens []token.Token, street []int) [][]token.Token {
+	var out [][]token.Token
+	for k, i := range street {
+		text := strings.ToUpper(tokens[i].Text)
+		if !word.MatchString(text) {
+			continue
+		}
+		for cut := 2; cut <= len(text)-2; cut++ {
+			out = append(out, splice(tokens, i, []string{text[:cut], text[cut:]}))
+		}
+		if k+1 < len(street) && street[k+1] == i+1 && tokens[i+1].Line == tokens[i].Line {
+			if next := strings.ToUpper(tokens[i+1].Text); word.MatchString(next) {
+				out = append(out, join(tokens, i, text+next))
+			}
+		}
+	}
+	return out
+}
+
+// join replaces the tokens at i and i+1 with one token, text, renumbering the
+// positions after it on that line; it is splice run the other way.
+func join(tokens []token.Token, i int, text string) []token.Token {
+	out := slices.Clone(tokens[:i+1])
+	out[i].Text = text
+	for _, t := range tokens[i+2:] {
+		if t.Line == tokens[i].Line {
+			t.Position--
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
 // held reports whether the data holds a reading's street for its ZIP Code:
 // agrees, or the ZIP holds it and only the city name is the suspect, the case
 // streetWindow already leaves alone. NY, NY 10030 and NEW YORK, NY 10030 are

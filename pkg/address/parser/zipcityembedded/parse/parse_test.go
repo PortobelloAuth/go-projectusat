@@ -1168,3 +1168,47 @@ func TestABareNumberSettlesToTheOrdinalTheDataHolds(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#231: a space closed up or opened inside a street name settles
+// to the spelling the data holds (normalize toward what the data holds, #261),
+// one way from either side, and a respacing that would turn part of a word into
+// a directional or a suffix is not taken.
+func TestASpaceInsideAStreetNameSettlesToTheSpellingTheDataHolds(t *testing.T) {
+	cases := []struct {
+		source                                string
+		predirectional, name, suffix, postdir string
+	}{
+		{"10 BLUEJAY DRIVE\nBRENTWOOD, NY 11717", "", "BLUE JAY", "DR", ""},
+		{"10 BLUE JAY DRIVE\nBRENTWOOD, NY 11717", "", "BLUE JAY", "DR", ""},
+		{"10 WHITEPLAINS ROAD\nBRONX, NY 10472", "", "WHITE PLAINS", "RD", ""},
+		{"10 WHITE PLAINS ROAD\nBRONX, NY 10472", "", "WHITE PLAINS", "RD", ""},
+		{"10 MORNING SIDE AVE\nNEW YORK, NY 10026", "", "MORNINGSIDE", "AVE", ""},
+		{"10 MORNINGSIDE AVE\nNEW YORK, NY 10026", "", "MORNINGSIDE", "AVE", ""},
+		{"10 GRANDCONCOURSE\nBRONX, NY 10458", "", "GRAND CONCOURSE", "", ""},
+		{"10 STPETERS AVE\nBRONX, NY 10461", "", "SAINT PETERS", "AVE", ""},
+		// The predirectional is a word of the street like any other.
+		{"10 EAST CHESTER RD\nBRONX, NY 10469", "", "EASTCHESTER", "RD", ""},
+		{"10 EASTCHESTER RD\nBRONX, NY 10469", "", "EASTCHESTER", "RD", ""},
+		// Controls: SO UTH and BLACKP OOL COURT answer in the filters, but the
+		// space is not one inside the name.
+		{"10 SOUTH AVE EAST\nTAMPA FL 33602", "", "SOUTH", "AVE", "E"},
+		{"10 BLACKPOOL COURT\nRIVERHEAD, NY 11961", "", "BLACKPOOL", "CT", ""},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.Predirectional != tc.predirectional || got.StreetName != tc.name || got.StreetSuffix != tc.suffix || got.Postdirectional != tc.postdir {
+			t.Errorf("%q: got %q|%q|%q|%q, want %q|%q|%q|%q", tc.source,
+				got.Predirectional, got.StreetName, got.StreetSuffix, got.Postdirectional,
+				tc.predirectional, tc.name, tc.suffix, tc.postdir)
+		}
+	}
+}
