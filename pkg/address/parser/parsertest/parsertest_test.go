@@ -8,6 +8,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/parsertest"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
 )
 
 // TestRunReportsPerCase checks Run and Result.Pass against a stub parser
@@ -216,7 +217,7 @@ func TestCasesComposition(t *testing.T) {
 // pp.34-35, "Remove ATTENTION, ATTN:"), and a StreetNamePreType route
 // designator is part of the street name.
 func TestUsAddressWantFields(t *testing.T) {
-	const wantSettled = 765
+	const wantSettled = 768
 
 	settled := 0
 	n := normalizer.NewContentNomalizer()
@@ -244,11 +245,11 @@ func TestUsAddressWantFields(t *testing.T) {
 	}{
 		{
 			input: "271 spring st nw attn: regus",
-			want:  &address.Address{PrimaryNumber: "271", StreetName: "SPRING", StreetSuffix: "ST", Postdirectional: "NW"},
+			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "271", StreetName: "SPRING", StreetSuffix: "ST", Postdirectional: "NW"},
 		},
 		{
 			input: "1234 W US Hwy 50",
-			want:  &address.Address{PrimaryNumber: "1234", Predirectional: "W", StreetName: "US HIGHWAY 50"},
+			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "1234", Predirectional: "W", StreetName: "US HIGHWAY 50"},
 		},
 	} {
 		c, ok := findCase(parsertest.UsAddressCases, tc.input)

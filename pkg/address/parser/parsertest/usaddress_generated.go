@@ -9,14 +9,13 @@ package parsertest
 //	labeled.xml                       107 /  146
 //	multi_word_state_addresses.xml      5 /    5
 //	simple_address_patterns.xml         7 /    8
-//	us50_test_tagged.xml              646 /  687
-//	total                             765 /  846
+//	us50_test_tagged.xml              649 /  687
+//	total                             768 /  846
 //
 // Cases without WantFields, by reason:
 //
 //	   1  negative case: LL is not a region
 //	  16  normalizer: Not a recognized PO Box street name
-//	   3  normalizer: not idempotent, a second pass changes the result
 //	   3  normalizer: predirectional
 //	   4  normalizer: secondary designator
 //	   6  normalizer: street suffix
@@ -31,6 +30,7 @@ package parsertest
 
 import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 )
 
@@ -44,6 +44,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 West U.S. Hwy 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "U.S. HIGHWAY 50",
@@ -53,6 +54,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 S Martin Luther King Dr Chicago, IL 60637",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "S",
 			StreetName:     "MARTIN LUTHER KING",
@@ -66,6 +68,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "Apt 1B 626 E Kilbourn Ave Milwaukee, WI 53202",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "626",
 			Predirectional:      "E",
 			StreetName:          "KILBOURN",
@@ -86,6 +89,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "N165 W2123 Tartan Ct Jackson, WI 53037",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "N165 W2123",
 			StreetName:    "TARTAN",
 			StreetSuffix:  "CT",
@@ -103,6 +107,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 W US Highway 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "US HIGHWAY 50",
@@ -112,6 +117,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 West U.S. Highway 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "U.S. HIGHWAY 50",
@@ -121,6 +127,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2002 FM 544 Wylie, TX 75098",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2002",
 			StreetName:    "FM 544",
 			City:          "WYLIE",
@@ -132,6 +139,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "519 PR 462 Leonard, TX 75452",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "519",
 			StreetName:    "PR HIGHWAY 462",
 			City:          "LEONARD",
@@ -143,6 +151,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "431 Marietta St NW Room 303",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "431",
 			StreetName:          "MARIETTA",
 			StreetSuffix:        "ST",
@@ -155,6 +164,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "20 Benton Pl St Louis, MO 63104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "20",
 			StreetName:    "BENTON",
 			StreetSuffix:  "PL",
@@ -167,6 +177,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "431 Marietta St NW Floor 3",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "431",
 			StreetName:          "MARIETTA",
 			StreetSuffix:        "ST",
@@ -179,6 +190,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "271 spring st nw attn: regus",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "271",
 			StreetName:      "SPRING",
 			StreetSuffix:    "ST",
@@ -194,6 +206,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 W US Hwy 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "US HIGHWAY 50",
@@ -203,6 +216,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 West US Hwy 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "US HIGHWAY 50",
@@ -212,6 +226,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1234 West US Highway 50",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
 			Predirectional: "W",
 			StreetName:     "US HIGHWAY 50",
@@ -226,6 +241,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "431 Marietta St NW 3rd Floor",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "431",
 			StreetName:          "MARIETTA",
 			StreetSuffix:        "ST",
@@ -238,6 +254,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "232 Dubei Ct Salt Lake City UT 84111",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "232",
 			StreetName:    "DUBEI",
 			StreetSuffix:  "CT",
@@ -250,6 +267,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "123 W Hastings St 123456789",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "123",
 			Predirectional: "W",
 			StreetName:     "HASTINGS",
@@ -280,6 +298,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "Zendesk Christian Golding 1019 Market St San Francisco CA 94103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1019",
 			StreetName:    "MARKET",
 			StreetSuffix:  "ST",
@@ -297,6 +316,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "Erin Johnson c/o DTZ Suite 1800 77 W Wacker Dr Chicago, IL 606001",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "77",
 			Predirectional:      "W",
 			StreetName:          "WACKER",
@@ -322,6 +342,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "830 Fifth Avenue, Room 313, New York, NY 10065",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "830",
 			StreetName:          "FIFTH",
 			StreetSuffix:        "AVE",
@@ -336,6 +357,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "10 Country Road 3668 Splendora TX 77372",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10",
 			StreetName:    "COUNTRY ROAD 3668",
 			City:          "SPLENDORA",
@@ -347,6 +369,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1954 Country Road 43 Greenville TX 75401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1954",
 			StreetName:    "COUNTRY ROAD 43",
 			City:          "GREENVILLE",
@@ -358,6 +381,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3419 SAINT JOHN W ST",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3419",
 			StreetName:      "SAINT JOHN",
 			StreetSuffix:    "ST",
@@ -368,6 +392,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3301 NEW MEXICO NW AV",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3301",
 			StreetName:      "NEW MEXICO",
 			StreetSuffix:    "AVE",
@@ -378,6 +403,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2802 BALLAST PT W BLVD",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2802",
 			StreetName:      "BALLAST POINT",
 			StreetSuffix:    "BLVD",
@@ -388,6 +414,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2350 WASHINGTON NE PL",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2350",
 			StreetName:      "WASHINGTON",
 			StreetSuffix:    "PL",
@@ -398,6 +425,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "10 POLLY DRUMMOND CTR",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10",
 			StreetName:    "POLLY DRUMMOND",
 			StreetSuffix:  "CTR",
@@ -419,6 +447,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "123 E Marcy St Ste 201 Santa Fe NM 87501",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "123",
 			Predirectional:      "E",
 			StreetName:          "MARCY",
@@ -434,6 +463,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "130 Grant Ave Ste 203 Santa Fe NM 87501",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "130",
 			StreetName:          "GRANT",
 			StreetSuffix:        "AVE",
@@ -453,6 +483,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1000 Cordova Place, # 234 Santa Fe NM 87505",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1000",
 			StreetName:          "CORDOVA",
 			StreetSuffix:        "PL",
@@ -467,6 +498,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "12145 NW Grand Ave El Mirage, AZ 85335",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "12145",
 			Predirectional: "NW",
 			StreetName:     "GRAND",
@@ -518,6 +550,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "16781 chagrin blvd # 124 shaker heights oh 44120-3721",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "16781",
 			StreetName:          "CHAGRIN",
 			StreetSuffix:        "BLVD",
@@ -547,6 +580,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "18530 mack ave # 445 grosse pointe farms mi 48236-3254",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "18530",
 			StreetName:          "MACK",
 			StreetSuffix:        "AVE",
@@ -561,6 +595,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1122 2nd st n saint petersburg fl 33701-1710",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "1122",
 			StreetName:      "2ND",
 			StreetSuffix:    "ST",
@@ -588,6 +623,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "10502 shadow ridge ln apt 103 louisville ky",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "10502",
 			StreetName:          "SHADOW RIDGE",
 			StreetSuffix:        "LN",
@@ -611,6 +647,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2207 d gault ave n ft payne al 35967",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2207",
 			StreetName:      "D GAULT",
 			StreetSuffix:    "AVE",
@@ -643,6 +680,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "93 s jackson st # 75108 seattle wa 98104-2818",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "93",
 			Predirectional:      "S",
 			StreetName:          "JACKSON",
@@ -658,6 +696,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "701 u.s. highway 1 ste 402 n. palm beach fl 33408",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "701",
 			StreetName:          "U.S. HIGHWAY 1",
 			SecondaryDesignator: "STE",
@@ -671,6 +710,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "428 westwind dr north palm beach fl 33408",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "428",
 			StreetName:    "WESTWIND",
 			StreetSuffix:  "DR",
@@ -683,6 +723,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3424 camp robinson rd. north little rock ar 72118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3424",
 			StreetName:    "CAMP ROBINSON",
 			StreetSuffix:  "RD",
@@ -709,6 +750,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "9457 s university blvd # 252 highlands ranch co 80126-4976",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "9457",
 			Predirectional:      "S",
 			StreetName:          "UNIVERSITY",
@@ -724,6 +766,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "62835 JESUS MARIA RD MOKELUMNE HILL CA 95245-9658",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "62835",
 			StreetName:    "JESUS MARIA",
 			StreetSuffix:  "RD",
@@ -736,6 +779,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "9275 NE 48TH CT APT 105 LIGHTHOUSE POINT FL 33064-7908",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "9275",
 			Predirectional:      "NE",
 			StreetName:          "48TH",
@@ -751,6 +795,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "9208 COUNTY LINE RD HUNTINGDON VALLEY PA 19006-1701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9208",
 			StreetName:    "COUNTY LINE",
 			StreetSuffix:  "RD",
@@ -763,6 +808,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "895 W MILLER ST FRUITLAND PK FL 34731-2244",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "895",
 			Predirectional: "W",
 			StreetName:     "MILLER",
@@ -776,6 +822,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "18 SLEEPY LAGOON WAY FLOWERY BRANCH GA 30542-7556",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "18",
 			StreetName:    "SLEEPY LAGOON",
 			StreetSuffix:  "WAY",
@@ -788,6 +835,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1080 BUCK HILL DR HUNTINGDON VY PA 19006-7910",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1080",
 			StreetName:    "BUCK HILL",
 			StreetSuffix:  "DR",
@@ -800,6 +848,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "85 MARTIN TRL FLOWERY BR GA 30542-3549",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "85",
 			StreetName:    "MARTIN",
 			StreetSuffix:  "TRL",
@@ -812,6 +861,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "10095 TALBOT AVE HUNTINGTON WOODS MI 48070-1134",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10095",
 			StreetName:    "TALBOT",
 			StreetSuffix:  "AVE",
@@ -824,6 +874,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "709 FOXWOOD CIR LAFAYETTE HL PA 19444-1646",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "709",
 			StreetName:    "FOXWOOD",
 			StreetSuffix:  "CIR",
@@ -836,6 +887,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "981 CATHAY CIR HUNTINGTON BH CA 92646-4817",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "981",
 			StreetName:    "CATHAY",
 			StreetSuffix:  "CIR",
@@ -848,6 +900,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "93 TWINBROOK RD BEAR CREEK TWP PA 18702-8415",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "93",
 			StreetName:    "TWINBROOK",
 			StreetSuffix:  "RD",
@@ -860,6 +913,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "612 N CATHERINE AVE LA GRANGE PARK IL 60526-1511",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "612",
 			Predirectional: "N",
 			StreetName:     "CATHERINE",
@@ -873,6 +927,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "38415 BORGMAN AVE HUNTINGTON WD MI 48070-1104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "38415",
 			StreetName:    "BORGMAN",
 			StreetSuffix:  "AVE",
@@ -885,6 +940,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "7810 JORDAN RD GLOUCESTER PT VA 23062-2222",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7810",
 			StreetName:    "JORDAN",
 			StreetSuffix:  "RD",
@@ -897,6 +953,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1503 BEAR CREEK BLVD BEAR CREEK TW PA 18702-9441",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1503",
 			StreetName:    "BEAR CREEK",
 			StreetSuffix:  "BLVD",
@@ -914,6 +971,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "396 GEORGE W LILES PKWY NW CONCORD 28027",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "396",
 			StreetName:      "GEORGE WEST LILES",
 			StreetSuffix:    "PKWY",
@@ -926,6 +984,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "0 E WARDELL DR # APT 3 PEMBROKE 28372",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "0",
 			Predirectional:      "E",
 			StreetName:          "WARDELL",
@@ -940,6 +999,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "406 North Highway 71 Business Lowell AR 72745",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "406",
 			Predirectional: "N",
 			StreetName:     "HIGHWAY 71 BUSINESS",
@@ -957,6 +1017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "4315 WEBSTER AVENUE LH",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "4315",
 			StreetName:      "WEBSTER",
 			StreetSuffix:    "AVE",
@@ -972,6 +1033,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "188 ROUTE 690 SPRINGBROOK TOWNSHIP, PA 18444",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "188",
 			StreetName:    "ROUTE 690",
 			City:          "SPRINGBROOK TOWNSHIP",
@@ -983,6 +1045,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "333 STATE ROUTE 590 ROARING BROOK TWP, PA 18444",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "333",
 			StreetName:    "STATE ROUTE 590",
 			City:          "ROARING BROOK TWP",
@@ -994,6 +1057,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3750 PRIORITY WAY SOUTH DR",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3750",
 			StreetName:      "PRIORITY WAY",
 			StreetSuffix:    "DR",
@@ -1004,6 +1068,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "250 JOHN W MORROW JR PKWY",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "250",
 			StreetName:    "JOHN WEST MORROW JR",
 			StreetSuffix:  "PKWY",
@@ -1013,6 +1078,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "900 Business 150 STE 3, Mansfield, PA 19402",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",
 			StreetName:          "BUSINESS 150",
 			SecondaryDesignator: "STE",
@@ -1026,6 +1092,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "83 Business 15, Mansfield, PA 16933",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "83",
 			StreetName:    "BUSINESS 15",
 			City:          "MANSFIELD",
@@ -1037,6 +1104,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "900 Business 150 STE 3, Mansfield, PA 19402",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",
 			StreetName:          "BUSINESS 150",
 			SecondaryDesignator: "STE",
@@ -1050,6 +1118,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "100 Business 40, Kernersville, NC 27284",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "100",
 			StreetName:    "BUSINESS 40",
 			City:          "KERNERSVILLE",
@@ -1061,6 +1130,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "400 Calm Lake Circle, Rochester, NY, 14612",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "400",
 			StreetName:    "CALM LAKE",
 			StreetSuffix:  "CIR",
@@ -1083,6 +1153,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1646 Red Leaf Drive Fort Mill, South Carolina 29715 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1646",
 			StreetName:    "RED LEAF",
 			StreetSuffix:  "DR",
@@ -1096,6 +1167,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "15 Bridge Street Providence, Rhode Island 02903 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "15",
 			StreetName:    "BRIDGE",
 			StreetSuffix:  "ST",
@@ -1109,6 +1181,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "150 Citizens Circle Little River, South Carolina 29566 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "150",
 			StreetName:    "CITIZENS",
 			StreetSuffix:  "CIR",
@@ -1122,6 +1195,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "4079 U.S. 17 Business Murrells Inlet, South Carolina 29576 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4079",
 			StreetName:    "U.S. 17 BUSINESS",
 			City:          "MURRELLS INLET",
@@ -1134,6 +1208,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "43 South Broadway Pitman, New Jersey 08071 United States",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "43",
 			Predirectional: "S",
 			StreetName:     "BROADWAY",
@@ -1207,6 +1282,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "4510 COUNTY ROAD GV, APPLETON, WI 54913",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4510",
 			StreetName:    "COUNTY ROAD GV",
 			City:          "APPLETON",
@@ -1218,6 +1294,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "7575 COUNTY ROAD ZZZ, MILWAUKEE, WI 54567",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7575",
 			StreetName:    "COUNTY ROAD ZZZ",
 			City:          "MILWAUKEE",
@@ -1229,6 +1306,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "123A E COUNTY ROAD DV, WAUPACA, WI 54981",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "123A",
 			Predirectional: "E",
 			StreetName:     "COUNTY ROAD DV",
@@ -1241,6 +1319,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1331 COUNTY ROAD AA NE, AMHERST JUNCTION, WI 54407",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "1331",
 			StreetName:      "COUNTY ROAD AA",
 			Postdirectional: "NE",
@@ -1253,6 +1332,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "133 W COUNTY ROAD LL, AMHERST, WI 54406",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "133",
 			Predirectional: "W",
 			StreetName:     "COUNTY ROAD LL",
@@ -1265,6 +1345,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "123 COUNTY ROAD ABC, APT 12, IOLA, WI 54445",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "123",
 			StreetName:          "COUNTY ROAD ABC",
 			SecondaryDesignator: "APT",
@@ -1278,6 +1359,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "200 EAST ELM, DENVER, COLORADO",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "200",
 			Predirectional: "E",
 			StreetName:     "ELM",
@@ -1289,6 +1371,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "55 WINDSOR PLACE, CHAMPAIGN, ILLINOIS",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "55",
 			StreetName:    "WINDSOR",
 			StreetSuffix:  "PL",
@@ -1300,6 +1383,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "5 NORTH MAIN, VAN NUYS, CALIFORNIA",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "5",
 			Predirectional: "N",
 			StreetName:     "MAIN",
@@ -1311,6 +1395,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2609 BAYVIEW, FORT LAUDERDALE, FL",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2609",
 			StreetName:    "BAYVIEW",
 			City:          "FORT LAUDERDALE",
@@ -1321,6 +1406,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "12855 6TH AVE, N. MIAMI, FL 33161",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12855",
 			StreetName:    "6TH",
 			StreetSuffix:  "AVE",
@@ -1333,6 +1419,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "783 HOPE ST, PROVIDENCE, RHODE ISLAND 02906",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "783",
 			StreetName:    "HOPE",
 			StreetSuffix:  "ST",
@@ -1345,6 +1432,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "200 EAST ELM, DENVER, COLORADO",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "200",
 			Predirectional: "E",
 			StreetName:     "ELM",
@@ -1356,6 +1444,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "977 PLEASANT STREET, N. ORANGE, NJ 07052",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "977",
 			StreetName:    "PLEASANT",
 			StreetSuffix:  "ST",
@@ -1368,6 +1457,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "610 EAST MAIN MARION KANSAS",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "610",
 			Predirectional: "E",
 			StreetName:     "MAIN",
@@ -1379,6 +1469,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "10 EAST LAKE, DENVER, COLORADO",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "10",
 			Predirectional: "E",
 			StreetName:     "LAKE",
@@ -1390,6 +1481,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2735 PAWTUCKET AVE EAST PROVIDENCE RHODE ISLAND 02914",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2735",
 			StreetName:    "PAWTUCKET",
 			StreetSuffix:  "AVE",
@@ -1402,6 +1494,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "5548 ELMER AVENUE, N. HOLLYWOOD, CA 91601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5548",
 			StreetName:    "ELMER",
 			StreetSuffix:  "AVE",
@@ -1414,6 +1507,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "150 I St SE The Garrett, Washington, DC 20003",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:    "THE GARRETT",
 			PrimaryNumber:   "150",
 			StreetName:      "I",
@@ -1428,6 +1522,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "209 S Westmoreland Ave The Chadwick, APT 53-201 Los Angeles, CA 90004",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:        "THE CHADWICK",
 			PrimaryNumber:       "209",
 			Predirectional:      "S",
@@ -1444,6 +1539,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3705 N Overlook Blvd Overlook Park Flats, Portland, OR 97227",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:   "OVERLOOK PARK FLATS",
 			PrimaryNumber:  "3705",
 			Predirectional: "N",
@@ -1458,6 +1554,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "2908 Bryant Ave S Uptown Square, Minneapolis, MN 55408",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:    "UPTOWN SQUARE",
 			PrimaryNumber:   "2908",
 			StreetName:      "BRYANT",
@@ -1472,6 +1569,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "850 Jaeger St Jaeger Square, Columbus, OH 43206",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:  "JAEGER SQUARE",
 			PrimaryNumber: "850",
 			StreetName:    "JAEGER",
@@ -1485,6 +1583,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "1090-1092 Berkeley St Forest Cove Apartments, Charleston, SC 29410",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:  "FOREST COVE APARTMENTS",
 			PrimaryNumber: "1090-1092",
 			StreetName:    "BERKELEY",
@@ -1498,6 +1597,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "102 Sottile St The Merchant, Unit 06-305 Charleston, SC 29403",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:        "THE MRCHNT",
 			PrimaryNumber:       "102",
 			StreetName:          "SOTTILE",
@@ -1513,6 +1613,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3420 Legacy Eagle Dr Legacy Mount Pleasant Apartments, Apt B2L Mount Pleasant, SC 29466",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			BusinessName:        "LEGACY MOUNT PLEASANT APARTMENTS",
 			PrimaryNumber:       "3420",
 			StreetName:          "LEGACY EAGLE",
@@ -1528,6 +1629,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "multi_word_state_addresses.xml",
 		Input: "1646 Red Leaf Drive Fort Mill, South Carolina 29715 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1646",
 			StreetName:    "RED LEAF",
 			StreetSuffix:  "DR",
@@ -1541,6 +1643,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "multi_word_state_addresses.xml",
 		Input: "15 Bridge Street Providence, Rhode Island 02903 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "15",
 			StreetName:    "BRIDGE",
 			StreetSuffix:  "ST",
@@ -1554,6 +1657,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "multi_word_state_addresses.xml",
 		Input: "150 Citizens Circle Little River, South Carolina 29566 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "150",
 			StreetName:    "CITIZENS",
 			StreetSuffix:  "CIR",
@@ -1567,6 +1671,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "multi_word_state_addresses.xml",
 		Input: "4079 U.S. 17 Business Murrells Inlet, South Carolina 29576 United States",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4079",
 			StreetName:    "U.S. 17 BUSINESS",
 			City:          "MURRELLS INLET",
@@ -1579,6 +1684,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "multi_word_state_addresses.xml",
 		Input: "43 South Broadway Pitman, New Jersey 08071 United States",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "43",
 			Predirectional: "S",
 			StreetName:     "BROADWAY",
@@ -1592,6 +1698,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "9112 Mendenhall Mall Road, Juneau, AK 99801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9112",
 			StreetName:    "MENDENHALL MALL",
 			StreetSuffix:  "RD",
@@ -1604,6 +1711,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "2701 Thayer Street, Evanston, 60201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2701",
 			StreetName:    "THAYER",
 			StreetSuffix:  "ST",
@@ -1615,6 +1723,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "34115 Sterling Highway, Anchor Point, AK 99556",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "34115",
 			StreetName:    "STERLING",
 			StreetSuffix:  "HWY",
@@ -1627,6 +1736,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "2222 Silverside Road, Wilmington, DE 19810",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2222",
 			StreetName:    "SILVERSIDE",
 			StreetSuffix:  "RD",
@@ -1639,6 +1749,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "111 Banyan Drive, Hilo, HI 96720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "111",
 			StreetName:    "BANYAN",
 			StreetSuffix:  "DR",
@@ -1656,6 +1767,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "3555 68th Street Southeast, Caledonia, MI 49316",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3555",
 			StreetName:      "68TH",
 			StreetSuffix:    "ST",
@@ -1669,6 +1781,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "simple_address_patterns.xml",
 		Input: "318 East 51st Street, Kansas City, MO 64112",
 		WantFields: &address.Address{
+			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "318",
 			Predirectional: "E",
 			StreetName:     "51ST",
@@ -1682,6 +1795,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Soldotna, AK 99669",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SOLDOTNA",
 			Region: "AK",
 			Postal: "99669",
@@ -1691,6 +1805,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9112 Mendenhall Mall Road, Juneau, AK 99801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9112",
 			StreetName:    "MENDENHALL MALL ROAD",
 			City:          "JUNEAU",
@@ -1702,6 +1817,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Mile K Beach Road # 1, Kenai, AK 99611",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MILE K",
 			StreetName:    "BEACH ROAD # 1",
 			City:          "KENAI",
@@ -1713,6 +1829,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Mile K Beach Road # 1, Kenai, AK 99611",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MILE K",
 			StreetName:    "BEACH ROAD # 1",
 			City:          "KENAI",
@@ -1724,6 +1841,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Mi K Beach Road # 2, Kenai, AK 99611",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MI K",
 			StreetName:    "BEACH ROAD # 2",
 			City:          "KENAI",
@@ -1735,6 +1853,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Sand Point, AK 99661",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SAND POINT",
 			Region: "AK",
 			Postal: "99661",
@@ -1744,6 +1863,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Ridgecrest Drive, Bethel, AK 99559",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "RIDGECREST DRIVE",
 			City:       "BETHEL",
 			Region:     "AK",
@@ -1754,6 +1874,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Bethel, AK 99559",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "BETHEL",
 			Region: "AK",
 			Postal: "99559",
@@ -1768,6 +1889,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Cordova, AK 99574",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "CORDOVA",
 			Region: "AK",
 			Postal: "99574",
@@ -1777,6 +1899,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "32-233 M Street, Elmendorf Afb, AK 99506",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "32-233",
 			StreetName:    "M STREET",
 			City:          "ELMENDORF AFB",
@@ -1788,6 +1911,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2932 Boniface Parkway, Anchorage, AK 99504",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2932",
 			StreetName:    "BONIFACE PARKWAY",
 			City:          "ANCHORAGE",
@@ -1799,6 +1923,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "34115 Sterling Highway, Anchor Point, AK 99556",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "34115",
 			StreetName:    "STERLING HIGHWAY",
 			City:          "ANCHOR POINT",
@@ -1810,6 +1935,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Anchor Point, AK 99556",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "ANCHOR POINT",
 			Region: "AK",
 			Postal: "99556",
@@ -1819,6 +1945,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2101 1st Avenue North, Pell City, AL 35125",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2101",
 			StreetName:    "1ST AVENUE NORTH",
 			City:          "PELL CITY",
@@ -1830,6 +1957,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8483 Al Highway 157, Moulton, AL 35650",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8483",
 			StreetName:    "AL HIGHWAY 157",
 			City:          "MOULTON",
@@ -1841,6 +1969,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "64 South Water Street, Mobile, AL 36602",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "64",
 			StreetName:    "SOUTH WATER STREET",
 			City:          "MOBILE",
@@ -1852,6 +1981,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "30653 Highway 278, Addison, AL 35540",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "30653",
 			StreetName:    "HIGHWAY 278",
 			City:          "ADDISON",
@@ -1863,6 +1993,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "325 Copeland Street, Eufaula, AL 36027",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "325",
 			StreetName:    "COPELAND STREET",
 			City:          "EUFAULA",
@@ -1874,6 +2005,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1405 Sunset Drive, Guntersville, AL 35976",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1405",
 			StreetName:    "SUNSET DRIVE",
 			City:          "GUNTERSVILLE",
@@ -1885,6 +2017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "131 Cove Avenue, Gulf Shores, AL 36542",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "131",
 			StreetName:    "COVE AVENUE",
 			City:          "GULF SHORES",
@@ -1896,6 +2029,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1014 Market Street, Greensboro, AL 36744",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1014",
 			StreetName:    "MARKET STREET",
 			City:          "GREENSBORO",
@@ -1912,6 +2046,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1720 North Eufaula Avenue, Eufaula, AL 36027",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1720",
 			StreetName:    "NORTH EUFAULA AVENUE",
 			City:          "EUFAULA",
@@ -1923,6 +2058,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "88175 US Highway 278, Altoona, AL 35952",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "88175",
 			StreetName:    "US HIGHWAY 278",
 			City:          "ALTOONA",
@@ -1934,6 +2070,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1361 Federal Drive, Montgomery, AL 36107",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1361",
 			StreetName:    "FEDERAL DRIVE",
 			City:          "MONTGOMERY",
@@ -1945,6 +2082,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1400 Lloyd Street, Montgomery, AL 36107",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1400",
 			StreetName:    "LLOYD STREET",
 			City:          "MONTGOMERY",
@@ -1956,6 +2094,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "120 Oxmoor Boulevard, Birmingham, AL 35209",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "120",
 			StreetName:    "OXMOOR BOULEVARD",
 			City:          "BIRMINGHAM",
@@ -1967,6 +2106,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7104 Highway 62 West, Gassville, AR 72635",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7104",
 			StreetName:    "HIGHWAY 62 WEST",
 			City:          "GASSVILLE",
@@ -1978,6 +2118,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2112 Linwood Drive, Paragould, AR 72450",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2112",
 			StreetName:    "LINWOOD DRIVE",
 			City:          "PARAGOULD",
@@ -1989,6 +2130,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "408 North Walnut Street, Searcy, AR 72143",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "408",
 			StreetName:    "NORTH WALNUT STREET",
 			City:          "SEARCY",
@@ -2000,6 +2142,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3209 Northeast 11th Street, Bentonville, AR 72712",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3209",
 			StreetName:    "NORTHEAST 11TH STREET",
 			City:          "BENTONVILLE",
@@ -2011,6 +2154,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Perryville, AR 72126",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "PERRYVILLE",
 			Region: "AR",
 			Postal: "72126",
@@ -2020,6 +2164,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "302 Veneer Street, Malvern, AR 72104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "302",
 			StreetName:    "VENEER STREET",
 			City:          "MALVERN",
@@ -2031,6 +2176,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Springdale, AR 72762",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SPRINGDALE",
 			Region: "AR",
 			Postal: "72762",
@@ -2040,6 +2186,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Springdale, AR 72762",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SPRINGDALE",
 			Region: "AR",
 			Postal: "72762",
@@ -2049,6 +2196,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "198 South Poplar Street, Marianna, AR 72360",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "198",
 			StreetName:    "SOUTH POPLAR STREET",
 			City:          "MARIANNA",
@@ -2060,6 +2208,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "703 East Race Avenue, Searcy, AR 72143",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "703",
 			StreetName:    "EAST RACE AVENUE",
 			City:          "SEARCY",
@@ -2071,6 +2220,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Lawson, Urbana, AR 71768",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "LAWSON",
 			City:       "URBANA",
 			Region:     "AR",
@@ -2081,6 +2231,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3000 Kavanaugh Boulevard, Little Rock, AR 72205",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3000",
 			StreetName:    "KAVANAUGH BOULEVARD",
 			City:          "LITTLE ROCK",
@@ -2092,6 +2243,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "406 North Highway 71 Business, Lowell, AR 72745",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "406",
 			StreetName:    "NORTH HIGHWAY 71 BUSINESS",
 			City:          "LOWELL",
@@ -2103,6 +2255,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1445 West Southern Avenue, Mesa, AZ 85202",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1445",
 			StreetName:    "WEST SOUTHERN AVENUE",
 			City:          "MESA",
@@ -2114,6 +2267,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1690 East Ash Street, Globe, AZ 85501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1690",
 			StreetName:    "EAST ASH STREET",
 			City:          "GLOBE",
@@ -2125,6 +2279,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "910 South Beeline Highway, Payson, AZ 85541",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "910",
 			StreetName:    "SOUTH BEELINE HIGHWAY",
 			City:          "PAYSON",
@@ -2136,6 +2291,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6500 Highway 179, Sedona, AZ 86351",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6500",
 			StreetName:    "HIGHWAY 179",
 			City:          "SEDONA",
@@ -2152,6 +2308,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1202 A Avenue, Douglas, AZ 85607",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1202",
 			StreetName:    "A AVENUE",
 			City:          "DOUGLAS",
@@ -2163,6 +2320,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2890 East Andy Devine Avenue, Kingman, AZ 86401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2890",
 			StreetName:    "EAST ANDY DEVINE AVENUE",
 			City:          "KINGMAN",
@@ -2174,6 +2332,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11291 East Viaduct Linda, Scottsdale, AZ 85259",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11291",
 			StreetName:    "EAST VIADUCT LINDA",
 			City:          "SCOTTSDALE",
@@ -2185,6 +2344,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Elfrida, AZ 85610",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "ELFRIDA",
 			Region: "AZ",
 			Postal: "85610",
@@ -2194,6 +2354,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "300 West Apache Trail, Apache Junction, AZ 85220",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "300",
 			StreetName:    "WEST APACHE TRAIL",
 			City:          "APACHE JUNCTION",
@@ -2205,6 +2366,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5235 North Highway 64, Williams, AZ 86046",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5235",
 			StreetName:    "NORTH HIGHWAY 64",
 			City:          "WILLIAMS",
@@ -2216,6 +2378,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1015 North Stone Avenue, Tucson, AZ 85705",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1015",
 			StreetName:    "NORTH STONE AVENUE",
 			City:          "TUCSON",
@@ -2227,6 +2390,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6300 East Golf Links Road, Tucson, AZ 85730",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6300",
 			StreetName:    "EAST GOLF LINKS ROAD",
 			City:          "TUCSON",
@@ -2238,6 +2402,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2616 South Mission Road, Tucson, AZ 85713",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2616",
 			StreetName:    "SOUTH MISSION ROAD",
 			City:          "TUCSON",
@@ -2249,6 +2414,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8501 West Bowles Avenue, Littleton, CO 80123",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8501",
 			StreetName:    "WEST BOWLES AVENUE",
 			City:          "LITTLETON",
@@ -2260,6 +2426,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2700 Colorado Boulevard, Idaho Springs, CO 80452",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2700",
 			StreetName:    "CO BOULEVARD",
 			City:          "IDAHO SPRINGS",
@@ -2271,6 +2438,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "926 Main Street, Longmont, CO 80501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "926",
 			StreetName:    "MAIN STREET",
 			City:          "LONGMONT",
@@ -2282,6 +2450,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "680 Oak Avenue, Eaton, CO 80615",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "680",
 			StreetName:    "OAK AVENUE",
 			City:          "EATON",
@@ -2293,6 +2462,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1606 West Eisenhower Boulevard, Loveland, CO 80537",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1606",
 			StreetName:    "WEST EISENHOWER BOULEVARD",
 			City:          "LOVELAND",
@@ -2304,6 +2474,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "525 North Avenue, Grand Junction, CO 81501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "525",
 			StreetName:    "NORTH AVENUE",
 			City:          "GRAND JUNCTION",
@@ -2315,6 +2486,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2255 Sheridan Boulevard, Denver, CO 80214",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2255",
 			StreetName:    "SHERIDAN BOULEVARD",
 			City:          "DENVER",
@@ -2326,6 +2498,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1001 West New York Avenue, Gunnison, CO 81230",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1001",
 			StreetName:    "WEST NY AVENUE",
 			City:          "GUNNISON",
@@ -2337,6 +2510,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "132 West 6th Street, Glenwood Springs, CO 81601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "132",
 			StreetName:    "WEST 6TH STREET",
 			City:          "GLENWOOD SPRINGS",
@@ -2348,6 +2522,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "321 South Denver Avenue, Fort Lupton, CO 80621",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "321",
 			StreetName:    "SOUTH DENVER AVENUE",
 			City:          "FORT LUPTON",
@@ -2359,6 +2534,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "390 South McCaslin Boulevard, Louisville, CO 80027",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "390",
 			StreetName:    "SOUTH MCCASLIN BOULEVARD",
 			City:          "LOUISVILLE",
@@ -2370,6 +2546,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1298 North College Avenue, Fort Collins, CO 80524",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1298",
 			StreetName:    "NORTH COLLEGE AVENUE",
 			City:          "FORT COLLINS",
@@ -2381,6 +2558,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "771 South Santa Fe Avenue, Pueblo, CO 81006",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "771",
 			StreetName:    "SOUTH SANTA FE AVENUE",
 			City:          "PUEBLO",
@@ -2392,6 +2570,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "100 Greyrock Place, Stamford, CT 06901",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "100",
 			StreetName:    "GREYROCK PLACE",
 			City:          "STAMFORD",
@@ -2408,6 +2587,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "228 Main Street, Winsted, CT 06098",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "228",
 			StreetName:    "MAIN STREET",
 			City:          "WINSTED",
@@ -2419,6 +2599,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "287 New Britain Avenue, Hartford, CT 06106",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "287",
 			StreetName:    "NEW BRITAIN AVENUE",
 			City:          "HARTFORD",
@@ -2430,6 +2611,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "316 Main Street, Cromwell, CT 06416",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "316",
 			StreetName:    "MAIN STREET",
 			City:          "CROMWELL",
@@ -2441,6 +2623,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "621 Washington Avenue, Bridgeport, CT 06604",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "621",
 			StreetName:    "WA AVENUE",
 			City:          "BRIDGEPORT",
@@ -2452,6 +2635,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "377 South Center Street, Windsor Locks, CT 06096",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "377",
 			StreetName:    "SOUTH CENTER STREET",
 			City:          "WINDSOR LOCKS",
@@ -2463,6 +2647,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "20 West Pine Way, Plainville, CT 06062",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "20",
 			StreetName:    "WEST PINE WAY",
 			City:          "PLAINVILLE",
@@ -2474,6 +2659,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "360 Watertown Road, Thomaston, CT 06787",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "360",
 			StreetName:    "WATERTOWN ROAD",
 			City:          "THOMASTON",
@@ -2485,6 +2671,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "53 Quinnipiac Avenue, North Haven, CT 06473",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "53",
 			StreetName:    "QUINNIPIAC AVENUE",
 			City:          "NORTH HAVEN",
@@ -2496,6 +2683,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "26 Killingworth Road, Higganum, CT 06441",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "26",
 			StreetName:    "KILLINGWORTH ROAD",
 			City:          "HIGGANUM",
@@ -2507,6 +2695,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "942 Main Street, Hartford, CT 06103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "942",
 			StreetName:    "MAIN STREET",
 			City:          "HARTFORD",
@@ -2523,6 +2712,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "907 Boston Post Road, Old Saybrook, CT 06475",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "907",
 			StreetName:    "BOSTON POST ROAD",
 			City:          "OLD SAYBROOK",
@@ -2534,6 +2724,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "222 7th Street Southeast, Washington, DC 20003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "222",
 			StreetName:    "7TH STREET SOUTHEAST",
 			City:          "WASHINGTON",
@@ -2545,6 +2736,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3320 M Street Northwest, Washington, DC 20007",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3320",
 			StreetName:    "M STREET NORTHWEST",
 			City:          "WASHINGTON",
@@ -2553,14 +2745,22 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:      "us50_test_tagged.xml",
-		Input:     "1517 Connecticut Avenue Northwest, Washington, DC 20036",
-		Unsettled: "normalizer: not idempotent, a second pass changes the result",
+		File:  "us50_test_tagged.xml",
+		Input: "1517 Connecticut Avenue Northwest, Washington, DC 20036",
+		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "1517",
+			StreetName:    "CT AVENUE NORTHWEST",
+			City:          "WASHINGTON",
+			Region:        "DC",
+			Postal:        "20036",
+		},
 	},
 	{
 		File:  "us50_test_tagged.xml",
 		Input: "4115 Wisconsin Avenue Northwest, Washington, DC 20016",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4115",
 			StreetName:    "WI AVENUE NORTHWEST",
 			City:          "WASHINGTON",
@@ -2572,6 +2772,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "613 K Street Northwest, Washington, DC 20001",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "613",
 			StreetName:    "K STREET NORTHWEST",
 			City:          "WASHINGTON",
@@ -2583,6 +2784,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2014 P Street Northwest, Washington, DC 20036",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2014",
 			StreetName:    "P STREET NORTHWEST",
 			City:          "WASHINGTON",
@@ -2594,6 +2796,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1606 7th Street Northwest, Washington, DC 20001",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1606",
 			StreetName:    "7TH STREET NORTHWEST",
 			City:          "WASHINGTON",
@@ -2605,6 +2808,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1063 31st Street Northwest, Washington, DC 20007",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1063",
 			StreetName:    "31ST STREET NORTHWEST",
 			City:          "WASHINGTON",
@@ -2613,14 +2817,22 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:      "us50_test_tagged.xml",
-		Input:     "3500 Connecticut Avenue Northwest, Washington, DC 20008",
-		Unsettled: "normalizer: not idempotent, a second pass changes the result",
+		File:  "us50_test_tagged.xml",
+		Input: "3500 Connecticut Avenue Northwest, Washington, DC 20008",
+		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "3500",
+			StreetName:    "CT AVENUE NORTHWEST",
+			City:          "WASHINGTON",
+			Region:        "DC",
+			Postal:        "20008",
+		},
 	},
 	{
 		File:  "us50_test_tagged.xml",
 		Input: "1654 Columbia Road Northwest, Washington, DC 20009",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1654",
 			StreetName:    "COLUMBIA ROAD NORTHWEST",
 			City:          "WASHINGTON",
@@ -2632,6 +2844,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4615 Wisconsin Avenue Northwest, Washington, DC 20016",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4615",
 			StreetName:    "WI AVENUE NORTHWEST",
 			City:          "WASHINGTON",
@@ -2648,6 +2861,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "499 South Capitol Street Southwest, Washington, DC 20003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "499",
 			StreetName:    "SOUTH CAPITOL STREET SOUTHWEST",
 			City:          "WASHINGTON",
@@ -2656,14 +2870,22 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:      "us50_test_tagged.xml",
-		Input:     "5532 Connecticut Avenue Northwest, Washington, DC 20015",
-		Unsettled: "normalizer: not idempotent, a second pass changes the result",
+		File:  "us50_test_tagged.xml",
+		Input: "5532 Connecticut Avenue Northwest, Washington, DC 20015",
+		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "5532",
+			StreetName:    "CT AVENUE NORTHWEST",
+			City:          "WASHINGTON",
+			Region:        "DC",
+			Postal:        "20015",
+		},
 	},
 	{
 		File:  "us50_test_tagged.xml",
 		Input: "1720 West Gilpin Drive, Wilmington, DE 19805",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1720",
 			StreetName:    "WEST GILPIN DRIVE",
 			City:          "WILMINGTON",
@@ -2675,6 +2897,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2222 Silverside Road, Wilmington, DE 19810",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2222",
 			StreetName:    "SILVERSIDE ROAD",
 			City:          "WILMINGTON",
@@ -2686,6 +2909,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "213 Anglers Road, Lewes, DE 19958",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "213",
 			StreetName:    "ANGLERS ROAD",
 			City:          "LEWES",
@@ -2697,6 +2921,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "500 Greenhill Avenue, Wilmington, DE 19805",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "500",
 			StreetName:    "GREENHILL AVENUE",
 			City:          "WILMINGTON",
@@ -2708,6 +2933,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12 East Lea Boulevard, Wilmington, DE 19802",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12",
 			StreetName:    "EAST LEA BOULEVARD",
 			City:          "WILMINGTON",
@@ -2719,6 +2945,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1270 Ocean Outlt, Rehoboth Beach, DE 19971",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1270",
 			StreetName:    "OCEAN OUTLT",
 			City:          "REHOBOTH BEACH",
@@ -2730,6 +2957,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "791 North Dual Highway, Seaford, DE 19973",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "791",
 			StreetName:    "NORTH DUAL HIGHWAY",
 			City:          "SEAFORD",
@@ -2741,6 +2969,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "909 North Dupont Highway, Dover, DE 19901",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "909",
 			StreetName:    "NORTH DUPONT HIGHWAY",
 			City:          "DOVER",
@@ -2752,6 +2981,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "900 Churchmans Road, Newark, DE 19713",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "900",
 			StreetName:    "CHURCHMANS ROAD",
 			City:          "NEWARK",
@@ -2763,6 +2993,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2354 Glasgow Avenue, Newark, DE 19702",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2354",
 			StreetName:    "GLASGOW AVENUE",
 			City:          "NEWARK",
@@ -2774,6 +3005,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "134 North Dupont Highway, New Castle, DE 19720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "134",
 			StreetName:    "NORTH DUPONT HIGHWAY",
 			City:          "NEW CASTLE",
@@ -2785,6 +3017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4000 Concord Pike, Wilmington, DE 19803",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4000",
 			StreetName:    "CONCORD PIKE",
 			City:          "WILMINGTON",
@@ -2796,6 +3029,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2719 Philadelphia Pike, Claymont, DE 19703",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2719",
 			StreetName:    "PHILADELPHIA PIKE",
 			City:          "CLAYMONT",
@@ -2807,6 +3041,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3211 Kirkwood Highway, Wilmington, DE 19808",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3211",
 			StreetName:    "KIRKWOOD HIGHWAY",
 			City:          "WILMINGTON",
@@ -2818,6 +3053,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8751 Himes Avenue North, Tampa, FL 33614",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8751",
 			StreetName:    "HIMES AVENUE NORTH",
 			City:          "TAMPA",
@@ -2829,6 +3065,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "13690 Stoneybrook Drive, Clearwater, FL 33762",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "13690",
 			StreetName:    "STONEYBROOK DRIVE",
 			City:          "CLEARWATER",
@@ -2840,6 +3077,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1733 Tamiami Trail South, Venice, FL 34293",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1733",
 			StreetName:    "TAMIAMI TRAIL SOUTH",
 			City:          "VENICE",
@@ -2851,6 +3089,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1812 South Osprey Avenue, Sarasota, FL 34239",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1812",
 			StreetName:    "SOUTH OSPREY AVENUE",
 			City:          "SARASOTA",
@@ -2862,6 +3101,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6600 Gulf Drive, Bradenton Beach, FL 34217",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6600",
 			StreetName:    "GULF DRIVE",
 			City:          "BRADENTON BEACH",
@@ -2873,6 +3113,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1287 1st Street, Sarasota, FL 34236",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1287",
 			StreetName:    "1ST STREET",
 			City:          "SARASOTA",
@@ -2884,6 +3125,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5401 West Kennedy Boulevard, Tampa, FL 33609",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5401",
 			StreetName:    "WEST KENNEDY BOULEVARD",
 			City:          "TAMPA",
@@ -2895,6 +3137,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "301 Gulf Boulevard, Belleair Beach, FL 33786",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "301",
 			StreetName:    "GULF BOULEVARD",
 			City:          "BELLEAIR BEACH",
@@ -2911,6 +3154,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4023 Water Avenue West, Tampa, FL 33614",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4023",
 			StreetName:    "WATER AVENUE WEST",
 			City:          "TAMPA",
@@ -2922,6 +3166,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "285 West Dearborn, Englewood, FL 34223",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "285",
 			StreetName:    "WEST DEARBORN",
 			City:          "ENGLEWOOD",
@@ -2933,6 +3178,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1330 9th Avenue, Tampa, FL 33605",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1330",
 			StreetName:    "9TH AVENUE",
 			City:          "TAMPA",
@@ -2944,6 +3190,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "844 6th Street Northwest, Winter Haven, FL 33881",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "844",
 			StreetName:    "6TH STREET NORTHWEST",
 			City:          "WINTER HAVEN",
@@ -2955,6 +3202,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1411 49th Street South, Saint Petersburg, FL 33707",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1411",
 			StreetName:    "49TH STREET SOUTH",
 			City:          "SAINT PETERSBURG",
@@ -2966,6 +3214,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 80, Allentown, GA 31003",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 80",
 			City:       "ALLENTOWN",
 			Region:     "GA",
@@ -2976,6 +3225,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "108 South Park Avenue, Calhoun, GA 30701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "108",
 			StreetName:    "SOUTH PARK AVENUE",
 			City:          "CALHOUN",
@@ -2987,6 +3237,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "122 Cedar Street, Arlington, GA 31713",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "122",
 			StreetName:    "CEDAR STREET",
 			City:          "ARLINGTON",
@@ -2998,6 +3249,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "110 1st Street Southwest, Moultrie, GA 31768",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "110",
 			StreetName:    "1ST STREET SOUTHWEST",
 			City:          "MOULTRIE",
@@ -3009,6 +3261,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2567 Main Street West, Snellville, GA 30078",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2567",
 			StreetName:    "MAIN STREET WEST",
 			City:          "SNELLVILLE",
@@ -3020,6 +3273,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Pineville Road, Buena Vista, GA 31803",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "PINEVILLE ROAD",
 			City:       "BUENA VISTA",
 			Region:     "GA",
@@ -3030,6 +3284,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2601 Dawson Road, Albany, GA 31707",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2601",
 			StreetName:    "DAWSON ROAD",
 			City:          "ALBANY",
@@ -3046,6 +3301,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1000 North Point Circle, Alpharetta, GA 30022",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1000",
 			StreetName:    "NORTH POINT CIRCLE",
 			City:          "ALPHARETTA",
@@ -3057,6 +3313,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "419 Spaulding Road, Montezuma, GA 31063",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "419",
 			StreetName:    "SPAULDING ROAD",
 			City:          "MONTEZUMA",
@@ -3068,6 +3325,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "615 Newton Road, Camilla, GA 31730",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "615",
 			StreetName:    "NEWTON ROAD",
 			City:          "CAMILLA",
@@ -3079,6 +3337,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "932 McDaniel Street Southwest, Atlanta, GA 30310",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "932",
 			StreetName:    "MCDANIEL STREET SOUTHWEST",
 			City:          "ATLANTA",
@@ -3090,6 +3349,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Buford Street, Shellman, GA 31786",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "BUFORD STREET",
 			City:       "SHELLMAN",
 			Region:     "GA",
@@ -3100,6 +3360,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "614 North Hutchinson Avenue, Adel, GA 31620",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "614",
 			StreetName:    "NORTH HUTCHINSON AVENUE",
 			City:          "ADEL",
@@ -3111,6 +3372,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1750 Kalakaua Avenue Fl 3rd, Honolulu, HI 96826",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1750",
 			StreetName:          "KALAKAUA AVENUE",
 			SecondaryDesignator: "FL",
@@ -3124,6 +3386,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1215 South Kihei Road Unit F, Kihei, HI 96753",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1215",
 			StreetName:          "SOUTH KIHEI ROAD",
 			SecondaryDesignator: "UNIT",
@@ -3137,6 +3400,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "111 Banyan Drive, Hilo, HI 96720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "111",
 			StreetName:    "BANYAN DRIVE",
 			City:          "HILO",
@@ -3148,6 +3412,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "217 Waianuenue Avenue, Hilo, HI 96720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "217",
 			StreetName:    "WAIANUENUE AVENUE",
 			City:          "HILO",
@@ -3159,6 +3424,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1050 Ala Moana Boulevard, Honolulu, HI 96813",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1050",
 			StreetName:    "ALA MOANA BOULEVARD",
 			City:          "HONOLULU",
@@ -3170,6 +3436,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2239 South King Street, Honolulu, HI 96826",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2239",
 			StreetName:    "SOUTH KING STREET",
 			City:          "HONOLULU",
@@ -3181,6 +3448,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2463 South Kihei Road, Kihei, HI 96753",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2463",
 			StreetName:    "SOUTH KIHEI ROAD",
 			City:          "KIHEI",
@@ -3192,6 +3460,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "935 California Avenue, Wahiawa, HI 96786",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "935",
 			StreetName:    "CA AVENUE",
 			City:          "WAHIAWA",
@@ -3203,6 +3472,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "94-210 Leokane, Suite 105, Waipahu, HI 96797",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "94-210",
 			StreetName:          "LEOKANE",
 			SecondaryDesignator: "STE",
@@ -3216,6 +3486,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2500 Kalakaua Avenue Unit A, Honolulu, HI 96815",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "2500",
 			StreetName:          "KALAKAUA AVENUE",
 			SecondaryDesignator: "UNIT",
@@ -3229,6 +3500,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1314 North King Street, Honolulu, HI 96817",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1314",
 			StreetName:    "NORTH KING STREET",
 			City:          "HONOLULU",
@@ -3240,6 +3512,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "120 Hekili, Kailua, HI 96734",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "120",
 			StreetName:    "HEKILI",
 			City:          "KAILUA",
@@ -3251,6 +3524,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1279 South Kihei Road Suite 122, Kihei, HI 96753",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1279",
 			StreetName:          "SOUTH KIHEI ROAD",
 			SecondaryDesignator: "STE",
@@ -3264,6 +3538,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1121 Nuuanu Avenue Suite 105, Honolulu, HI 96817",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1121",
 			StreetName:          "NUUANU AVENUE",
 			SecondaryDesignator: "STE",
@@ -3277,6 +3552,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 34 East, Albia, IA 52531",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 34 EAST",
 			City:       "ALBIA",
 			Region:     "IA",
@@ -3292,6 +3568,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2801 Main Street, Keokuk, IA 52632",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2801",
 			StreetName:    "MAIN STREET",
 			City:          "KEOKUK",
@@ -3303,6 +3580,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1804 Highway Boulevard, Spencer, IA 51301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1804",
 			StreetName:    "HIGHWAY BOULEVARD",
 			City:          "SPENCER",
@@ -3314,6 +3592,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1106 Highway 69 North, Forest City, IA 50436",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1106",
 			StreetName:    "HIGHWAY 69 NORTH",
 			City:          "FOREST CITY",
@@ -3325,6 +3604,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3070 Highway 22, Riverside, IA 52327",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3070",
 			StreetName:    "HIGHWAY 22",
 			City:          "RIVERSIDE",
@@ -3336,6 +3616,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9125 Atlantic Drive Southwest, Cedar Rapids, IA 52404",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9125",
 			StreetName:    "ATLANTIC DRIVE SOUTHWEST",
 			City:          "CEDAR RAPIDS",
@@ -3347,6 +3628,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 West Taylor Street, Creston, IA 50801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "WEST TAYLOR STREET",
 			City:          "CRESTON",
@@ -3358,6 +3640,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1302 US Highway 71 North, Carroll, IA 51401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1302",
 			StreetName:    "US HIGHWAY 71 NORTH",
 			City:          "CARROLL",
@@ -3369,6 +3652,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "115 Main Street, Ames, IA 50010",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "115",
 			StreetName:    "MAIN STREET",
 			City:          "AMES",
@@ -3380,6 +3664,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1905 Cottage Grove Avenue, Des Moines, IA 50314",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1905",
 			StreetName:    "COTTAGE GROVE AVENUE",
 			City:          "DES MOINES",
@@ -3391,6 +3676,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "127 East 18th Street, Cedar Falls, IA 50613",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "127",
 			StreetName:    "EAST 18TH STREET",
 			City:          "CEDAR FALLS",
@@ -3402,6 +3688,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "812 Illinois Street, Sidney, IA 51652",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "812",
 			StreetName:    "IL STREET",
 			City:          "SIDNEY",
@@ -3413,6 +3700,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "215 East Walnut Street, Des Moines, IA 50309",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "215",
 			StreetName:    "EAST WALNUT STREET",
 			City:          "DES MOINES",
@@ -3424,6 +3712,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "978 East Main Street, Burley, ID 83318",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "978",
 			StreetName:    "EAST MAIN STREET",
 			City:          "BURLEY",
@@ -3435,6 +3724,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "348 Addison Avenue West, Twin Falls, ID 83301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "348",
 			StreetName:    "ADDISON AVENUE WEST",
 			City:          "TWIN FALLS",
@@ -3446,6 +3736,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "295 South 250 East, Burley, ID 83318",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "295",
 			StreetName:    "SOUTH 250 EAST",
 			City:          "BURLEY",
@@ -3457,6 +3748,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "423 South Oneida Street, Rupert, ID 83350",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "423",
 			StreetName:    "SOUTH ONEIDA STREET",
 			City:          "RUPERT",
@@ -3468,6 +3760,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "123 West 5th North, Burley, ID 83318",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "123",
 			StreetName:    "WEST 5TH NORTH",
 			City:          "BURLEY",
@@ -3479,6 +3772,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "317 Happy Day Boulevard, Caldwell, ID 83607",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "317",
 			StreetName:    "HAPPY DAY BOULEVARD",
 			City:          "CALDWELL",
@@ -3490,6 +3784,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "524 Airport Loop, Twin Falls, ID 83301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "524",
 			StreetName:    "AIRPORT LOOP",
 			City:          "TWIN FALLS",
@@ -3501,6 +3796,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "111 Broadway Avenue, Boise, ID 83702",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "111",
 			StreetName:    "BROADWAY AVENUE",
 			City:          "BOISE",
@@ -3512,6 +3808,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6536 Main Street, Bonners Ferry, ID 83805",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6536",
 			StreetName:    "MAIN STREET",
 			City:          "BONNERS FERRY",
@@ -3523,6 +3820,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 77, Albion, ID 83311",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 77",
 			City:       "ALBION",
 			Region:     "ID",
@@ -3533,6 +3831,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "220 6th Street, Wallace, ID 83873",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "220",
 			StreetName:    "6TH STREET",
 			City:          "WALLACE",
@@ -3544,6 +3843,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "150 1st Street, Idaho Falls, ID 83401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "150",
 			StreetName:    "1ST STREET",
 			City:          "IDAHO FALLS",
@@ -3555,6 +3855,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "160 West Main Street, Oakley, ID 83346",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "160",
 			StreetName:    "WEST MAIN STREET",
 			City:          "OAKLEY",
@@ -3566,6 +3867,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Almo, ID 83312",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "ALMO",
 			Region: "ID",
 			Postal: "83312",
@@ -3575,6 +3877,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2256 Northbrook Court, Northbrook, IL 60062",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2256",
 			StreetName:    "NORTHBROOK COURT",
 			City:          "NORTHBROOK",
@@ -3586,6 +3889,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1060 Spring Hill Mall, Dundee, IL 60118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1060",
 			StreetName:    "SPRING HILL MALL",
 			City:          "DUNDEE",
@@ -3597,6 +3901,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6 West South Water Market, Chicago, IL 60608",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6",
 			StreetName:    "WEST SOUTH WATER MARKET",
 			City:          "CHICAGO",
@@ -3608,6 +3913,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "14510 South Indiana Avenue, Riverdale, IL 60827",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "14510",
 			StreetName:    "SOUTH IN AVENUE",
 			City:          "RIVERDALE",
@@ -3619,6 +3925,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "719 West Elm Street, Hoopeston, IL 60942",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "719",
 			StreetName:    "WEST ELM STREET",
 			City:          "HOOPESTON",
@@ -3630,6 +3937,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1612 North Sedgwick Street, Chicago, IL 60614",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1612",
 			StreetName:    "NORTH SEDGWICK STREET",
 			City:          "CHICAGO",
@@ -3641,6 +3949,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3359 West 115th Street, Alsip, IL 60803",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3359",
 			StreetName:    "WEST 115TH STREET",
 			City:          "ALSIP",
@@ -3652,6 +3961,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "425 West 115th Street, Chicago, IL 60628",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "425",
 			StreetName:    "WEST 115TH STREET",
 			City:          "CHICAGO",
@@ -3663,6 +3973,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4730 West 103rd Street, Oak Lawn, IL 60453",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4730",
 			StreetName:    "WEST 103RD STREET",
 			City:          "OAK LAWN",
@@ -3674,6 +3985,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6943 Roosevelt Road, Berwyn, IL 60402",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6943",
 			StreetName:    "ROOSEVELT ROAD",
 			City:          "BERWYN",
@@ -3685,6 +3997,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1330 West Madison Street, Chicago, IL 60607",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1330",
 			StreetName:    "WEST MADISON STREET",
 			City:          "CHICAGO",
@@ -3696,6 +4009,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4128 14th Avenue, Rock Island, IL 61201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4128",
 			StreetName:    "14TH AVENUE",
 			City:          "ROCK ISLAND",
@@ -3707,6 +4021,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "829 Moen Avenue, Joliet, IL 60436",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "829",
 			StreetName:    "MOEN AVENUE",
 			City:          "JOLIET",
@@ -3718,6 +4033,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "40 East Main Street, Hagerstown, IN 47346",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "40",
 			StreetName:    "EAST MAIN STREET",
 			City:          "HAGERSTOWN",
@@ -3729,6 +4045,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "313-317 Broadway, Madison, IN 47250",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "313-317",
 			StreetName:    "BROADWAY",
 			City:          "MADISON",
@@ -3740,6 +4057,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2371 North 26th Street, Lafayette, IN 47904",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2371",
 			StreetName:    "NORTH 26TH STREET",
 			City:          "LAFAYETTE",
@@ -3751,6 +4069,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "10 West Market Street, Indianapolis, IN 46204",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10",
 			StreetName:    "WEST MARKET STREET",
 			City:          "INDIANAPOLIS",
@@ -3762,6 +4081,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3906 North Indianapolis Road, Columbus, IN 47201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3906",
 			StreetName:    "NORTH INDIANAPOLIS ROAD",
 			City:          "COLUMBUS",
@@ -3773,6 +4093,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1100 West 11th Street, Bloomington, IN 47404",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1100",
 			StreetName:    "WEST 11TH STREET",
 			City:          "BLOOMINGTON",
@@ -3784,6 +4105,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12510 North Meridian Street, Carmel, IN 46032",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12510",
 			StreetName:    "NORTH MERIDIAN STREET",
 			City:          "CARMEL",
@@ -3795,6 +4117,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1753 East 12th Street, Mishawaka, IN 46544",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1753",
 			StreetName:    "EAST 12TH STREET",
 			City:          "MISHAWAKA",
@@ -3806,6 +4129,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1900 South Mock Avenue, Muncie, IN 47302",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1900",
 			StreetName:    "SOUTH MOCK AVENUE",
 			City:          "MUNCIE",
@@ -3817,6 +4141,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1800 East Market Street, Logansport, IN 46947",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1800",
 			StreetName:    "EAST MARKET STREET",
 			City:          "LOGANSPORT",
@@ -3828,6 +4153,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1621 East 10th Street, Jeffersonville, IN 47130",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1621",
 			StreetName:    "EAST 10TH STREET",
 			City:          "JEFFERSONVILLE",
@@ -3839,6 +4165,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "239 West Monroe Street, Decatur, IN 46733",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "239",
 			StreetName:    "WEST MONROE STREET",
 			City:          "DECATUR",
@@ -3850,6 +4177,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1000 Indiana Highway 212, Michigan City, IN 46360",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1000",
 			StreetName:    "IN HIGHWAY 212",
 			City:          "MICHIGAN CITY",
@@ -3861,6 +4189,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "324 West Washington Street, Oskaloosa, KS 66066",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "324",
 			StreetName:    "WEST WA STREET",
 			City:          "OSKALOOSA",
@@ -3872,6 +4201,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8 East 6th Street, Lawrence, KS 66044",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8",
 			StreetName:    "EAST 6TH STREET",
 			City:          "LAWRENCE",
@@ -3883,6 +4213,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1044 West 29th Street North, Wichita, KS 67204",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1044",
 			StreetName:    "WEST 29TH STREET NORTH",
 			City:          "WICHITA",
@@ -3894,6 +4225,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8533 Southwest 21st Street, Topeka, KS 66615",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8533",
 			StreetName:    "SOUTHWEST 21ST STREET",
 			City:          "TOPEKA",
@@ -3905,6 +4237,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6249 East 21st Street North, Wichita, KS 67208",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6249",
 			StreetName:    "EAST 21ST STREET NORTH",
 			City:          "WICHITA",
@@ -3916,6 +4249,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "707 North Main Street, Newton, KS 67114",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "707",
 			StreetName:    "NORTH MAIN STREET",
 			City:          "NEWTON",
@@ -3927,6 +4261,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1135 College Drive, Garden City, KS 67846",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1135",
 			StreetName:    "COLLEGE DRIVE",
 			City:          "GARDEN CITY",
@@ -3938,6 +4273,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2615 1/2 Gary Avenue, Dodge City, KS 67801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2615 1/2",
 			StreetName:    "GARY AVENUE",
 			City:          "DODGE CITY",
@@ -3949,6 +4285,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "103 West 5th Street, Admire, KS 66830",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "103",
 			StreetName:    "WEST 5TH STREET",
 			City:          "ADMIRE",
@@ -3960,6 +4297,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "13964 Santa Fe Trail Drive, Shawnee Mission, KS 66215",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "13964",
 			StreetName:    "SANTA FE TRAIL DRIVE",
 			City:          "SHAWNEE MISSION",
@@ -3971,6 +4309,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11120 Antioch Road, Shawnee Mission, KS 66210",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11120",
 			StreetName:    "ANTIOCH ROAD",
 			City:          "SHAWNEE MISSION",
@@ -3982,6 +4321,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "311 West Holme Street, Norton, KS 67654",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "311",
 			StreetName:    "WEST HOLME STREET",
 			City:          "NORTON",
@@ -3993,6 +4333,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3002 East Central Avenue, Wichita, KS 67214",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3002",
 			StreetName:    "EAST CENTRAL AVENUE",
 			City:          "WICHITA",
@@ -4009,6 +4350,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "211 Clover Lane, Louisville, KY 40207",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "211",
 			StreetName:    "CLOVER LANE",
 			City:          "LOUISVILLE",
@@ -4025,6 +4367,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "440 East Main Street, Bowling Green, KY 42101",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "440",
 			StreetName:    "EAST MAIN STREET",
 			City:          "BOWLING GREEN",
@@ -4036,6 +4379,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "600 West 9th Street, Russellville, KY 42276",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "600",
 			StreetName:    "WEST 9TH STREET",
 			City:          "RUSSELLVILLE",
@@ -4052,6 +4396,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "433 Johnson Street, Covington, KY 41011",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "433",
 			StreetName:    "JOHNSON STREET",
 			City:          "COVINGTON",
@@ -4063,6 +4408,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "610 West Magnolia Avenue, Louisville, KY 40208",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "610",
 			StreetName:    "WEST MAGNOLIA AVENUE",
 			City:          "LOUISVILLE",
@@ -4074,6 +4420,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "445 Highway 44 East, Shepherdsville, KY 40165",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "445",
 			StreetName:    "HIGHWAY 44 EAST",
 			City:          "SHEPHERDSVILLE",
@@ -4085,6 +4432,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "134 Spout Springs Road, Irvine, KY 40336",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "134",
 			StreetName:    "SPOUT SPRINGS ROAD",
 			City:          "IRVINE",
@@ -4096,6 +4444,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "820 Madison Avenue, Covington, KY 41011",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "820",
 			StreetName:    "MADISON AVENUE",
 			City:          "COVINGTON",
@@ -4107,6 +4456,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9464 Brownsboro Road, Louisville, KY 40241",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9464",
 			StreetName:    "BROWNSBORO ROAD",
 			City:          "LOUISVILLE",
@@ -4118,6 +4468,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "41 East Washington Street, Sebree, KY 42455",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "41",
 			StreetName:    "EAST WA STREET",
 			City:          "SEBREE",
@@ -4129,6 +4480,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "410 West Vine Street, Lexington, KY 40507",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "410",
 			StreetName:    "WEST VINE STREET",
 			City:          "LEXINGTON",
@@ -4140,6 +4492,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "500 Winchester Avenue, Ashland, KY 41101",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "500",
 			StreetName:    "WINCHESTER AVENUE",
 			City:          "ASHLAND",
@@ -4151,6 +4504,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1587 Crowley Rayne Highway, Crowley, LA 70526",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1587",
 			StreetName:    "CROWLEY RAYNE HIGHWAY",
 			City:          "CROWLEY",
@@ -4162,6 +4516,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 Cheyenne Drive, Scott, LA 70583",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "CHEYENNE DRIVE",
 			City:          "SCOTT",
@@ -4173,6 +4528,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1003 Hugh Wallis Road South, Lafayette, LA 70508",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1003",
 			StreetName:    "HUGH WALLIS ROAD SOUTH",
 			City:          "LAFAYETTE",
@@ -4184,6 +4540,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "724 Iberville Street, New Orleans, LA 70130",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "724",
 			StreetName:    "IBERVILLE STREET",
 			City:          "NEW ORLEANS",
@@ -4195,6 +4552,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "724 Iberville Street, New Orleans, LA 70130",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "724",
 			StreetName:    "IBERVILLE STREET",
 			City:          "NEW ORLEANS",
@@ -4206,6 +4564,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "305 Constitution Drive, West Monroe, LA 71292",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "305",
 			StreetName:    "CONSTITUTION DRIVE",
 			City:          "WEST MONROE",
@@ -4217,6 +4576,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8523 Highway 23, Belle Chasse, LA 70037",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8523",
 			StreetName:    "HIGHWAY 23",
 			City:          "BELLE CHASSE",
@@ -4228,6 +4588,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8523 Highway 23, Belle Chasse, LA 70037",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8523",
 			StreetName:    "HIGHWAY 23",
 			City:          "BELLE CHASSE",
@@ -4239,6 +4600,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "611 Frenchmen Street, New Orleans, LA 70116",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "611",
 			StreetName:    "FRENCHMEN STREET",
 			City:          "NEW ORLEANS",
@@ -4250,6 +4612,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "New Iberia, LA 70560",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "NEW IBERIA",
 			Region: "LA",
 			Postal: "70560",
@@ -4259,6 +4622,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "401 Highway 1 North, Oil City, LA 71061",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "401",
 			StreetName:    "HIGHWAY 1 NORTH",
 			City:          "OIL CITY",
@@ -4270,6 +4634,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4396 Natchitoches Highway, Many, LA 71449",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4396",
 			StreetName:    "NATCHITOCHES HIGHWAY",
 			City:          "MANY",
@@ -4281,6 +4646,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3810 East Texas Street, Bossier City, LA 71111",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3810",
 			StreetName:    "EAST TX STREET",
 			City:          "BOSSIER CITY",
@@ -4292,6 +4658,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6764 Airline Highway, Baton Rouge, LA 70805",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6764",
 			StreetName:    "AIRLINE HIGHWAY",
 			City:          "BATON ROUGE",
@@ -4303,6 +4670,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1665 Beacon Street, Brookline, MA 02445",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1665",
 			StreetName:    "BEACON STREET",
 			City:          "BROOKLINE",
@@ -4314,6 +4682,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "212 Stuart Street, Boston, MA 02116",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "212",
 			StreetName:    "STUART STREET",
 			City:          "BOSTON",
@@ -4325,6 +4694,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "529 King Street, Littleton, MA 01460",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "529",
 			StreetName:    "KING STREET",
 			City:          "LITTLETON",
@@ -4336,6 +4706,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "72 Bigelow Avenue, Watertown, MA 02472",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "72",
 			StreetName:    "BIGELOW AVENUE",
 			City:          "WATERTOWN",
@@ -4347,6 +4718,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "234 John Wise Avenue, Essex, MA 01929",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "234",
 			StreetName:    "JOHN WISE AVENUE",
 			City:          "ESSEX",
@@ -4358,6 +4730,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1655 Lakeview Avenue, Dracut, MA 01826",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1655",
 			StreetName:    "LAKEVIEW AVENUE",
 			City:          "DRACUT",
@@ -4369,6 +4742,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "30 Boltwood Avenue, Amherst, MA 01002",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "30",
 			StreetName:    "BOLTWOOD AVENUE",
 			City:          "AMHERST",
@@ -4380,6 +4754,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "45 School Street, Boston, MA 02108",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "45",
 			StreetName:    "SCHOOL STREET",
 			City:          "BOSTON",
@@ -4391,6 +4766,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2465 Massachusetts Avenue, Cambridge, MA 02140",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2465",
 			StreetName:    "MA AVENUE",
 			City:          "CAMBRIDGE",
@@ -4402,6 +4778,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "313 Littleton Road, Westford, MA 01886",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "313",
 			StreetName:    "LITTLETON ROAD",
 			City:          "WESTFORD",
@@ -4413,6 +4790,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "472 Massachusetts Avenue, Cambridge, MA 02139",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "472",
 			StreetName:    "MA AVENUE",
 			City:          "CAMBRIDGE",
@@ -4424,6 +4802,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "752 Plain Street, Marshfield, MA 02050",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "752",
 			StreetName:    "PLAIN STREET",
 			City:          "MARSHFIELD",
@@ -4435,6 +4814,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "259 Union Street, Holbrook, MA 02343",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "259",
 			StreetName:    "UNION STREET",
 			City:          "HOLBROOK",
@@ -4446,6 +4826,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17503 Redland Road, Derwood, MD 20855",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17503",
 			StreetName:    "REDLAND ROAD",
 			City:          "DERWOOD",
@@ -4457,6 +4838,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "996 West Patrick Street, Frederick, MD 21703",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "996",
 			StreetName:    "WEST PATRICK STREET",
 			City:          "FREDERICK",
@@ -4468,6 +4850,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6339 Allentown Road, Temple Hills, MD 20748",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6339",
 			StreetName:    "ALLENTOWN ROAD",
 			City:          "TEMPLE HILLS",
@@ -4479,6 +4862,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "190 Thomas Jefferson Drive, Frederick, MD 21702",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "190",
 			StreetName:    "THOMAS JEFFERSON DRIVE",
 			City:          "FREDERICK",
@@ -4490,6 +4874,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "58 South Potomac Street, Hagerstown, MD 21740",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "58",
 			StreetName:    "SOUTH POTOMAC STREET",
 			City:          "HAGERSTOWN",
@@ -4501,6 +4886,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Pikesville, MD 21208",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "PIKESVILLE",
 			Region: "MD",
 			Postal: "21208",
@@ -4510,6 +4896,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Drum Point Road, Deale, MD 20751",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "DRUM POINT ROAD",
 			City:       "DEALE",
 			Region:     "MD",
@@ -4520,6 +4907,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1678 Village Green, Crofton, MD 21114",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1678",
 			StreetName:    "VILLAGE GREEN",
 			City:          "CROFTON",
@@ -4531,6 +4919,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2700 Turf Valley Road, Ellicott City, MD 21042",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2700",
 			StreetName:    "TURF VALLEY ROAD",
 			City:          "ELLICOTT CITY",
@@ -4542,6 +4931,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1011 Baltimore Boulevard, Westminster, MD 21157",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1011",
 			StreetName:    "BALTIMORE BOULEVARD",
 			City:          "WESTMINSTER",
@@ -4553,6 +4943,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "580 Ritchie Highway, Severna Park, MD 21146",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "580",
 			StreetName:    "RITCHIE HIGHWAY",
 			City:          "SEVERNA PARK",
@@ -4564,6 +4955,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "106 Reisterstown Road, Pikesville, MD 21208",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "106",
 			StreetName:    "REISTERSTOWN ROAD",
 			City:          "PIKESVILLE",
@@ -4575,6 +4967,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Kennebunkport, ME 04046",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "KENNEBUNKPORT",
 			Region: "ME",
 			Postal: "04046",
@@ -4584,6 +4977,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "55 Western Avenue, Kennebunk, ME 04043",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "55",
 			StreetName:    "WESTERN AVENUE",
 			City:          "KENNEBUNK",
@@ -4595,6 +4989,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Main, Mars Hill, ME 04758",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "MAIN",
 			City:       "MARS HILL",
 			Region:     "ME",
@@ -4610,6 +5005,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "21 North Main Street, Rockland, ME 04841",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "21",
 			StreetName:    "NORTH MAIN STREET",
 			City:          "ROCKLAND",
@@ -4621,6 +5017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "71 India Street, Portland, ME 04101",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "71",
 			StreetName:    "INDIA STREET",
 			City:          "PORTLAND",
@@ -4632,6 +5029,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "30 Fair Street, Norway, ME 04268",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "30",
 			StreetName:    "FAIR STREET",
 			City:          "NORWAY",
@@ -4643,6 +5041,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "469 Main Street, Saco, ME 04072",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "469",
 			StreetName:    "MAIN STREET",
 			City:          "SACO",
@@ -4659,6 +5058,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "458 Center Street, Auburn, ME 04210",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "458",
 			StreetName:    "CENTER STREET",
 			City:          "AUBURN",
@@ -4670,6 +5070,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "148 Pleasant Street, Brunswick, ME 04011",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "148",
 			StreetName:    "PLEASANT STREET",
 			City:          "BRUNSWICK",
@@ -4681,6 +5082,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9 Dana Street, Portland, ME 04101",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9",
 			StreetName:    "DANA STREET",
 			City:          "PORTLAND",
@@ -4692,6 +5094,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Anchor Inn Road, Round Pond, ME 04564",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "ANCHOR INN ROAD",
 			City:       "ROUND POND",
 			Region:     "ME",
@@ -4702,6 +5105,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12 Bridge Street, Boothbay Harbor, ME 04538",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12",
 			StreetName:    "BRIDGE STREET",
 			City:          "BOOTHBAY HARBOR",
@@ -4713,6 +5117,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9793 Telegraph Road, Erie, MI 48133",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9793",
 			StreetName:    "TELEGRAPH ROAD",
 			City:          "ERIE",
@@ -4724,6 +5129,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "621 East Michigan Avenue, Lansing, MI 48912",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "621",
 			StreetName:    "EAST MI AVENUE",
 			City:          "LANSING",
@@ -4735,6 +5141,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3555 68th Street Southeast, Caledonia, MI 49316",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3555",
 			StreetName:    "68TH STREET SOUTHEAST",
 			City:          "CALEDONIA",
@@ -4746,6 +5153,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "84 East 8th Street, Holland, MI 49423",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "84",
 			StreetName:    "EAST 8TH STREET",
 			City:          "HOLLAND",
@@ -4757,6 +5165,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4346 South Division Avenue, Grand Rapids, MI 49548",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4346",
 			StreetName:    "SOUTH DIVISION AVENUE",
 			City:          "GRAND RAPIDS",
@@ -4768,6 +5177,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "19214 Joy Road, Detroit, MI 48228",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "19214",
 			StreetName:    "JOY ROAD",
 			City:          "DETROIT",
@@ -4779,6 +5189,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9405 West Fort Street, Detroit, MI 48209",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9405",
 			StreetName:    "WEST FORT STREET",
 			City:          "DETROIT",
@@ -4790,6 +5201,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2229 18 Mile Road, Sterling Heights, MI 48314",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2229",
 			StreetName:    "18 MILE ROAD",
 			City:          "STERLING HEIGHTS",
@@ -4801,6 +5213,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "510 North Telegraph Road, Pontiac, MI 48341",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "510",
 			StreetName:    "NORTH TELEGRAPH ROAD",
 			City:          "PONTIAC",
@@ -4812,6 +5225,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12200 Market Place Drive, Birch Run, MI 48415",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12200",
 			StreetName:    "MARKET PLACE DRIVE",
 			City:          "BIRCH RUN",
@@ -4823,6 +5237,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "18440 West Warren Avenue, Detroit, MI 48228",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "18440",
 			StreetName:    "WEST WARREN AVENUE",
 			City:          "DETROIT",
@@ -4834,6 +5249,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "304 North State Street, Big Rapids, MI 49307",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "304",
 			StreetName:    "NORTH STATE STREET",
 			City:          "BIG RAPIDS",
@@ -4845,6 +5261,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "301 Lafayette Avenue, Bay City, MI 48708",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "301",
 			StreetName:    "LAFAYETTE AVENUE",
 			City:          "BAY CITY",
@@ -4856,6 +5273,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "200 South Cherry Street, Flushing, MI 48433",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "200",
 			StreetName:    "SOUTH CHERRY STREET",
 			City:          "FLUSHING",
@@ -4867,6 +5285,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "510 Groveland Avenue, Minneapolis, MN 55403",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "510",
 			StreetName:    "GROVELAND AVENUE",
 			City:          "MINNEAPOLIS",
@@ -4878,6 +5297,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 59 North, Detroit Lakes, MN 56501",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 59 NORTH",
 			City:       "DETROIT LAKES",
 			Region:     "MN",
@@ -4888,6 +5308,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1364 West 71 Street, Saint Paul, MN 55102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1364",
 			StreetName:    "WEST 71 STREET",
 			City:          "SAINT PAUL",
@@ -4899,6 +5320,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1285 Highway 7 East, Hutchinson, MN 55350",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1285",
 			StreetName:    "HIGHWAY 7 EAST",
 			City:          "HUTCHINSON",
@@ -4910,6 +5332,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Minneapolis, MN 55401",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "MINNEAPOLIS",
 			Region: "MN",
 			Postal: "55401",
@@ -4919,6 +5342,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3131 West 3rd Street, Duluth, MN 55806",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3131",
 			StreetName:    "WEST 3RD STREET",
 			City:          "DULUTH",
@@ -4930,6 +5354,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1200 12th Street Southwest, Rochester, MN 55902",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1200",
 			StreetName:    "12TH STREET SOUTHWEST",
 			City:          "ROCHESTER",
@@ -4941,6 +5366,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "103 Main Street South, Aurora, MN 55705",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "103",
 			StreetName:    "MAIN STREET SOUTH",
 			City:          "AURORA",
@@ -4952,6 +5378,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17280 Highway 23 Northeast, New London, MN 56273",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17280",
 			StreetName:    "HIGHWAY 23 NORTHEAST",
 			City:          "NEW LONDON",
@@ -4968,6 +5395,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "910 4th Street Northwest, Austin, MN 55912",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "910",
 			StreetName:    "4TH STREET NORTHWEST",
 			City:          "AUSTIN",
@@ -4979,6 +5407,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1529 Robert Street South, Saint Paul, MN 55118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1529",
 			StreetName:    "ROBERT STREET SOUTH",
 			City:          "SAINT PAUL",
@@ -4995,6 +5424,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "510 1st Street West, Fosston, MN 56542",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "510",
 			StreetName:    "1ST STREET WEST",
 			City:          "FOSSTON",
@@ -5006,6 +5436,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "510 Southwest 3rd Street, Lees Summit, MO 64063",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "510",
 			StreetName:    "SOUTHWEST 3RD STREET",
 			City:          "LEES SUMMIT",
@@ -5022,6 +5453,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "803 Franklin Avenue, Washington, MO 63090",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "803",
 			StreetName:    "FRANKLIN AVENUE",
 			City:          "WASHINGTON",
@@ -5033,6 +5465,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "405 West Main Street, Branson, MO 65616",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "405",
 			StreetName:    "WEST MAIN STREET",
 			City:          "BRANSON",
@@ -5044,6 +5477,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Tipton, MO 65081",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "TIPTON",
 			Region: "MO",
 			Postal: "65081",
@@ -5053,6 +5487,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "318 East 51st Street, Kansas City, MO 64112",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "318",
 			StreetName:    "EAST 51ST STREET",
 			City:          "KANSAS CITY",
@@ -5064,6 +5499,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "609 West Newton Street, Versailles, MO 65084",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "609",
 			StreetName:    "WEST NEWTON STREET",
 			City:          "VERSAILLES",
@@ -5080,6 +5516,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2003 Southridge Drive, Jefferson City, MO 65109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2003",
 			StreetName:    "SOUTHRIDGE DRIVE",
 			City:          "JEFFERSON CITY",
@@ -5091,6 +5528,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "303 Northeast Englewood Road, Kansas City, MO 64118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "303",
 			StreetName:    "NORTHEAST ENGLEWOOD ROAD",
 			City:          "KANSAS CITY",
@@ -5102,6 +5540,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5801 North Highway 763, Columbia, MO 65202",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5801",
 			StreetName:    "NORTH HIGHWAY 763",
 			City:          "COLUMBIA",
@@ -5113,6 +5552,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 63 South, Edgar Springs, MO 65462",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 63 SOUTH",
 			City:       "EDGAR SPRINGS",
 			Region:     "MO",
@@ -5123,6 +5563,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17315 Highway 87, Boonville, MO 65233",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17315",
 			StreetName:    "HIGHWAY 87",
 			City:          "BOONVILLE",
@@ -5134,6 +5575,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "19 Charlestowne Plaza, Saint Charles, MO 63303",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "19",
 			StreetName:    "CHARLESTOWNE PLAZA",
 			City:          "SAINT CHARLES",
@@ -5145,6 +5587,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "789 Vieux Marche Mall, Biloxi, MS 39530",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "789",
 			StreetName:    "VIEUX MARCHE MALL",
 			City:          "BILOXI",
@@ -5156,6 +5599,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "130 Airport Cafe Circle, Lucedale, MS 39452",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "130",
 			StreetName:    "AIRPORT CAFE CIRCLE",
 			City:          "LUCEDALE",
@@ -5172,6 +5616,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "118 Courthouse Square, Oxford, MS 38655",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "118",
 			StreetName:    "COURTHOUSE SQUARE",
 			City:          "OXFORD",
@@ -5183,6 +5628,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2039 Highway 82 East, Greenville, MS 38703",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2039",
 			StreetName:    "HIGHWAY 82 EAST",
 			City:          "GREENVILLE",
@@ -5194,6 +5640,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2028 Beach Boulevard, Biloxi, MS 39531",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2028",
 			StreetName:    "BEACH BOULEVARD",
 			City:          "BILOXI",
@@ -5205,6 +5652,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Highway 27 South, Monticello, MS 39654",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "HIGHWAY 27 SOUTH",
 			City:       "MONTICELLO",
 			Region:     "MS",
@@ -5215,6 +5663,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "107 East Jackson Street, Belzoni, MS 39038",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "107",
 			StreetName:    "EAST JACKSON STREET",
 			City:          "BELZONI",
@@ -5226,6 +5675,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "646 Highway 48 West, Tylertown, MS 39667",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "646",
 			StreetName:    "HIGHWAY 48 WEST",
 			City:          "TYLERTOWN",
@@ -5237,6 +5687,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "25357 Highway 330, Oakland, MS 38948",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "25357",
 			StreetName:    "HIGHWAY 330",
 			City:          "OAKLAND",
@@ -5248,6 +5699,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "741 West Broadway Street, Yazoo City, MS 39194",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "741",
 			StreetName:    "WEST BROADWAY STREET",
 			City:          "YAZOO CITY",
@@ -5259,6 +5711,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "134 North Front Street, Senatobia, MS 38668",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "134",
 			StreetName:    "NORTH FRONT STREET",
 			City:          "SENATOBIA",
@@ -5270,6 +5723,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "511 East Waldron Street, Corinth, MS 38834",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "511",
 			StreetName:    "EAST WALDRON STREET",
 			City:          "CORINTH",
@@ -5281,6 +5735,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3307 Mlk Jr Drive, Jackson, MS 39213",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3307",
 			StreetName:    "MLK JR DRIVE",
 			City:          "JACKSON",
@@ -5292,6 +5747,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "142 South Pratten, Columbus, MT 59019",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "142",
 			StreetName:    "SOUTH PRATTEN",
 			City:          "COLUMBUS",
@@ -5303,6 +5759,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "US Highway 22, Miles City, MT 59301",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "US HIGHWAY 22",
 			City:       "MILES CITY",
 			Region:     "MT",
@@ -5313,6 +5770,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5225 West Broadway Street, Missoula, MT 59808",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5225",
 			StreetName:    "WEST BROADWAY STREET",
 			City:          "MISSOULA",
@@ -5324,6 +5782,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Kalispell, MT 59901",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "KALISPELL",
 			Region: "MT",
 			Postal: "59901",
@@ -5333,6 +5792,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "419 South Ellery Avenue, Fairview, MT 59221",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "419",
 			StreetName:    "SOUTH ELLERY AVENUE",
 			City:          "FAIRVIEW",
@@ -5344,6 +5804,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Sheridan, MT 59749",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SHERIDAN",
 			Region: "MT",
 			Postal: "59749",
@@ -5353,6 +5814,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "22 1st Street East, Kalispell, MT 59901",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "22",
 			StreetName:    "1ST STREET EAST",
 			City:          "KALISPELL",
@@ -5369,6 +5831,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "600 Central Avenue, Great Falls, MT 59401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "600",
 			StreetName:    "CENTRAL AVENUE",
 			City:          "GREAT FALLS",
@@ -5380,6 +5843,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 Main Street, Kalispell, MT 59901",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "MAIN STREET",
 			City:          "KALISPELL",
@@ -5391,6 +5855,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Columbia Falls, MT 59912",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "COLUMBIA FALLS",
 			Region: "MT",
 			Postal: "59912",
@@ -5400,6 +5865,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1425 Broadwater Avenue, Billings, MT 59102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1425",
 			StreetName:    "BROADWATER AVENUE",
 			City:          "BILLINGS",
@@ -5411,6 +5877,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7353 Goddard Drive, Malmstrom A F B, MT 59402",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7353",
 			StreetName:    "GODDARD DRIVE",
 			City:          "MALMSTROM A F B",
@@ -5427,6 +5894,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1 The Square, Lillington, NC 27546",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1",
 			StreetName:    "THE SQUARE",
 			City:          "LILLINGTON",
@@ -5438,6 +5906,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1205 Shelby Highway, Cherryville, NC 28021",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1205",
 			StreetName:    "SHELBY HIGHWAY",
 			City:          "CHERRYVILLE",
@@ -5449,6 +5918,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "710 East 10th Street, Roanoke Rapids, NC 27870",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "710",
 			StreetName:    "EAST 10TH STREET",
 			City:          "ROANOKE RAPIDS",
@@ -5460,6 +5930,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "118 South Hancock Street, Rockingham, NC 28379",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "118",
 			StreetName:    "SOUTH HANCOCK STREET",
 			City:          "ROCKINGHAM",
@@ -5471,6 +5942,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "121 South Trade Street, Tryon, NC 28782",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "121",
 			StreetName:    "SOUTH TRADE STREET",
 			City:          "TRYON",
@@ -5482,6 +5954,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1222 North Alston Avenue, Durham, NC 27701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1222",
 			StreetName:    "NORTH ALSTON AVENUE",
 			City:          "DURHAM",
@@ -5493,6 +5966,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "935 College Street, Oxford, NC 27565",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "935",
 			StreetName:    "COLLEGE STREET",
 			City:          "OXFORD",
@@ -5504,6 +5978,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Queen Elizabeth Avenue, Manteo, NC 27954",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "QUEEN ELIZABETH AVENUE",
 			City:       "MANTEO",
 			Region:     "NC",
@@ -5519,6 +5994,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "123 Landmark Alley, Statesville, NC 28677",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "123",
 			StreetName:    "LANDMARK ALLEY",
 			City:          "STATESVILLE",
@@ -5530,6 +6006,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1025 Blue Ridge Road, Raleigh, NC 27607",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1025",
 			StreetName:    "BLUE RIDGE ROAD",
 			City:          "RALEIGH",
@@ -5541,6 +6018,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "443 2nd Avenue Southwest, Hickory, NC 28602",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "443",
 			StreetName:    "2ND AVENUE SOUTHWEST",
 			City:          "HICKORY",
@@ -5552,6 +6030,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6500 Aviation Parkway, Morrisville, NC 27560",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6500",
 			StreetName:    "AVIATION PARKWAY",
 			City:          "MORRISVILLE",
@@ -5563,6 +6042,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "200 North Davie Street, Greensboro, NC 27401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "200",
 			StreetName:    "NORTH DAVIE STREET",
 			City:          "GREENSBORO",
@@ -5574,6 +6054,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "106 5th Avenue Southwest, Valley City, ND 58072",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "106",
 			StreetName:    "5TH AVENUE SOUTHWEST",
 			City:          "VALLEY CITY",
@@ -5585,6 +6066,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2302 15th Street Southwest, Minot, ND 58701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2302",
 			StreetName:    "15TH STREET SOUTHWEST",
 			City:          "MINOT",
@@ -5596,6 +6078,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2851 South Columbia Road, Grand Forks, ND 58201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2851",
 			StreetName:    "SOUTH COLUMBIA ROAD",
 			City:          "GRAND FORKS",
@@ -5607,6 +6090,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "434 South 3rd Street, Bismarck, ND 58504",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "434",
 			StreetName:    "SOUTH 3RD STREET",
 			City:          "BISMARCK",
@@ -5618,6 +6102,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "289 15th Street West, Dickinson, ND 58601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "289",
 			StreetName:    "15TH STREET WEST",
 			City:          "DICKINSON",
@@ -5629,6 +6114,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2802 13th Avenue South, Fargo, ND 58103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2802",
 			StreetName:    "13TH AVENUE SOUTH",
 			City:          "FARGO",
@@ -5640,6 +6126,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "106 26th Street West, Williston, ND 58801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "106",
 			StreetName:    "26TH STREET WEST",
 			City:          "WILLISTON",
@@ -5651,6 +6138,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2400 10th Street Southwest, Minot, ND 58701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2400",
 			StreetName:    "10TH STREET SOUTHWEST",
 			City:          "MINOT",
@@ -5662,6 +6150,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1419 South Columbia Road, Grand Forks, ND 58201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1419",
 			StreetName:    "SOUTH COLUMBIA ROAD",
 			City:          "GRAND FORKS",
@@ -5673,6 +6162,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2815 13th Avenue South, Fargo, ND 58103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2815",
 			StreetName:    "13TH AVENUE SOUTH",
 			City:          "FARGO",
@@ -5684,6 +6174,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1415 42nd Street South, Fargo, ND 58103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1415",
 			StreetName:    "42ND STREET SOUTH",
 			City:          "FARGO",
@@ -5695,6 +6186,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1117 38th Street North, Fargo, ND 58102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1117",
 			StreetName:    "38TH STREET NORTH",
 			City:          "FARGO",
@@ -5706,6 +6198,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "251 14th Street West, Dickinson, ND 58601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "251",
 			StreetName:    "14TH STREET WEST",
 			City:          "DICKINSON",
@@ -5717,6 +6210,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1801 8th Avenue Southwest, Jamestown, ND 58401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1801",
 			StreetName:    "8TH AVENUE SOUTHWEST",
 			City:          "JAMESTOWN",
@@ -5728,6 +6222,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1824 North 120th Street, Omaha, NE 68154",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1824",
 			StreetName:    "NORTH 120TH STREET",
 			City:          "OMAHA",
@@ -5739,6 +6234,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "220 West 2nd Street, Grand Island, NE 68801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "220",
 			StreetName:    "WEST 2ND STREET",
 			City:          "GRAND ISLAND",
@@ -5750,6 +6246,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "122 East 16th Street, Schuyler, NE 68661",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "122",
 			StreetName:    "EAST 16TH STREET",
 			City:          "SCHUYLER",
@@ -5761,6 +6258,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1006 Howard Street, Omaha, NE 68102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1006",
 			StreetName:    "HOWARD STREET",
 			City:          "OMAHA",
@@ -5782,6 +6280,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11036 Elm Street, Omaha, NE 68144",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11036",
 			StreetName:    "ELM STREET",
 			City:          "OMAHA",
@@ -5793,6 +6292,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "106 East Front Street, Alda, NE 68810",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "106",
 			StreetName:    "EAST FRONT STREET",
 			City:          "ALDA",
@@ -5804,6 +6304,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8021 Blondo Street, Omaha, NE 68134",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8021",
 			StreetName:    "BLONDO STREET",
 			City:          "OMAHA",
@@ -5815,6 +6316,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Plainview, NE 68769",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "PLAINVIEW",
 			Region: "NE",
 			Postal: "68769",
@@ -5824,6 +6326,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "10220 Regency Circle, Omaha, NE 68114",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10220",
 			StreetName:    "REGENCY CIRCLE",
 			City:          "OMAHA",
@@ -5835,6 +6338,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "432 East Douglas Street, Oneill, NE 68763",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "432",
 			StreetName:    "EAST DOUGLAS STREET",
 			City:          "ONEILL",
@@ -5846,6 +6350,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "10405 Calhoun Road, Omaha, NE 68112",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10405",
 			StreetName:    "CALHOUN ROAD",
 			City:          "OMAHA",
@@ -5857,6 +6362,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "520 South Main, Ohiowa, NE 68416",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "520",
 			StreetName:    "SOUTH MAIN",
 			City:          "OHIOWA",
@@ -5868,6 +6374,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "90 Front Street, Exeter, NH 03833",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "90",
 			StreetName:    "FRONT STREET",
 			City:          "EXETER",
@@ -5879,6 +6386,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17 Newmarket Road, Durham, NH 03824",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17",
 			StreetName:    "NEWMARKET ROAD",
 			City:          "DURHAM",
@@ -5890,6 +6398,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9 Depot Street, Hillsboro, NH 03244",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9",
 			StreetName:    "DEPOT STREET",
 			City:          "HILLSBORO",
@@ -5901,6 +6410,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Tecumseh Road, Waterville Valley, NH 03215",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "TECUMSEH ROAD",
 			City:       "WATERVILLE VALLEY",
 			Region:     "NH",
@@ -5911,6 +6421,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Westside Road, North Conway, NH 03860",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "WESTSIDE ROAD",
 			City:       "NORTH CONWAY",
 			Region:     "NH",
@@ -5921,6 +6432,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Lee's Mill Road, Moultonborough, NH 03254",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "LEE'S MILL ROAD",
 			City:       "MOULTONBOROUGH",
 			Region:     "NH",
@@ -5931,6 +6443,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "176 Main Street, Keene, NH 03431",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "176",
 			StreetName:    "MAIN STREET",
 			City:          "KEENE",
@@ -5942,6 +6455,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Route 16, North Conway, NH 03860",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "ROUTE 16",
 			City:       "NORTH CONWAY",
 			Region:     "NH",
@@ -5952,6 +6466,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Woodbury Avenue, Portsmouth, NH 03801",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "WOODBURY AVENUE",
 			City:       "PORTSMOUTH",
 			Region:     "NH",
@@ -5962,6 +6477,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "21 Front Street, Manchester, NH 03102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "21",
 			StreetName:    "FRONT STREET",
 			City:          "MANCHESTER",
@@ -5973,6 +6489,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "837 Brattleboro Road, Hinsdale, NH 03451",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "837",
 			StreetName:    "BRATTLEBORO ROAD",
 			City:          "HINSDALE",
@@ -5984,6 +6501,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11 Main Street, Bennington, NH 03442",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11",
 			StreetName:    "MAIN STREET",
 			City:          "BENNINGTON",
@@ -5995,6 +6513,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Main, Ashland, NH 03217",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "MAIN",
 			City:       "ASHLAND",
 			Region:     "NH",
@@ -6005,6 +6524,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "667 Palisade Avenue, Cliffside Park, NJ 07010",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "667",
 			StreetName:    "PALISADE AVENUE",
 			City:          "CLIFFSIDE PARK",
@@ -6016,6 +6536,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2 Bay Avenue, Highlands, NJ 07732",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2",
 			StreetName:    "BAY AVENUE",
 			City:          "HIGHLANDS",
@@ -6027,6 +6548,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7 Grove Street, Wanaque, NJ 07465",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7",
 			StreetName:    "GROVE STREET",
 			City:          "WANAQUE",
@@ -6038,6 +6560,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1101 U.S. Highway No. 130 North, Burlington, NJ 08016",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1101",
 			StreetName:    "U.S. HIGHWAY NO. 130 NORTH",
 			City:          "BURLINGTON",
@@ -6049,6 +6572,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Main Street, Medford, NJ 08055",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "MAIN STREET",
 			City:       "MEDFORD",
 			Region:     "NJ",
@@ -6059,6 +6583,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2011 Route 70 West, Cherry Hill, NJ 08002",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2011",
 			StreetName:    "ROUTE 70 WEST",
 			City:          "CHERRY HILL",
@@ -6070,6 +6595,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "185 3rd Avenue, Long Branch, NJ 07740",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "185",
 			StreetName:    "3RD AVENUE",
 			City:          "LONG BRANCH",
@@ -6081,6 +6607,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "301 Howard Street, Cape May, NJ 08204",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "301",
 			StreetName:    "HOWARD STREET",
 			City:          "CAPE MAY",
@@ -6092,6 +6619,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "254 U.S. Highway No 202, Pluckemin, NJ 07978",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "254",
 			StreetName:    "U.S. HIGHWAY NO 202",
 			City:          "PLUCKEMIN",
@@ -6103,6 +6631,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "State Highway No 33, Hightstown, NJ 08520",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "STATE HIGHWAY NO 33",
 			City:       "HIGHTSTOWN",
 			Region:     "NJ",
@@ -6113,6 +6642,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2104 State Highway No 70, Lakehurst, NJ 08733",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2104",
 			StreetName:    "STATE HIGHWAY NO 70",
 			City:          "LAKEHURST",
@@ -6124,6 +6654,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "118 Berkshire Avenue, Paterson, NJ 07502",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "118",
 			StreetName:    "BERKSHIRE AVENUE",
 			City:          "PATERSON",
@@ -6135,6 +6666,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2 Broadway, Somers Point, NJ 08244",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2",
 			StreetName:    "BROADWAY",
 			City:          "SOMERS POINT",
@@ -6146,6 +6678,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1451 Mechem Drive, Ruidoso, NM 88345",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1451",
 			StreetName:    "MECHEM DRIVE",
 			City:          "RUIDOSO",
@@ -6157,6 +6690,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "62 Camino Azul, Jemez Springs, NM 87025",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "62",
 			StreetName:    "CAMINO AZUL",
 			City:          "JEMEZ SPRINGS",
@@ -6168,6 +6702,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "205 Central Avenue, Tularosa, NM 88352",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "205",
 			StreetName:    "CENTRAL AVENUE",
 			City:          "TULAROSA",
@@ -6179,6 +6714,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Los Ojos, NM 87551",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "LOS OJOS",
 			Region: "NM",
 			Postal: "87551",
@@ -6188,6 +6724,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7400 North US Highway 54-70, Tularosa, NM 88352",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7400",
 			StreetName:    "NORTH US HIGHWAY 54-70",
 			City:          "TULAROSA",
@@ -6199,6 +6736,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12999 Central Avenue Northeast, Albuquerque, NM 87123",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12999",
 			StreetName:    "CENTRAL AVENUE NORTHEAST",
 			City:          "ALBUQUERQUE",
@@ -6210,6 +6748,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1015 Rio Grande Boulevard Northwest, Albuquerque, NM 87104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1015",
 			StreetName:    "RIO GRANDE BOULEVARD NORTHWEST",
 			City:          "ALBUQUERQUE",
@@ -6221,6 +6760,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2101 Louisiana Boulevard Northeast, Albuquerque, NM 87110",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2101",
 			StreetName:    "LA BOULEVARD NORTHEAST",
 			City:          "ALBUQUERQUE",
@@ -6232,6 +6772,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "500 Marquette Avenue Northwest Suite 1500, Albuquerque, NM 87102",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "500",
 			StreetName:          "MARQUETTE AVENUE NORTHWEST",
 			SecondaryDesignator: "STE",
@@ -6245,6 +6786,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3297 Cerrillos Road, Santa Fe, NM 87505",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3297",
 			StreetName:    "CERRILLOS ROAD",
 			City:          "SANTA FE",
@@ -6256,6 +6798,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Mora, NM 87732",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "MORA",
 			Region: "NM",
 			Postal: "87732",
@@ -6265,6 +6808,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "801 Delaware Avenue, Alamogordo, NM 88310",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "801",
 			StreetName:    "DE AVENUE",
 			City:          "ALAMOGORDO",
@@ -6281,6 +6825,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1341 State Road 75, Penasco, NM 87553",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1341",
 			StreetName:    "STATE ROAD 75",
 			City:          "PENASCO",
@@ -6292,6 +6837,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "515 South Virginia Street, Reno, NV 89501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "515",
 			StreetName:    "SOUTH VA STREET",
 			City:          "RENO",
@@ -6303,6 +6849,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "442 Flint Street, Reno, NV 89501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "442",
 			StreetName:    "FLINT STREET",
 			City:          "RENO",
@@ -6314,6 +6861,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5030 Paradise Road, Las Vegas, NV 89119",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5030",
 			StreetName:    "PARADISE ROAD",
 			City:          "LAS VEGAS",
@@ -6325,6 +6873,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3999 Las Vegas Boulevard South, Las Vegas, NV 89119",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3999",
 			StreetName:    "LAS VEGAS BOULEVARD SOUTH",
 			City:          "LAS VEGAS",
@@ -6336,6 +6885,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1950 East Greg Street, Sparks, NV 89431",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1950",
 			StreetName:    "EAST GREG STREET",
 			City:          "SPARKS",
@@ -6347,6 +6897,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3763 Las Vegas Boulevard South, Las Vegas, NV 89109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3763",
 			StreetName:    "LAS VEGAS BOULEVARD SOUTH",
 			City:          "LAS VEGAS",
@@ -6358,6 +6909,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3100 Needles Highway, Laughlin, NV 89029",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3100",
 			StreetName:    "NEEDLES HIGHWAY",
 			City:          "LAUGHLIN",
@@ -6369,6 +6921,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3100 Needles Highway, Laughlin, NV 89029",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3100",
 			StreetName:    "NEEDLES HIGHWAY",
 			City:          "LAUGHLIN",
@@ -6380,6 +6933,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3466 South Decatur Boulevard, Las Vegas, NV 89102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3466",
 			StreetName:    "SOUTH DECATUR BOULEVARD",
 			City:          "LAS VEGAS",
@@ -6391,6 +6945,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3025 Las Vegas Boulevard South, Las Vegas, NV 89109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3025",
 			StreetName:    "LAS VEGAS BOULEVARD SOUTH",
 			City:          "LAS VEGAS",
@@ -6402,6 +6957,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5550 West Charleston Boulevard, Las Vegas, NV 89146",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5550",
 			StreetName:    "WEST CHARLESTON BOULEVARD",
 			City:          "LAS VEGAS",
@@ -6413,6 +6969,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3400 Las Vegas Boulevard South, Las Vegas, NV 89109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3400",
 			StreetName:    "LAS VEGAS BOULEVARD SOUTH",
 			City:          "LAS VEGAS",
@@ -6424,6 +6981,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "375 East Harmon Avenue, Las Vegas, NV 89109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "375",
 			StreetName:    "EAST HARMON AVENUE",
 			City:          "LAS VEGAS",
@@ -6435,6 +6993,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2845 Las Vegas Boulevard South, Las Vegas, NV 89109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2845",
 			StreetName:    "LAS VEGAS BOULEVARD SOUTH",
 			City:          "LAS VEGAS",
@@ -6446,6 +7005,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1011 Avn Of Th Amrcs, New York, NY 10018",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1011",
 			StreetName:    "AVENUE OF TH AMRCS",
 			City:          "NEW YORK",
@@ -6457,6 +7017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "361 1st Avenue, New York, NY 10010",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "361",
 			StreetName:    "1ST AVENUE",
 			City:          "NEW YORK",
@@ -6468,6 +7029,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1511 Lexington Avenue, New York, NY 10029",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1511",
 			StreetName:    "LEXINGTON AVENUE",
 			City:          "NEW YORK",
@@ -6479,6 +7041,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "770 Washington Avenue, Brooklyn, NY 11238",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "770",
 			StreetName:    "WA AVENUE",
 			City:          "BROOKLYN",
@@ -6490,6 +7053,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1007 Clarkson Avenue, Brooklyn, NY 11212",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1007",
 			StreetName:    "CLARKSON AVENUE",
 			City:          "BROOKLYN",
@@ -6501,6 +7065,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 West 23rd Street, New York, NY 10011",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "WEST 23RD STREET",
 			City:          "NEW YORK",
@@ -6512,6 +7077,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "10018 4th Avenue, Brooklyn, NY 11209",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "10018",
 			StreetName:    "4TH AVENUE",
 			City:          "BROOKLYN",
@@ -6523,6 +7089,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 East 161st Street, Bronx, NY 10451",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "EAST 161ST STREET",
 			City:          "BRONX",
@@ -6534,6 +7101,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1010 Northern Boulevard, Great Neck, NY 11021",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1010",
 			StreetName:    "NORTHERN BOULEVARD",
 			City:          "GREAT NECK",
@@ -6545,6 +7113,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "103 2nd Avenue, New York, NY 10003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "103",
 			StreetName:    "2ND AVENUE",
 			City:          "NEW YORK",
@@ -6556,6 +7125,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "229 East 9th Street, New York, NY 10003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "229",
 			StreetName:    "EAST 9TH STREET",
 			City:          "NEW YORK",
@@ -6567,6 +7137,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "725 10th Avenue, New York, NY 10019",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "725",
 			StreetName:    "10TH AVENUE",
 			City:          "NEW YORK",
@@ -6578,6 +7149,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "104 West 57th Street, New York, NY 10019",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "104",
 			StreetName:    "WEST 57TH STREET",
 			City:          "NEW YORK",
@@ -6589,6 +7161,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "107 Forest Avenue, Locust Valley, NY 11560",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "107",
 			StreetName:    "FOREST AVENUE",
 			City:          "LOCUST VALLEY",
@@ -6600,6 +7173,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "356 Main Street, Wellsville, OH 43968",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "356",
 			StreetName:    "MAIN STREET",
 			City:          "WELLSVILLE",
@@ -6611,6 +7185,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4919 Mount Pleasant Street Northwest, Canton, OH 44720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4919",
 			StreetName:    "MOUNT PLEASANT STREET NORTHWEST",
 			City:          "CANTON",
@@ -6622,6 +7197,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4919 Mount Pleasant Street Northwest, Green, OH 44232",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4919",
 			StreetName:    "MOUNT PLEASANT STREET NORTHWEST",
 			City:          "GREEN",
@@ -6633,6 +7209,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "389 South Green Road, Cleveland, OH 44121",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "389",
 			StreetName:    "SOUTH GREEN ROAD",
 			City:          "CLEVELAND",
@@ -6644,6 +7221,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "123 North Paint Street, Chillicothe, OH 45601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "123",
 			StreetName:    "NORTH PAINT STREET",
 			City:          "CHILLICOTHE",
@@ -6655,6 +7233,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4200 Kettering Boulevard, Dayton, OH 45439",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4200",
 			StreetName:    "KETTERING BOULEVARD",
 			City:          "DAYTON",
@@ -6666,6 +7245,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2241 East 42nd Street, Lorain, OH 44055",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2241",
 			StreetName:    "EAST 42ND STREET",
 			City:          "LORAIN",
@@ -6677,6 +7257,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "33587 Aurora Road, Solon, OH 44139",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "33587",
 			StreetName:    "AURORA ROAD",
 			City:          "SOLON",
@@ -6688,6 +7269,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "T703 State Route 66, Archbold, OH 43502",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "T703",
 			StreetName:    "STATE ROUTE 66",
 			City:          "ARCHBOLD",
@@ -6699,6 +7281,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "T703 State Route 66, Archbold, OH 43502",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "T703",
 			StreetName:    "STATE ROUTE 66",
 			City:          "ARCHBOLD",
@@ -6710,6 +7293,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3257 West Siebenthaler Avenue, Dayton, OH 45406",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3257",
 			StreetName:    "WEST SIEBENTHALER AVENUE",
 			City:          "DAYTON",
@@ -6721,6 +7305,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1130 US Highway 52, Aberdeen, OH 45101",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1130",
 			StreetName:    "US HIGHWAY 52",
 			City:          "ABERDEEN",
@@ -6732,6 +7317,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4016 Glenway Avenue, Cincinnati, OH 45205",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4016",
 			StreetName:    "GLENWAY AVENUE",
 			City:          "CINCINNATI",
@@ -6743,6 +7329,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "33 East Schtock Road, New Albany, OH 43054",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "33",
 			StreetName:    "EAST SCHTOCK ROAD",
 			City:          "NEW ALBANY",
@@ -6754,6 +7341,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "201 East Main, Binger, OK 73009",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "201",
 			StreetName:    "EAST MAIN",
 			City:          "BINGER",
@@ -6765,6 +7353,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2014 West Gary Boulevard, Clinton, OK 73601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2014",
 			StreetName:    "WEST GARY BOULEVARD",
 			City:          "CLINTON",
@@ -6776,6 +7365,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1002 West Jackson Street, Hugo, OK 74743",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1002",
 			StreetName:    "WEST JACKSON STREET",
 			City:          "HUGO",
@@ -6787,6 +7377,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "119 East 10, Weleetka, OK 74880",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "119",
 			StreetName:    "EAST 10",
 			City:          "WELEETKA",
@@ -6798,6 +7389,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1254 North Eastern Avenue, Oklahoma City, OK 73160",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1254",
 			StreetName:    "NORTH EASTERN AVENUE",
 			City:          "OKLAHOMA CITY",
@@ -6809,6 +7401,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2118 West Edmond Road, Edmond, OK 73003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2118",
 			StreetName:    "WEST EDMOND ROAD",
 			City:          "EDMOND",
@@ -6820,6 +7413,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "401 Grant, Agra, OK 74824",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "401",
 			StreetName:    "GRANT",
 			City:          "AGRA",
@@ -6831,6 +7425,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "722 Asp Avenue, Norman, OK 73069",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "722",
 			StreetName:    "ASP AVENUE",
 			City:          "NORMAN",
@@ -6842,6 +7437,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8500 South Elwood, Jenks, OK 74037",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8500",
 			StreetName:    "SOUTH ELWOOD",
 			City:          "JENKS",
@@ -6853,6 +7449,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11919 North Pennsylvania Avenue, Oklahoma City, OK 73120",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11919",
 			StreetName:    "NORTH PA AVENUE",
 			City:          "OKLAHOMA CITY",
@@ -6864,6 +7461,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4734 Southeast 29th Street, Oklahoma City, OK 73115",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4734",
 			StreetName:    "SOUTHEAST 29TH STREET",
 			City:          "OKLAHOMA CITY",
@@ -6875,6 +7473,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1809 South Air Depot Boulevard, Oklahoma City, OK 73110",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1809",
 			StreetName:    "SOUTH AIR DEPOT BOULEVARD",
 			City:          "OKLAHOMA CITY",
@@ -6886,6 +7485,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2917 South Douglas Boulevard, Oklahoma City, OK 73130",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2917",
 			StreetName:    "SOUTH DOUGLAS BOULEVARD",
 			City:          "OKLAHOMA CITY",
@@ -6897,6 +7497,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2748 South Harvard Avenue, Tulsa, OK 74114",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2748",
 			StreetName:    "SOUTH HARVARD AVENUE",
 			City:          "TULSA",
@@ -6908,6 +7509,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4021 Southwest 117th Avenue Suite C, Beaverton, OR 97005",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "4021",
 			StreetName:          "SOUTHWEST 117TH AVENUE",
 			SecondaryDesignator: "STE",
@@ -6921,6 +7523,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1341 Northeast Orenco Station Pakway, Hillsboro, OR 97124",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1341",
 			StreetName:    "NORTHEAST ORENCO STATION PAKWAY",
 			City:          "HILLSBORO",
@@ -6932,6 +7535,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4 South Main Street, Joseph, OR 97846",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4",
 			StreetName:    "SOUTH MAIN STREET",
 			City:          "JOSEPH",
@@ -6943,6 +7547,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "13500 Southwest Pacific Highway, Portland, OR 97223",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "13500",
 			StreetName:    "SOUTHWEST PACIFIC HIGHWAY",
 			City:          "PORTLAND",
@@ -6954,6 +7559,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "16165 Southwest Regatta Lane, Suite 1000, Beaverton, OR 97006",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "16165",
 			StreetName:          "SOUTHWEST REGATTA LANE",
 			SecondaryDesignator: "STE",
@@ -6967,6 +7573,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2628 North Highway 99 West, Mcminnville, OR 97128",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2628",
 			StreetName:    "NORTH HIGHWAY 99 WEST",
 			City:          "MCMINNVILLE",
@@ -6978,6 +7585,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2525 Southeast Clinton, Portland, OR 97202",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2525",
 			StreetName:    "SOUTHEAST CLINTON",
 			City:          "PORTLAND",
@@ -6989,6 +7597,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17210 Southwest Shaw Street, Aloha, OR 97007",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17210",
 			StreetName:    "SOUTHWEST SHAW STREET",
 			City:          "ALOHA",
@@ -7000,6 +7609,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "15700 Northwest Blue Ridge Street, Beaverton, OR 97006",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "15700",
 			StreetName:    "NORTHWEST BLUE RIDGE STREET",
 			City:          "BEAVERTON",
@@ -7011,6 +7621,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17455 Southwest Farmington Road, Aloha, OR 97007",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17455",
 			StreetName:    "SOUTHWEST FARMINGTON ROAD",
 			City:          "ALOHA",
@@ -7022,6 +7633,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "500 Southeast Butler Road, Gresham, OR 97080",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "500",
 			StreetName:    "SOUTHEAST BUTLER ROAD",
 			City:          "GRESHAM",
@@ -7033,6 +7645,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Portland, OR 97210",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "PORTLAND",
 			Region: "OR",
 			Postal: "97210",
@@ -7042,6 +7655,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1025 Chetco Avenue, Brookings, OR 97415",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1025",
 			StreetName:    "CHETCO AVENUE",
 			City:          "BROOKINGS",
@@ -7053,6 +7667,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4805 Southwest 229th, Aloha, OR 97007",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4805",
 			StreetName:    "SOUTHWEST 229TH",
 			City:          "ALOHA",
@@ -7064,6 +7679,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12 East Lancaster Avenue, Ardmore, PA 19003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12",
 			StreetName:    "EAST LANCASTER AVENUE",
 			City:          "ARDMORE",
@@ -7075,6 +7691,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "709 Olde Hickory Road, Lancaster, PA 17601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "709",
 			StreetName:    "OLDE HICKORY ROAD",
 			City:          "LANCASTER",
@@ -7086,6 +7703,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2300 Route 309, Wilkes Barre, PA 18702",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2300",
 			StreetName:    "ROUTE 309",
 			City:          "WILKES BARRE",
@@ -7097,6 +7715,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4034 Easton Avenue, Bethlehem, PA 18020",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4034",
 			StreetName:    "EASTON AVENUE",
 			City:          "BETHLEHEM",
@@ -7108,6 +7727,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "422 East State Street, Sharon, PA 16146",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "422",
 			StreetName:    "EAST STATE STREET",
 			City:          "SHARON",
@@ -7119,6 +7739,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4431 Easton Avenue, Bethlehem, PA 18020",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4431",
 			StreetName:    "EASTON AVENUE",
 			City:          "BETHLEHEM",
@@ -7135,6 +7756,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1591 Big Oak Rd, Yardley, PA 19067",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1591",
 			StreetName:    "BIG OAK ROAD",
 			City:          "YARDLEY",
@@ -7146,6 +7768,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Rt 10, Parkesburg, PA 19365",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "ROUTE 10",
 			City:       "PARKESBURG",
 			Region:     "PA",
@@ -7156,6 +7779,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "522 McKean Avenue, Donora, PA 15033",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "522",
 			StreetName:    "MCKEAN AVENUE",
 			City:          "DONORA",
@@ -7167,6 +7791,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "800 Spring Mill Avenue, Conshohocken, PA 19428",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "800",
 			StreetName:    "SPRING MILL AVENUE",
 			City:          "CONSHOHOCKEN",
@@ -7183,6 +7808,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1358 Columbia Ave, Lancaster, PA 17603",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1358",
 			StreetName:    "COLUMBIA AVENUE",
 			City:          "LANCASTER",
@@ -7194,6 +7820,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1 Broadway, Newport, RI 02840",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1",
 			StreetName:    "BROADWAY",
 			City:          "NEWPORT",
@@ -7210,6 +7837,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "11 John Street, Bristol, RI 02809",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "11",
 			StreetName:    "JOHN STREET",
 			City:          "BRISTOL",
@@ -7221,6 +7849,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "28 Market Street, Warren, RI 02885",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "28",
 			StreetName:    "MARKET STREET",
 			City:          "WARREN",
@@ -7232,6 +7861,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "99 Fortin Road, Kingston, RI 02881",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "99",
 			StreetName:    "FORTIN ROAD",
 			City:          "KINGSTON",
@@ -7243,6 +7873,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1715 Stafford Road, Tiverton, RI 02878",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1715",
 			StreetName:    "STAFFORD ROAD",
 			City:          "TIVERTON",
@@ -7254,6 +7885,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "130 Chapel Street, Harrisville, RI 02830",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "130",
 			StreetName:    "CHAPEL STREET",
 			City:          "HARRISVILLE",
@@ -7265,6 +7897,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "577 South Main Street, Providence, RI 02903",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "577",
 			StreetName:    "SOUTH MAIN STREET",
 			City:          "PROVIDENCE",
@@ -7276,6 +7909,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "800 Greenwich Avenue, Warwick, RI 02886",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "800",
 			StreetName:    "GREENWICH AVENUE",
 			City:          "WARWICK",
@@ -7287,6 +7921,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "449 West Shore Road, Warwick, RI 02889",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "449",
 			StreetName:    "WEST SHORE ROAD",
 			City:          "WARWICK",
@@ -7298,6 +7933,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7570 Post Road, North Kingstown, RI 02852",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7570",
 			StreetName:    "POST ROAD",
 			City:          "NORTH KINGSTOWN",
@@ -7309,6 +7945,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "134 Providence Street, Woonsocket, RI 02895",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "134",
 			StreetName:    "PROVIDENCE STREET",
 			City:          "WOONSOCKET",
@@ -7320,6 +7957,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "80 River Street, Woonsocket, RI 02895",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "80",
 			StreetName:    "RIVER STREET",
 			City:          "WOONSOCKET",
@@ -7331,6 +7969,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "54 Smithfield Avenue, Pawtucket, RI 02860",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "54",
 			StreetName:    "SMITHFIELD AVENUE",
 			City:          "PAWTUCKET",
@@ -7342,6 +7981,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "101 Aiken Road, Graniteville, SC 29829",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "101",
 			StreetName:    "AIKEN ROAD",
 			City:          "GRANITEVILLE",
@@ -7353,6 +7993,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2701 David H McLeod Boulevard, Florence, SC 29501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2701",
 			StreetName:    "DAVID H MCLEOD BOULEVARD",
 			City:          "FLORENCE",
@@ -7364,6 +8005,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4634 Factory Stores Boulevard, Myrtle Beach, SC 29579",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4634",
 			StreetName:    "FACTORY STORES BOULEVARD",
 			City:          "MYRTLE BEACH",
@@ -7375,6 +8017,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1600 Marina Road, Irmo, SC 29063",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1600",
 			StreetName:    "MARINA ROAD",
 			City:          "IRMO",
@@ -7386,6 +8029,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "931 Senate Street, Columbia, SC 29201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "931",
 			StreetName:    "SENATE STREET",
 			City:          "COLUMBIA",
@@ -7397,6 +8041,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "338 King Street, Charleston, SC 29401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "338",
 			StreetName:    "KING STREET",
 			City:          "CHARLESTON",
@@ -7408,6 +8053,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1010 Ocean Boulevard, Isle Of Palms, SC 29451",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1010",
 			StreetName:    "OCEAN BOULEVARD",
 			City:          "ISLE OF PALMS",
@@ -7419,6 +8065,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "961 West Union Road, West Union, SC 29696",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "961",
 			StreetName:    "WEST UNION ROAD",
 			City:          "WEST UNION",
@@ -7430,6 +8077,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "17166 Highway 72 West, Waterloo, SC 29384",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "17166",
 			StreetName:    "HIGHWAY 72 WEST",
 			City:          "WATERLOO",
@@ -7441,6 +8089,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2401 Reidville Road, Spartanburg, SC 29301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2401",
 			StreetName:    "REIDVILLE ROAD",
 			City:          "SPARTANBURG",
@@ -7452,6 +8101,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12188 Old Number 6 Highway, Eutawville, SC 29048",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12188",
 			StreetName:    "OLD NUMBER 6 HIGHWAY",
 			City:          "EUTAWVILLE",
@@ -7463,6 +8113,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1215 Saint Andrews Road, Columbia, SC 29210",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1215",
 			StreetName:    "SAINT ANDREWS ROAD",
 			City:          "COLUMBIA",
@@ -7474,6 +8125,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "702 North Greenwood Avenue, Ware Shoals, SC 29692",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "702",
 			StreetName:    "NORTH GREENWOOD AVENUE",
 			City:          "WARE SHOALS",
@@ -7485,6 +8137,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "213 Meeting Street, Charleston, SC 29401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "213",
 			StreetName:    "MEETING STREET",
 			City:          "CHARLESTON",
@@ -7496,6 +8149,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3800 South Louise Avenue Frnt, Sioux Falls, SD 57106",
 		WantFields: &address.Address{
+			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3800",
 			StreetName:      "SOUTH LOUISE AVENUE",
 			SecondaryNumber: "FRNT",
@@ -7508,6 +8162,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2160 North Haines Avenue, Rapid City, SD 57701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2160",
 			StreetName:    "NORTH HAINES AVENUE",
 			City:          "RAPID CITY",
@@ -7519,6 +8174,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "333 West Jackson Boulevard, Spearfish, SD 57783",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "333",
 			StreetName:    "WEST JACKSON BOULEVARD",
 			City:          "SPEARFISH",
@@ -7530,6 +8186,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5050 North Cliff Avenue, Sioux Falls, SD 57104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5050",
 			StreetName:    "NORTH CLIFF AVENUE",
 			City:          "SIOUX FALLS",
@@ -7541,6 +8198,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3820 West 41st Street, Sioux Falls, SD 57106",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3820",
 			StreetName:    "WEST 41ST STREET",
 			City:          "SIOUX FALLS",
@@ -7552,6 +8210,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1308 East 60th Street North, Sioux Falls, SD 57104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1308",
 			StreetName:    "EAST 60TH STREET NORTH",
 			City:          "SIOUX FALLS",
@@ -7563,6 +8222,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "915 8th Avenue Northwest, Aberdeen, SD 57401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "915",
 			StreetName:    "8TH AVENUE NORTHWEST",
 			City:          "ABERDEEN",
@@ -7574,6 +8234,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "535 Mountain View Road, Rapid City, SD 57702",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "535",
 			StreetName:    "MOUNTAIN VIEW ROAD",
 			City:          "RAPID CITY",
@@ -7590,6 +8251,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1500 South Burr Street, Mitchell, SD 57301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1500",
 			StreetName:    "SOUTH BURR STREET",
 			City:          "MITCHELL",
@@ -7606,6 +8268,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2729 East 10th Street, Sioux Falls, SD 57103",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2729",
 			StreetName:    "EAST 10TH STREET",
 			City:          "SIOUX FALLS",
@@ -7617,6 +8280,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1620 Cambell Street, Rapid City, SD 57701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1620",
 			StreetName:    "CAMBELL STREET",
 			City:          "RAPID CITY",
@@ -7628,6 +8292,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "111 Iowa Street, Alcester, SD 57001",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "111",
 			StreetName:    "IA STREET",
 			City:          "ALCESTER",
@@ -7639,6 +8304,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "835 Foothills Mall Drive, Maryville, TN 37801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "835",
 			StreetName:    "FOOTHILLS MALL DRIVE",
 			City:          "MARYVILLE",
@@ -7650,6 +8316,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "929 Dolly Parton Parkway, Sevierville, TN 37862",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "929",
 			StreetName:    "DOLLY PARTON PARKWAY",
 			City:          "SEVIERVILLE",
@@ -7661,6 +8328,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1824 East Stone Drive, Kingsport, TN 37660",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1824",
 			StreetName:    "EAST STONE DRIVE",
 			City:          "KINGSPORT",
@@ -7672,6 +8340,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4014 Hillsboro Circle, Nashville, TN 37215",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4014",
 			StreetName:    "HILLSBORO CIRCLE",
 			City:          "NASHVILLE",
@@ -7683,6 +8352,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3100 North Roan Street, Johnson City, TN 37601",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3100",
 			StreetName:    "NORTH ROAN STREET",
 			City:          "JOHNSON CITY",
@@ -7694,6 +8364,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1001 Kingston Street, Lenoir City, TN 37771",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1001",
 			StreetName:    "KINGSTON STREET",
 			City:          "LENOIR CITY",
@@ -7705,6 +8376,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1718 Madison Avenue, Memphis, TN 38104",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1718",
 			StreetName:    "MADISON AVENUE",
 			City:          "MEMPHIS",
@@ -7716,6 +8388,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1021 Jackson Avenue, Memphis, TN 38107",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1021",
 			StreetName:    "JACKSON AVENUE",
 			City:          "MEMPHIS",
@@ -7727,6 +8400,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7409 Middlebrook Pike, Knoxville, TN 37909",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7409",
 			StreetName:    "MIDDLEBROOK PIKE",
 			City:          "KNOXVILLE",
@@ -7738,6 +8412,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2204 Whitten Road, Memphis, TN 38133",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2204",
 			StreetName:    "WHITTEN ROAD",
 			City:          "MEMPHIS",
@@ -7749,6 +8424,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "209 Main Street, Petros, TN 37845",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "209",
 			StreetName:    "MAIN STREET",
 			City:          "PETROS",
@@ -7760,6 +8436,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3445 Poplar Avenue, Memphis, TN 38111",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3445",
 			StreetName:    "POPLAR AVENUE",
 			City:          "MEMPHIS",
@@ -7771,6 +8448,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3445 Poplar Avenue, Memphis, TN 38111",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3445",
 			StreetName:    "POPLAR AVENUE",
 			City:          "MEMPHIS",
@@ -7782,6 +8460,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "24 Front Street, Big Sandy, TN 38221",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "24",
 			StreetName:    "FRONT STREET",
 			City:          "BIG SANDY",
@@ -7793,6 +8472,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "304 North Llano, Fredericksburg, TX 78624",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "304",
 			StreetName:    "NORTH LLANO",
 			City:          "FREDERICKSBURG",
@@ -7804,6 +8484,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1328 West McDermott Suite 200, Allen, TX 75013",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1328",
 			StreetName:          "WEST MCDERMOTT",
 			SecondaryDesignator: "STE",
@@ -7817,6 +8498,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "820 East IH35 South Suite A, Denton, TX 76205",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "820",
 			StreetName:          "EAST IH35 SOUTH",
 			SecondaryDesignator: "STE",
@@ -7830,6 +8512,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "220 East Las Colinas Boulevard, Irving, TX 75039",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "220",
 			StreetName:    "EAST LAS COLINAS BOULEVARD",
 			City:          "IRVING",
@@ -7841,6 +8524,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2969 West 15th Street, Plano, TX 75075",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2969",
 			StreetName:    "WEST 15TH STREET",
 			City:          "PLANO",
@@ -7852,6 +8536,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4501 Travis Street, Dallas, TX 75205",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4501",
 			StreetName:    "TRAVIS STREET",
 			City:          "DALLAS",
@@ -7863,6 +8548,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "807 South Central Expressway, Richardson, TX 75080",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "807",
 			StreetName:    "SOUTH CENTRAL EXPRESSWAY",
 			City:          "RICHARDSON",
@@ -7874,6 +8560,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3068 Forest Lane, Dallas, TX 75234",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3068",
 			StreetName:    "FOREST LANE",
 			City:          "DALLAS",
@@ -7885,6 +8572,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2029 East Highway 356 (Irving Boulevard), Irving, TX 75038",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2029",
 			StreetName:    "EAST HIGHWAY 356 (IRVING BOULEVARD",
 			City:          "IRVING",
@@ -7896,6 +8584,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3948 Legacy Drive, Plano, TX 75023",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3948",
 			StreetName:    "LEGACY DRIVE",
 			City:          "PLANO",
@@ -7907,6 +8596,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "120 South Main, Grapevine, TX 76051",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "120",
 			StreetName:    "SOUTH MAIN",
 			City:          "GRAPEVINE",
@@ -7918,6 +8608,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2001 Coit Road, Plano, TX 75075",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2001",
 			StreetName:    "COIT ROAD",
 			City:          "PLANO",
@@ -7929,6 +8620,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2300 Cross Timbers, Flower Mound, TX 75028",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2300",
 			StreetName:    "CROSS TIMBERS",
 			City:          "FLOWER MOUND",
@@ -7940,6 +8632,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1045 Hidden Ridge, Irving, TX 75038",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1045",
 			StreetName:    "HIDDEN RIDGE",
 			City:          "IRVING",
@@ -7951,6 +8644,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4140 West 5415 South, Salt Lake City, UT 84118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4140",
 			StreetName:    "WEST 5415 SOUTH",
 			City:          "SALT LAKE CITY",
@@ -7962,6 +8656,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1500 Kearns Boulevard, Park City, UT 84060",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1500",
 			StreetName:    "KEARNS BOULEVARD",
 			City:          "PARK CITY",
@@ -7973,6 +8668,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "164 South 100 West, Cedar City, UT 84720",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "164",
 			StreetName:    "SOUTH 100 WEST",
 			City:          "CEDAR CITY",
@@ -7984,6 +8680,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Sandy, UT 84092",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "SANDY",
 			Region: "UT",
 			Postal: "84092",
@@ -7993,6 +8690,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "239 South 500 East, Salt Lake City, UT 84102",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "239",
 			StreetName:    "SOUTH 500 EAST",
 			City:          "SALT LAKE CITY",
@@ -8004,6 +8702,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3513 Riverdale Road, Ogden, UT 84405",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3513",
 			StreetName:    "RIVERDALE ROAD",
 			City:          "OGDEN",
@@ -8015,6 +8714,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2901 East 3300 South, Salt Lake City, UT 84109",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2901",
 			StreetName:    "EAST 3300 SOUTH",
 			City:          "SALT LAKE CITY",
@@ -8026,6 +8726,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1754 West 7800 South, West Jordan, UT 84088",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1754",
 			StreetName:    "WEST 7800 SOUTH",
 			City:          "WEST JORDAN",
@@ -8037,6 +8738,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3765 West 5400 South, Kearns, UT 84118",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3765",
 			StreetName:    "WEST 5400 SOUTH",
 			City:          "KEARNS",
@@ -8048,6 +8750,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4931 South State Street, Salt Lake City, UT 84107",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4931",
 			StreetName:    "SOUTH STATE STREET",
 			City:          "SALT LAKE CITY",
@@ -8059,6 +8762,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1168 32nd Street, Ogden, UT 84403",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1168",
 			StreetName:    "32ND STREET",
 			City:          "OGDEN",
@@ -8070,6 +8774,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1499 South State Street, Salt Lake City, UT 84115",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1499",
 			StreetName:    "SOUTH STATE STREET",
 			City:          "SALT LAKE CITY",
@@ -8081,6 +8786,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1516 North Freedom Boulevard, Provo, UT 84604",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1516",
 			StreetName:    "NORTH FREEDOM BOULEVARD",
 			City:          "PROVO",
@@ -8092,6 +8798,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6065 Jefferson Avenue, Newport News, VA 23605",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6065",
 			StreetName:    "JEFFERSON AVENUE",
 			City:          "NEWPORT NEWS",
@@ -8103,6 +8810,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "232 South Armistead Avenue, Hampton, VA 23669",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "232",
 			StreetName:    "SOUTH ARMISTEAD AVENUE",
 			City:          "HAMPTON",
@@ -8114,6 +8822,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6723 Richmond Highway, Alexandria, VA 22306",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6723",
 			StreetName:    "RICHMOND HIGHWAY",
 			City:          "ALEXANDRIA",
@@ -8125,6 +8834,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4300 Colley Avenue, Norfolk, VA 23508",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4300",
 			StreetName:    "COLLEY AVENUE",
 			City:          "NORFOLK",
@@ -8136,6 +8846,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2887 Poindexter Road, Trevilians, VA 23170",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2887",
 			StreetName:    "POINDEXTER ROAD",
 			City:          "TREVILIANS",
@@ -8147,6 +8858,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "422 William Street, Fredericksburg, VA 22401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "422",
 			StreetName:    "WILLIAM STREET",
 			City:          "FREDERICKSBURG",
@@ -8158,6 +8870,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1402 Richmond Road, Williamsburg, VA 23185",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1402",
 			StreetName:    "RICHMOND ROAD",
 			City:          "WILLIAMSBURG",
@@ -8169,6 +8882,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "516 South Van Dorn Street, Alexandria, VA 22304",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "516",
 			StreetName:    "SOUTH VAN DORN STREET",
 			City:          "ALEXANDRIA",
@@ -8180,6 +8894,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7279 Arlington Boulevard, Falls Church, VA 22042",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7279",
 			StreetName:    "ARLINGTON BOULEVARD",
 			City:          "FALLS CHURCH",
@@ -8191,6 +8906,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "8701 Midlothian Turnpike, Richmond, VA 23235",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "8701",
 			StreetName:    "MIDLOTHIAN TURNPIKE",
 			City:          "RICHMOND",
@@ -8202,6 +8918,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2926 Franklin Road Southwest, Roanoke, VA 24000",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2926",
 			StreetName:    "FRANKLIN ROAD SOUTHWEST",
 			City:          "ROANOKE",
@@ -8213,6 +8930,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2500 Riverside Drive, Danville, VA 24540",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2500",
 			StreetName:    "RIVERSIDE DRIVE",
 			City:          "DANVILLE",
@@ -8224,6 +8942,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "116 S. Independence Blvd., Virginia Beach, VA 23462",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "116",
 			StreetName:    "S. INDEPENDENCE BOULEVARD",
 			City:          "VIRGINIA BEACH",
@@ -8240,6 +8959,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "15 Barre Street Suite 1, Montpelier, VT 05602",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "15",
 			StreetName:          "BARRE STREET",
 			SecondaryDesignator: "STE",
@@ -8258,6 +8978,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "18 Lake Street, Saint Albans, VT 05478",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "18",
 			StreetName:    "LAKE STREET",
 			City:          "SAINT ALBANS",
@@ -8269,6 +8990,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4 Fairground Road, Brattleboro, VT 05301",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4",
 			StreetName:    "FAIRGROUND ROAD",
 			City:          "BRATTLEBORO",
@@ -8280,6 +9002,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "50 Railroad Street, Montpelier, VT 05602",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "50",
 			StreetName:    "RAILROAD STREET",
 			City:          "MONTPELIER",
@@ -8291,6 +9014,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "20 Susie Wilson Road, Essex Junction, VT 05452",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "20",
 			StreetName:    "SUSIE WILSON ROAD",
 			City:          "ESSEX JUNCTION",
@@ -8307,6 +9031,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "225 Woodstock Avenue, Rutland, VT 05701",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "225",
 			StreetName:    "WOODSTOCK AVENUE",
 			City:          "RUTLAND",
@@ -8333,6 +9058,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3904 Route # A, Arlington, VT 05250",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3904",
 			StreetName:    "ROUTE # A",
 			City:          "ARLINGTON",
@@ -8349,6 +9075,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "31595 SR 20, Oak Harbor, WA 98277",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "31595",
 			StreetName:    "STATE ROAD 20",
 			City:          "OAK HARBOR",
@@ -8360,6 +9087,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "5694 Third Avenue, Ferndale, WA 98248",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "5694",
 			StreetName:    "THIRD AVENUE",
 			City:          "FERNDALE",
@@ -8371,6 +9099,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "20221 Aurora Avenue North, Seattle, WA 98133",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "20221",
 			StreetName:    "AURORA AVENUE NORTH",
 			City:          "SEATTLE",
@@ -8382,6 +9111,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "630 Southeast Pioneer Way, Oak Harbor, WA 98277",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "630",
 			StreetName:    "SOUTHEAST PIONEER WAY",
 			City:          "OAK HARBOR",
@@ -8393,6 +9123,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "6251 Northeast Bothell Way, Kenmore, WA 98028",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "6251",
 			StreetName:    "NORTHEAST BOTHELL WAY",
 			City:          "KENMORE",
@@ -8404,6 +9135,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1427 228th Street Suite 82, Bothell, WA 98021",
 		WantFields: &address.Address{
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "1427",
 			StreetName:          "228TH STREET",
 			SecondaryDesignator: "STE",
@@ -8417,6 +9149,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1351 Southwest Barlow Street, Oak Harbor, WA 98277",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1351",
 			StreetName:    "SOUTHWEST BARLOW STREET",
 			City:          "OAK HARBOR",
@@ -8428,6 +9161,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "21210 44th Avenue West, Mountlake Terrace, WA 98043",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "21210",
 			StreetName:    "44TH AVENUE WEST",
 			City:          "MOUNTLAKE TERRACE",
@@ -8439,6 +9173,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "225 Highway 150, Chelan, WA 98816",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "225",
 			StreetName:    "HIGHWAY 150",
 			City:          "CHELAN",
@@ -8450,6 +9185,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "15740 Aurora Avenue North, Seattle, WA 98133",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "15740",
 			StreetName:    "AURORA AVENUE NORTH",
 			City:          "SEATTLE",
@@ -8461,6 +9197,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1114 First Street, Snohomish, WA 98290",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1114",
 			StreetName:    "FIRST STREET",
 			City:          "SNOHOMISH",
@@ -8472,6 +9209,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "546 5th Avenue South, Edmonds, WA 98020",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "546",
 			StreetName:    "5TH AVENUE SOUTH",
 			City:          "EDMONDS",
@@ -8483,6 +9221,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "12025 Highway 99, Everett, WA 98204",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12025",
 			StreetName:    "HIGHWAY 99",
 			City:          "EVERETT",
@@ -8494,6 +9233,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4520 200th Street Southwest, Lynnwood, WA 98036",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4520",
 			StreetName:    "200TH STREET SOUTHWEST",
 			City:          "LYNNWOOD",
@@ -8505,6 +9245,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "231 East Towne Mall, Madison, WI 53704",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "231",
 			StreetName:    "EAST TOWNE MALL",
 			City:          "MADISON",
@@ -8516,6 +9257,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "108 West Towne Mall, Madison, WI 53719",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "108",
 			StreetName:    "WEST TOWNE MALL",
 			City:          "MADISON",
@@ -8527,6 +9269,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2500 North Mayfair Road, Milwaukee, WI 53226",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2500",
 			StreetName:    "NORTH MAYFAIR ROAD",
 			City:          "MILWAUKEE",
@@ -8538,6 +9281,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "4301 West Wisconsin Avenue, Appleton, WI 54913",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "4301",
 			StreetName:    "WEST WI AVENUE",
 			City:          "APPLETON",
@@ -8549,6 +9293,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2401 South Oneida Street, Green Bay, WI 54304",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2401",
 			StreetName:    "SOUTH ONEIDA STREET",
 			City:          "GREEN BAY",
@@ -8560,6 +9305,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "325 Central Avenue, Owen, WI 54460",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "325",
 			StreetName:    "CENTRAL AVENUE",
 			City:          "OWEN",
@@ -8576,6 +9322,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2559 South Howell Avenue, Milwaukee, WI 53207",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2559",
 			StreetName:    "SOUTH HOWELL AVENUE",
 			City:          "MILWAUKEE",
@@ -8587,6 +9334,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "9067 State Highway 70 West, Saint Germain, WI 54558",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "9067",
 			StreetName:    "STATE HIGHWAY 70 WEST",
 			City:          "SAINT GERMAIN",
@@ -8598,6 +9346,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Wausau, WI 54403",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "WAUSAU",
 			Region: "WI",
 			Postal: "54403",
@@ -8607,6 +9356,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "635 South Main Street, Shawano, WI 54166",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "635",
 			StreetName:    "SOUTH MAIN STREET",
 			City:          "SHAWANO",
@@ -8618,6 +9368,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3201 East Main Street, Merrill, WI 54452",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3201",
 			StreetName:    "EAST MAIN STREET",
 			City:          "MERRILL",
@@ -8629,6 +9380,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "7441 East County Road Y, Gordon, WI 54838",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "7441",
 			StreetName:    "EAST COUNTY ROAD Y",
 			City:          "GORDON",
@@ -8640,6 +9392,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "102 Old Abe Road, Lac Du Flambeau, WI 54538",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "102",
 			StreetName:    "OLD ABE ROAD",
 			City:          "LAC DU FLAMBEAU",
@@ -8651,6 +9404,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1193 Pineview Drive, Morgantown, WV 26505",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1193",
 			StreetName:    "PINEVIEW DRIVE",
 			City:          "MORGANTOWN",
@@ -8662,6 +9416,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "345 High Street, Morgantown, WV 26505",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "345",
 			StreetName:    "HIGH STREET",
 			City:          "MORGANTOWN",
@@ -8673,6 +9428,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "512 West Main Street, West Union, WV 26456",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "512",
 			StreetName:    "WEST MAIN STREET",
 			City:          "WEST UNION",
@@ -8684,6 +9440,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "78 Main Street, Shinnston, WV 26431",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "78",
 			StreetName:    "MAIN STREET",
 			City:          "SHINNSTON",
@@ -8695,6 +9452,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "256 Carolina Avenue, Chester, WV 26034",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "256",
 			StreetName:    "CAROLINA AVENUE",
 			City:          "CHESTER",
@@ -8706,6 +9464,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Keyser, WV 26726",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "KEYSER",
 			Region: "WV",
 			Postal: "26726",
@@ -8715,6 +9474,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "50 Carmel Road, Wheeling, WV 26003",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "50",
 			StreetName:    "CARMEL ROAD",
 			City:          "WHEELING",
@@ -8726,6 +9486,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Terra Alta, WV 26764",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "TERRA ALTA",
 			Region: "WV",
 			Postal: "26764",
@@ -8735,6 +9496,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "102 Forever Green Drive, Falling Waters, WV 25419",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "102",
 			StreetName:    "FOREVER GREEN DRIVE",
 			City:          "FALLING WATERS",
@@ -8746,6 +9508,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Fairmont, WV 26554",
 		WantFields: &address.Address{
+			Type:   &ordinarystreet.OrdinaryStreetAddress{},
 			City:   "FAIRMONT",
 			Region: "WV",
 			Postal: "26554",
@@ -8755,6 +9518,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "Cortland Road, Davis, WV 26260",
 		WantFields: &address.Address{
+			Type:       &ordinarystreet.OrdinaryStreetAddress{},
 			StreetName: "CORTLAND ROAD",
 			City:       "DAVIS",
 			Region:     "WV",
@@ -8765,6 +9529,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "205 West Maple Avenue, Fayetteville, WV 25840",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "205",
 			StreetName:    "WEST MAPLE AVENUE",
 			City:          "FAYETTEVILLE",
@@ -8776,6 +9541,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "120 East German, Shepherdstown, WV 25443",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "120",
 			StreetName:    "EAST GERMAN",
 			City:          "SHEPHERDSTOWN",
@@ -8787,6 +9553,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "669 Main Street, Follansbee, WV 26037",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "669",
 			StreetName:    "MAIN STREET",
 			City:          "FOLLANSBEE",
@@ -8798,6 +9565,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1401 Dell Range Boulevard, Cheyenne, WY 82009",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1401",
 			StreetName:    "DELL RANGE BOULEVARD",
 			City:          "CHEYENNE",
@@ -8809,6 +9577,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "3209 East Grand Avenue, Laramie, WY 82070",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "3209",
 			StreetName:    "EAST GRAND AVENUE",
 			City:          "LARAMIE",
@@ -8820,6 +9589,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "128 West Valley Road, Torrington, WY 82240",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "128",
 			StreetName:    "WEST VALLEY ROAD",
 			City:          "TORRINGTON",
@@ -8831,6 +9601,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1777 Coffeen Avenue, Sheridan, WY 82801",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1777",
 			StreetName:    "COFFEEN AVENUE",
 			City:          "SHERIDAN",
@@ -8842,6 +9613,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2720 South Douglas Highway, Gillette, WY 82718",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2720",
 			StreetName:    "SOUTH DOUGLAS HIGHWAY",
 			City:          "GILLETTE",
@@ -8853,6 +9625,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1140 West Main Street, Riverton, WY 82501",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1140",
 			StreetName:    "WEST MAIN STREET",
 			City:          "RIVERTON",
@@ -8864,6 +9637,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "91 16th Street, Wheatland, WY 82201",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "91",
 			StreetName:    "16TH STREET",
 			City:          "WHEATLAND",
@@ -8875,6 +9649,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "310 East Lincolnway, Cheyenne, WY 82001",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "310",
 			StreetName:    "EAST LINCOLNWAY",
 			City:          "CHEYENNE",
@@ -8886,6 +9661,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1500 Big Horn Avenue, Worland, WY 82401",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1500",
 			StreetName:    "BIG HORN AVENUE",
 			City:          "WORLAND",
@@ -8897,6 +9673,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1503 Sheridan Avenue, Cody, WY 82414",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1503",
 			StreetName:    "SHERIDAN AVENUE",
 			City:          "CODY",
@@ -8908,6 +9685,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "2148 East Grand Avenue, Laramie, WY 82070",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "2148",
 			StreetName:    "EAST GRAND AVENUE",
 			City:          "LARAMIE",
@@ -8919,6 +9697,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "355 North Russell Avenue, Douglas, WY 82633",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "355",
 			StreetName:    "NORTH RUSSELL AVENUE",
 			City:          "DOUGLAS",
@@ -8930,6 +9709,7 @@ var usAddressGenerated = []usAddressCase{
 		File:  "us50_test_tagged.xml",
 		Input: "1899 Dewar Drive, Rock Springs, WY 82901",
 		WantFields: &address.Address{
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "1899",
 			StreetName:    "DEWAR DRIVE",
 			City:          "ROCK SPRINGS",

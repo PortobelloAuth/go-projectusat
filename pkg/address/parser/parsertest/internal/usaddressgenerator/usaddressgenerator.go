@@ -24,12 +24,14 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox"
 	"github.com/PortobelloAuth/go-projectusat/pkg/textutil"
 )
@@ -104,7 +106,8 @@ type override struct {
 }
 
 // wantFields is the JSON form of an expected address.Address, named after its
-// fields. POBox stands in for Type, the only type the mapping produces.
+// fields. POBox stands in for Type: false is an OrdinaryStreetAddress, the
+// default, and true a POBoxAddress, the only other type the mapping produces.
 type wantFields struct {
 	POBox               bool   `json:"poBox,omitempty"`
 	BusinessName        string `json:"businessName,omitempty"`
@@ -136,6 +139,7 @@ func (w wantFields) address() *address.Address {
 		Postal:              w.Postal,
 		Country:             w.Country,
 	}
+	a.Type = &ordinarystreet.OrdinaryStreetAddress{}
 	if w.POBox {
 		a.Type = &pobox.POBoxAddress{}
 	}
@@ -392,6 +396,7 @@ func rawAddress(tags []tag) (*address.Address, string) {
 	if *a == (address.Address{}) {
 		return nil, "no address components outside Recipient"
 	}
+	a.Type = &ordinarystreet.OrdinaryStreetAddress{}
 	if isPOBox {
 		a.Type = &pobox.POBoxAddress{}
 	}
@@ -406,11 +411,16 @@ func render(cases []generatedCase) ([]byte, error) {
 	b.WriteString("package parsertest\n\n")
 	writeReport(&b, cases)
 
-	usesPOBox := slices.ContainsFunc(cases, func(c generatedCase) bool {
-		return c.WantFields != nil && c.WantFields.Type != nil
-	})
+	usesType := func(t address.AddressType) bool {
+		return slices.ContainsFunc(cases, func(c generatedCase) bool {
+			return c.WantFields != nil && reflect.TypeOf(c.WantFields.Type) == reflect.TypeOf(t)
+		})
+	}
 	b.WriteString("import (\n\t\"github.com/PortobelloAuth/go-projectusat/pkg/address\"\n")
-	if usesPOBox {
+	if usesType(&ordinarystreet.OrdinaryStreetAddress{}) {
+		b.WriteString("\t\"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet\"\n")
+	}
+	if usesType(&pobox.POBoxAddress{}) {
 		b.WriteString("\t\"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/pobox\"\n")
 	}
 	b.WriteString(")\n\n")
@@ -493,6 +503,8 @@ func typeLiteral(a *address.Address) (string, bool) {
 	switch a.Type.(type) {
 	case nil:
 		return "", true
+	case *ordinarystreet.OrdinaryStreetAddress:
+		return "&ordinarystreet.OrdinaryStreetAddress{}", true
 	case *pobox.POBoxAddress:
 		return "&pobox.POBoxAddress{}", true
 	}

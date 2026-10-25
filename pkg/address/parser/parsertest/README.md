@@ -98,7 +98,8 @@ case is left unsettled for any of these reasons:
 - **A reviewed override.** `internal/usaddressgenerator/overrides.json` holds
   per-input overrides, each with a mandatory `reason`. With no `want` the case
   is left unsettled and the reason is reported; with a `want` (fields named as in
-  `address.Address`, `poBox` for the PO Box type) that address replaces the
+  `address.Address`, `poBox` for the PO Box type; every other record is an
+  `OrdinaryStreetAddress`) that address replaces the
   normalizer's. Fix the normalizer first, since that fixes every input; an
   override is for a fixture no normalizer could be right about, such as a
   negative case or a recipient run that mixes a business and a person. The
