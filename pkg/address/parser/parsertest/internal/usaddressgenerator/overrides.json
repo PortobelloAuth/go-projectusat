@@ -60,5 +60,13 @@
       "region": "TX",
       "postal": "75038"
     }
+  },
+  {
+    "input": "Mile K Beach Road # 1, Kenai, AK 99611",
+    "reason": "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)"
+  },
+  {
+    "input": "Mi K Beach Road # 2, Kenai, AK 99611",
+    "reason": "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)"
   }
 ]

@@ -9,14 +9,14 @@ package parsertest
 //	labeled.xml                       107 /  146
 //	multi_word_state_addresses.xml      5 /    5
 //	simple_address_patterns.xml         7 /    8
-//	us50_test_tagged.xml              649 /  687
-//	total                             768 /  846
+//	us50_test_tagged.xml              646 /  687
+//	total                             765 /  846
 //
 // Cases where the full normalizer would change WantFields and the change was
 // refused (the content-normalized address is kept), by reason:
 //
 //	   1  full normalizer changed BusinessName
-//	   8  full normalizer changed PrimaryNumber
+//	   5  full normalizer changed PrimaryNumber
 //	   1  full normalizer changed Region
 //	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer dropped Predirectional
@@ -24,6 +24,7 @@ package parsertest
 //
 // Cases without WantFields, by reason:
 //
+//	   3  Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)
 //	   1  negative case: LL is not a region
 //	  16  normalizer: Not a recognized PO Box street name
 //	   3  normalizer: predirectional
@@ -1817,43 +1818,19 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "us50_test_tagged.xml",
-		Input:      "Mile K Beach Road # 1, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber from \"MILE K\" to \"\"; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
-		WantFields: &address.Address{
-			Type:          &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber: "MILE K",
-			StreetName:    "BEACH ROAD # 1",
-			City:          "KENAI",
-			Region:        "AK",
-			Postal:        "99611",
-		},
+		File:      "us50_test_tagged.xml",
+		Input:     "Mile K Beach Road # 1, Kenai, AK 99611",
+		Unsettled: "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)",
 	},
 	{
-		File:       "us50_test_tagged.xml",
-		Input:      "Mile K Beach Road # 1, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber from \"MILE K\" to \"\"; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
-		WantFields: &address.Address{
-			Type:          &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber: "MILE K",
-			StreetName:    "BEACH ROAD # 1",
-			City:          "KENAI",
-			Region:        "AK",
-			Postal:        "99611",
-		},
+		File:      "us50_test_tagged.xml",
+		Input:     "Mile K Beach Road # 1, Kenai, AK 99611",
+		Unsettled: "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)",
 	},
 	{
-		File:       "us50_test_tagged.xml",
-		Input:      "Mi K Beach Road # 2, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber from \"MI K\" to \"\"; full normalizer gave \"MI K BEACH RD # 2 KENAI AK 99611\"",
-		WantFields: &address.Address{
-			Type:          &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber: "MI K",
-			StreetName:    "BEACH ROAD # 2",
-			City:          "KENAI",
-			Region:        "AK",
-			Postal:        "99611",
-		},
+		File:      "us50_test_tagged.xml",
+		Input:     "Mi K Beach Road # 2, Kenai, AK 99611",
+		Unsettled: "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)",
 	},
 	{
 		File:  "us50_test_tagged.xml",

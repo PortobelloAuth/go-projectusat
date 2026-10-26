@@ -217,7 +217,7 @@ func TestCasesComposition(t *testing.T) {
 // pp.34-35, "Remove ATTENTION, ATTN:"), and a StreetNamePreType route
 // designator is part of the street name.
 func TestUsAddressWantFields(t *testing.T) {
-	const wantSettled = 768
+	const wantSettled = 765
 
 	settled := 0
 	n := normalizer.NewContentNomalizer()
