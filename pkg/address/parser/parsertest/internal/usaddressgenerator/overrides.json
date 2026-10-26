@@ -10,5 +10,17 @@
   {
     "input": "MARTIN DAVIS SOS SECURITY IL CHICAGO BRANCH 30 S WACKER DR STE 2200 CHICAGO IL 60606",
     "reason": "recipient run mixes person and business name"
+  },
+  {
+    "input": "N165 W2123 Tartan Ct Jackson, WI 53037",
+    "reason": "the full normalizer joins a Wisconsin grid primary number (N165 W2123 -> N165W2123) and that is correct; the fixture's spelling is the one that is wrong",
+    "want": {
+      "primaryNumber": "N165W2123",
+      "streetName": "TARTAN",
+      "streetSuffix": "CT",
+      "city": "JACKSON",
+      "region": "WI",
+      "postal": "53037"
+    }
   }
 ]

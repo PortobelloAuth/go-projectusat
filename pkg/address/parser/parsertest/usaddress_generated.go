@@ -16,9 +16,9 @@ package parsertest
 // refused (the content-normalized address is kept), by reason:
 //
 //	   1  full normalizer changed BusinessName
-//	  17  full normalizer changed PrimaryNumber
+//	  16  full normalizer changed PrimaryNumber
 //	   1  full normalizer changed Region
-//	   5  full normalizer changed SecondaryDesignator
+//	   2  full normalizer changed SecondaryDesignator
 //	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer dropped Predirectional
 //	   1  full normalizer: parse: no address type offered a reading
@@ -64,7 +64,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "1234 S Martin Luther King Dr Chicago, IL 60637",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"1234 S MARTIN LUTHER KING DR CHICAGO IL 60637\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"1234\" to \"\"; full normalizer gave \"1234 S MARTIN LUTHER KING DR CHICAGO IL 60637\"",
 		WantFields: &address.Address{
 			Type:           &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:  "1234",
@@ -98,12 +98,11 @@ var usAddressGenerated = []usAddressCase{
 		Unsettled: "normalizer: Not a recognized PO Box street name",
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "N165 W2123 Tartan Ct Jackson, WI 53037",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"N165W2123 TARTAN CT JACKSON WI 53037\"",
+		File:  "labeled.xml",
+		Input: "N165 W2123 Tartan Ct Jackson, WI 53037",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber: "N165 W2123",
+			PrimaryNumber: "N165W2123",
 			StreetName:    "TARTAN",
 			StreetSuffix:  "CT",
 			City:          "JACKSON",
@@ -427,7 +426,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "2350 WASHINGTON NE PL",
-		NotAdopted: "full normalizer changed Region; full normalizer gave \"2350 WASHINGTON PL NE\"",
+		NotAdopted: "full normalizer changed Region from \"\" to \"NE\"; full normalizer gave \"2350 WASHINGTON PL NE\"",
 		WantFields: &address.Address{
 			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2350",
@@ -526,7 +525,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "church street station po box 6793 new york ny 10249",
-		NotAdopted: "full normalizer changed BusinessName; full normalizer gave \"CHURCH STREET STA PO BOX 6793 NEW YORK NY 10249\"",
+		NotAdopted: "full normalizer changed BusinessName from \"CHURCH STREET STA\" to \"\"; full normalizer gave \"CHURCH STREET STA PO BOX 6793 NEW YORK NY 10249\"",
 		WantFields: &address.Address{
 			Type:          &pobox.POBoxAddress{},
 			BusinessName:  "CHURCH STREET STA",
@@ -622,18 +621,15 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "file 74155 po box 60000 san francisco ca 94160",
-		NotAdopted: "full normalizer changed SecondaryDesignator; full normalizer gave \"PO BOX 60000 SAN FRANCISCO CA 94160\"",
+		File:  "labeled.xml",
+		Input: "file 74155 po box 60000 san francisco ca 94160",
 		WantFields: &address.Address{
-			Type:                &pobox.POBoxAddress{},
-			PrimaryNumber:       "60000",
-			StreetName:          "PO BOX",
-			SecondaryDesignator: "file",
-			SecondaryNumber:     "74155",
-			City:                "SAN FRANCISCO",
-			Region:              "CA",
-			Postal:              "94160",
+			Type:          &pobox.POBoxAddress{},
+			PrimaryNumber: "60000",
+			StreetName:    "PO BOX",
+			City:          "SAN FRANCISCO",
+			Region:        "CA",
+			Postal:        "94160",
 		},
 	},
 	{
@@ -663,7 +659,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "2207 d gault ave n ft payne al 35967",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"2207 D GAULT AVE N FORT PAYNE AL 35967\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"2207\" to \"\"; full normalizer gave \"2207 D GAULT AVE N FORT PAYNE AL 35967\"",
 		WantFields: &address.Address{
 			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2207",
@@ -676,18 +672,15 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "po box 33701 dept 33701 sn francisco ca 94139",
-		NotAdopted: "full normalizer changed SecondaryDesignator; full normalizer gave \"PO BOX 33701 SN FRANCISCO CA 94139\"",
+		File:  "labeled.xml",
+		Input: "po box 33701 dept 33701 sn francisco ca 94139",
 		WantFields: &address.Address{
-			Type:                &pobox.POBoxAddress{},
-			PrimaryNumber:       "33701",
-			StreetName:          "PO BOX",
-			SecondaryDesignator: "dept",
-			SecondaryNumber:     "33701",
-			City:                "SN FRANCISCO",
-			Region:              "CA",
-			Postal:              "94139",
+			Type:          &pobox.POBoxAddress{},
+			PrimaryNumber: "33701",
+			StreetName:    "PO BOX",
+			City:          "SN FRANCISCO",
+			Region:        "CA",
+			Postal:        "94139",
 		},
 	},
 	{
@@ -752,18 +745,15 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "po box 2303 department 130 indianapolis in 46206",
-		NotAdopted: "full normalizer changed SecondaryDesignator; full normalizer gave \"PO BOX 2303 INDIANAPOLIS IN 46206\"",
+		File:  "labeled.xml",
+		Input: "po box 2303 department 130 indianapolis in 46206",
 		WantFields: &address.Address{
-			Type:                &pobox.POBoxAddress{},
-			PrimaryNumber:       "2303",
-			StreetName:          "PO BOX",
-			SecondaryDesignator: "department",
-			SecondaryNumber:     "130",
-			City:                "INDIANAPOLIS",
-			Region:              "IN",
-			Postal:              "46206",
+			Type:          &pobox.POBoxAddress{},
+			PrimaryNumber: "2303",
+			StreetName:    "PO BOX",
+			City:          "INDIANAPOLIS",
+			Region:        "IN",
+			Postal:        "46206",
 		},
 	},
 	{
@@ -1036,7 +1026,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "4315 WEBSTER AVENUE LH",
-		NotAdopted: "full normalizer changed SecondaryNumber; full normalizer gave \"4315 WEBSTER AVENUE LH\"",
+		NotAdopted: "full normalizer changed SecondaryNumber from \"LH\" to \"\"; full normalizer gave \"4315 WEBSTER AVENUE LH\"",
 		WantFields: &address.Address{
 			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "4315",
@@ -1098,7 +1088,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "900 Business 150 STE 3, Mansfield, PA 19402",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"900\" to \"150\"; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
 		WantFields: &address.Address{
 			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",
@@ -1125,7 +1115,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "900 Business 150 STE 3, Mansfield, PA 19402",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"900\" to \"150\"; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
 		WantFields: &address.Address{
 			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",
@@ -1362,7 +1352,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "123 COUNTY ROAD ABC, APT 12, IOLA, WI 54445",
-		NotAdopted: "full normalizer changed SecondaryDesignator; full normalizer gave \"123 COUNTY ROAD ABC APT 12 IOLA WI 54445\"",
+		NotAdopted: "full normalizer changed SecondaryDesignator from \"APT\" to \"\"; full normalizer gave \"123 COUNTY ROAD ABC APT 12 IOLA WI 54445\"",
 		WantFields: &address.Address{
 			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "123",
@@ -1424,7 +1414,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "12855 6TH AVE, N. MIAMI, FL 33161",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"N MIAMI FL 33161\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"12855\" to \"\"; full normalizer gave \"N MIAMI FL 33161\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12855",
@@ -1463,7 +1453,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "labeled.xml",
 		Input:      "977 PLEASANT STREET, N. ORANGE, NJ 07052",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"N ORANGE NJ 07052\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"977\" to \"\"; full normalizer gave \"N ORANGE NJ 07052\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "977",
@@ -1833,7 +1823,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "Mile K Beach Road # 1, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"MILE K\" to \"\"; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MILE K",
@@ -1846,7 +1836,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "Mile K Beach Road # 1, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"MILE K\" to \"\"; full normalizer gave \"MILE K BEACH RD # 1 KENAI AK 99611\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MILE K",
@@ -1859,7 +1849,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "Mi K Beach Road # 2, Kenai, AK 99611",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"MI K BEACH RD # 2 KENAI AK 99611\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"MI K\" to \"\"; full normalizer gave \"MI K BEACH RD # 2 KENAI AK 99611\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "MI K",
@@ -2405,7 +2395,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "300 West Apache Trail, Apache Junction, AZ 85220",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"300 WEST APACHE TRL APACHE JUNCTION AZ 85220\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"300\" to \"\"; full normalizer gave \"300 WEST APACHE TRL APACHE JUNCTION AZ 85220\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "300",
@@ -3085,7 +3075,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "791 North Dual Highway, Seaford, DE 19973",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"791 NORTH DUAL HWY SEAFORD DE 19973\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"791\" to \"\"; full normalizer gave \"791 NORTH DUAL HWY SEAFORD DE 19973\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "791",
@@ -4457,7 +4447,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "324 West Washington Street, Oskaloosa, KS 66066",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"324 WEST WASHINGTON ST OSKALOOSA KS 66066\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"324\" to \"\"; full normalizer gave \"324 WEST WASHINGTON ST OSKALOOSA KS 66066\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "324",
@@ -6130,7 +6120,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "134 North Front Street, Senatobia, MS 38668",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"134 NORTH FRONT ST SENATOBIA MS 38668\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"134\" to \"\"; full normalizer gave \"134 NORTH FRONT ST SENATOBIA MS 38668\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "134",
@@ -6217,7 +6207,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "419 South Ellery Avenue, Fairview, MT 59221",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"419 SOUTH ELLERY AVE FAIRVIEW MT 59221\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"419\" to \"\"; full normalizer gave \"419 SOUTH ELLERY AVE FAIRVIEW MT 59221\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "419",
@@ -7360,7 +7350,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "515 South Virginia Street, Reno, NV 89501",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"515 SOUTH VIRGINIA ST RENO NV 89501\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"515\" to \"\"; full normalizer gave \"515 SOUTH VIRGINIA ST RENO NV 89501\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "515",
@@ -8761,7 +8751,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "12188 Old Number 6 Highway, Eutawville, SC 29048",
-		NotAdopted: "full normalizer changed PrimaryNumber; full normalizer gave \"12188 OLD NUMBER 6 HIGHWAY EUTAWVILLE SC 29048\"",
+		NotAdopted: "full normalizer changed PrimaryNumber from \"12188\" to \"6\"; full normalizer gave \"12188 OLD NUMBER 6 HIGHWAY EUTAWVILLE SC 29048\"",
 		WantFields: &address.Address{
 			Type:          &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber: "12188",
@@ -8814,7 +8804,7 @@ var usAddressGenerated = []usAddressCase{
 	{
 		File:       "us50_test_tagged.xml",
 		Input:      "3800 South Louise Avenue Frnt, Sioux Falls, SD 57106",
-		NotAdopted: "full normalizer changed SecondaryDesignator; full normalizer gave \"3800 S LOUISE AVE FRNT SIOUX FALLS SD 57106\"",
+		NotAdopted: "full normalizer changed SecondaryDesignator from \"\" to \"FRNT\"; full normalizer gave \"3800 S LOUISE AVE FRNT SIOUX FALLS SD 57106\"",
 		WantFields: &address.Address{
 			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "3800",

@@ -298,16 +298,22 @@ func refine(full *goprojectusat.USAt, a *address.Address) (*address.Address, str
 // misreading names the field the full normalizer should not have changed, or is
 // empty when got is a refinement of a.
 func misreading(a, got *address.Address) string {
-	for _, f := range []struct{ name, was, now string }{
+	fields := []struct{ name, was, now string }{
 		{"PrimaryNumber", a.PrimaryNumber, got.PrimaryNumber},
 		{"Region", a.Region, got.Region},
 		{"Postal", a.Postal, got.Postal},
-		{"SecondaryDesignator", a.SecondaryDesignator, got.SecondaryDesignator},
-		{"SecondaryNumber", a.SecondaryNumber, got.SecondaryNumber},
 		{"BusinessName", a.BusinessName, got.BusinessName},
-	} {
+	}
+	// Pub 28 and Project US@ allow no secondary designator on a PO Box
+	// address, so dropping one there is the normalizer being right.
+	if _, isPOBox := got.Type.(*pobox.POBoxAddress); !isPOBox || got.SecondaryDesignator != "" || got.SecondaryNumber != "" {
+		fields = append(fields,
+			struct{ name, was, now string }{"SecondaryDesignator", a.SecondaryDesignator, got.SecondaryDesignator},
+			struct{ name, was, now string }{"SecondaryNumber", a.SecondaryNumber, got.SecondaryNumber})
+	}
+	for _, f := range fields {
 		if f.was != f.now {
-			return "full normalizer changed " + f.name
+			return fmt.Sprintf("full normalizer changed %s from %q to %q", f.name, f.was, f.now)
 		}
 	}
 	for _, f := range []struct{ name, was, now string }{
@@ -556,6 +562,7 @@ func writeReport(b *bytes.Buffer, cases []generatedCase) {
 	for _, c := range cases {
 		if c.NotAdopted != "" {
 			cat, _, _ := strings.Cut(c.NotAdopted, ";")
+			cat, _, _ = strings.Cut(cat, " from ")
 			notAdopted[cat]++
 		}
 	}
