@@ -1,5 +1,10 @@
 package parsertest
 
+import (
+	"github.com/PortobelloAuth/go-projectusat/pkg/address"
+	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
+)
+
 // OursCases are hard cases the address stack found on its own, rather than
 // transcribed from the standard: addresses whose comma placement or
 // abbreviation puts two real readings within one edit of each other, so a
@@ -193,5 +198,21 @@ var OursCases = []Case{
 		Note:   "single-line-only POST OFFICE address with 5-digit box",
 		Input:  "POB 84401",
 		Want:   "PO BOX 84401",
+	},
+	// go-projectusat#222 stage 2: the street window slid past a number and a
+	// directional whenever the ZIP held the street without the directional,
+	// reading 324 W ELM ST as a firm "324 W" ahead of ELM ST.
+	{
+		Source:     "ours",
+		Note:       "go-projectusat#222: a street the data holds does not take the number and directional for a firm name",
+		Input:      "324 W ELM ST OSKALOOSA KS 66066",
+		Want:       "324 W ELM ST\nOSKALOOSA KS 66066",
+		WantFields: &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "324", Predirectional: "W", StreetName: "ELM", StreetSuffix: "ST", City: "OSKALOOSA", Region: "KS", Postal: "66066"},
+	},
+	{
+		Source: "ours",
+		Note:   "go-projectusat#222: the same with a state name for the street",
+		Input:  "134 N FRONT ST SENATOBIA MS 38668",
+		Want:   "134 N FRONT ST\nSENATOBIA MS 38668",
 	},
 }

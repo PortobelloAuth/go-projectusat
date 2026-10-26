@@ -92,6 +92,13 @@ func (p *Parser) streetWindow(tokens []token.Token, best *address.CandidateAddre
 		if window == nil || !recognizable(window.Address) {
 			continue
 		}
+		// A window that starts after the primary number the reading found
+		// has slid off the number itself: 324 W ELM ST is not a firm name
+		// "324 W" ahead of ELM ST. A firm name ahead of the street is the
+		// grammar failing to find the number at all, so best has none.
+		if best.Address.PrimaryNumber != "" && window.Address.PrimaryNumber == "" {
+			continue
+		}
 		if ans, ok := p.streetAgreement(r, window.Address); !ok || ans != agrees {
 			continue
 		}
