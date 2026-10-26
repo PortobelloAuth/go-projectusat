@@ -22,5 +22,43 @@
       "region": "WI",
       "postal": "53037"
     }
+  },
+  {
+    "input": "7400 North US Highway 54-70, Tularosa, NM 88352",
+    "reason": "US 54 and US 70 run concurrently here and both resolve to the same business (zipcity has both streets in 88352); like a rural route, the address keeps one route, not both fused",
+    "want": {
+      "primaryNumber": "7400",
+      "predirectional": "N",
+      "streetName": "US HIGHWAY 54",
+      "city": "TULAROSA",
+      "region": "NM",
+      "postal": "88352"
+    }
+  },
+  {
+    "input": "3800 South Louise Avenue Frnt, Sioux Falls, SD 57106",
+    "reason": "zipcity has S LOUISE AVE in 57106 but not S LOUISE AVE FRNT, so FRNT is the secondary designator (a unit with no number)",
+    "want": {
+      "primaryNumber": "3800",
+      "predirectional": "S",
+      "streetName": "LOUISE",
+      "streetSuffix": "AVE",
+      "secondaryDesignator": "FRNT",
+      "city": "SIOUX FALLS",
+      "region": "SD",
+      "postal": "57106"
+    }
+  },
+  {
+    "input": "2029 East Highway 356 (Irving Boulevard), Irving, TX 75038",
+    "reason": "the parenthetical is a second name for the same road; an address carries one street, not both (like the rural route rule), and zipcity holds neither in 75038 to choose by",
+    "want": {
+      "primaryNumber": "2029",
+      "predirectional": "E",
+      "streetName": "HIGHWAY 356",
+      "city": "IRVING",
+      "region": "TX",
+      "postal": "75038"
+    }
   }
 ]
