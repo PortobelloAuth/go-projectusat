@@ -306,7 +306,7 @@ func (p *Parser) unfuse(tokens []token.Token, best *address.CandidateAddress) []
 // a word is not one: BLACKPOOL COURT is not a street named BLACKP OOL COURT,
 // nor SOUTH AVE the street SO UTH AVE, however the filters answer.
 func (p *Parser) respace(tokens []token.Token, best *address.CandidateAddress) []token.Token {
-	if !recognizable(best.Address) {
+	if !recognizable(best.Address) || !zip5.MatchString(best.Address.Postal) {
 		return tokens
 	}
 	r := reference{}
@@ -319,7 +319,11 @@ func (p *Parser) respace(tokens []token.Token, best *address.CandidateAddress) [
 	var found []token.Token
 	var reading *address.CandidateAddress
 	top, tied := typed, false
-	for _, respaced := range respacings(tokens, street) {
+	for _, c := range respacings(tokens, street) {
+		respaced := c.tokens
+		if !p.exactInZip(r, c.probe(best.Address)) {
+			continue
+		}
 		reread := p.readLine(respaced, true)
 		if reread == nil || !recognizable(reread.Address) || !inside(best.Address, reread.Address) {
 			continue
@@ -388,22 +392,47 @@ func (p *Parser) holding(r reference, a *address.Address) holding {
 // word is a run of letters respace may split or join; numbers are unfuse's.
 var word = regexp.MustCompile(`^[A-Z]+$`)
 
+// respacing is the tokens with one space moved, and the words of the street
+// they leave.
+type respacing struct {
+	tokens []token.Token
+	words  []string
+}
+
+// probe is the street a respacing asks the data for: the typed address with
+// its street words replaced, the predirectional kept only while its word is
+// untouched. exactInZip asks about it before respace pays to re-read the line.
+func (c respacing) probe(typed *address.Address) *address.Address {
+	a := *typed
+	a.Predirectional, a.StreetName = "", strings.Join(c.words, " ")
+	if typed.Predirectional != "" && len(c.words) > 1 && c.words[0] == strings.ToUpper(typed.Predirectional) {
+		a.Predirectional, a.StreetName = typed.Predirectional, strings.Join(c.words[1:], " ")
+	}
+	return &a
+}
+
 // respacings lists the tokens with one space closed up between two adjacent
 // words of the street, or one opened inside a word of it, leaving at least
 // two letters either side.
-func respacings(tokens []token.Token, street []int) [][]token.Token {
-	var out [][]token.Token
+func respacings(tokens []token.Token, street []int) []respacing {
+	words := make([]string, len(street))
 	for k, i := range street {
-		text := strings.ToUpper(tokens[i].Text)
+		words[k] = strings.ToUpper(tokens[i].Text)
+	}
+	var out []respacing
+	for k, i := range street {
+		text := words[k]
 		if !word.MatchString(text) {
 			continue
 		}
 		for cut := 2; cut <= len(text)-2; cut++ {
-			out = append(out, splice(tokens, i, []string{text[:cut], text[cut:]}))
+			w := slices.Concat(words[:k], []string{text[:cut], text[cut:]}, words[k+1:])
+			out = append(out, respacing{splice(tokens, i, []string{text[:cut], text[cut:]}), w})
 		}
 		if k+1 < len(street) && street[k+1] == i+1 && tokens[i+1].Line == tokens[i].Line {
-			if next := strings.ToUpper(tokens[i+1].Text); word.MatchString(next) {
-				out = append(out, join(tokens, i, text+next))
+			if next := words[k+1]; word.MatchString(next) {
+				w := slices.Concat(words[:k], []string{text + next}, words[k+2:])
+				out = append(out, respacing{join(tokens, i, text+next), w})
 			}
 		}
 	}
