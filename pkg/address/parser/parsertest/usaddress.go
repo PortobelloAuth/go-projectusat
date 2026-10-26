@@ -38,12 +38,15 @@ const usAddressCommit = "aa7699b53a0843fc443f9e87285b88cbd9eaf50a"
 var UsAddressCases = buildUsAddressCases()
 
 // usAddressCase is one generated entry of usaddress_generated.go. Unsettled
-// says why WantFields is nil, and is empty when it is not.
+// says why WantFields is nil, and is empty when it is not. NotAdopted says
+// that the full normalizer would have changed WantFields and why that change
+// was refused; it too is empty when it does not apply.
 type usAddressCase struct {
 	File       string
 	Input      string
 	WantFields *address.Address
 	Unsettled  string
+	NotAdopted string
 }
 
 func buildUsAddressCases() []Case {
@@ -55,6 +58,9 @@ func buildUsAddressCases() []Case {
 		)
 		if g.Unsettled != "" {
 			note += "; WantFields unsettled: " + g.Unsettled
+		}
+		if g.NotAdopted != "" {
+			note += "; full normalizer change not adopted: " + g.NotAdopted
 		}
 		cases = append(cases, Case{
 			Source:     "usaddress",

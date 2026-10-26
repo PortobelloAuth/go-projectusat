@@ -29,6 +29,7 @@ import (
 	"slices"
 	"strings"
 
+	goprojectusat "github.com/PortobelloAuth/go-projectusat"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
@@ -176,12 +177,15 @@ func loadOverrides(path string) (map[string]override, error) {
 }
 
 // generatedCase is one emitted entry: the fixture file, the input string, and
-// either a normalized WantFields or the reason there is none.
+// either a normalized WantFields or the reason there is none. NotAdopted is set
+// when the full normalizer would have changed WantFields but the change was
+// refused; it says why and what the normalizer gave (see refine).
 type generatedCase struct {
 	File       string
 	Input      string
 	WantFields *address.Address
 	Unsettled  string
+	NotAdopted string
 }
 
 func main() {
@@ -199,6 +203,10 @@ func main() {
 	used := map[string]bool{}
 
 	n := normalizer.NewContentNomalizer()
+	full, err := goprojectusat.New(goprojectusat.WithContentNormalization())
+	if err != nil {
+		log.Fatalf("usaddressgenerator: %v", err)
+	}
 	var cases []generatedCase
 	for _, name := range fixtureFiles {
 		records, err := readFixture(filepath.Join(fixtureDir, name))
@@ -226,7 +234,7 @@ func main() {
 				// normalizer is idempotent on the input.
 				c.Unsettled = notIdempotent
 			} else {
-				c.WantFields = normalized
+				c.WantFields, c.NotAdopted = refine(full, normalized)
 			}
 			cases = append(cases, c)
 		}
@@ -255,6 +263,74 @@ func main() {
 		}
 	}
 	fmt.Printf("usaddressgenerator: wrote %s: %d cases, %d with WantFields\n", outputName, len(cases), settled)
+}
+
+// refine is stage two of settling a WantFields (go-projectusat#222): the
+// content-normalized address goes through the full normalizer, which re-reads it
+// with the parser and the ZIP's data, and the result is adopted when it only
+// re-decomposes the street line or corrects the city. That is how a fixture's
+// StreetName "MENDENHALL MALL ROAD" becomes StreetName "MENDENHALL MALL" and
+// StreetSuffix "RD".
+//
+// A change that looks wrong is refused, the content-normalized address is kept,
+// and the second result says why, so the disagreement is visible in the generated
+// file rather than silently turned into the expected answer. A result looks
+// wrong when it changes a field the re-read has no business changing (number,
+// region, postal code, secondary unit, business name), drops a directional or the
+// city the fixture gave, or is not a fixed point of the full normalizer itself.
+func refine(full *goprojectusat.USAt, a *address.Address) (*address.Address, string) {
+	got, err := full.NormalizeAddress(a)
+	if err != nil {
+		return a, "full normalizer: " + err.Error()
+	}
+	if got.Equals(a) {
+		return a, ""
+	}
+	if why := misreading(a, got); why != "" {
+		return a, why + "; full normalizer gave " + oneLine(got)
+	}
+	if again, err := full.NormalizeAddress(got); err != nil || !again.Equals(got) {
+		return a, "full normalizer is not stable on its own result; gave " + oneLine(got)
+	}
+	return got, ""
+}
+
+// misreading names the field the full normalizer should not have changed, or is
+// empty when got is a refinement of a.
+func misreading(a, got *address.Address) string {
+	for _, f := range []struct{ name, was, now string }{
+		{"PrimaryNumber", a.PrimaryNumber, got.PrimaryNumber},
+		{"Region", a.Region, got.Region},
+		{"Postal", a.Postal, got.Postal},
+		{"SecondaryDesignator", a.SecondaryDesignator, got.SecondaryDesignator},
+		{"SecondaryNumber", a.SecondaryNumber, got.SecondaryNumber},
+		{"BusinessName", a.BusinessName, got.BusinessName},
+	} {
+		if f.was != f.now {
+			return "full normalizer changed " + f.name
+		}
+	}
+	for _, f := range []struct{ name, was, now string }{
+		{"Predirectional", a.Predirectional, got.Predirectional},
+		{"Postdirectional", a.Postdirectional, got.Postdirectional},
+	} {
+		if f.was != "" && f.now == "" {
+			return "full normalizer dropped " + f.name
+		}
+	}
+	if a.City != "" && got.City == "" {
+		return "full normalizer dropped City"
+	}
+	return ""
+}
+
+// oneLine renders a on one line for a Note.
+func oneLine(a *address.Address) string {
+	s, err := a.Format(address.FormatOptions{SingleLine: true})
+	if err != nil {
+		return fmt.Sprintf("%+v", *a)
+	}
+	return fmt.Sprintf("%q", s)
 }
 
 // readFixture walks one usaddress tagged-XML file and returns one record per
@@ -428,6 +504,9 @@ func render(cases []generatedCase) ([]byte, error) {
 	b.WriteString("var usAddressGenerated = []usAddressCase{\n")
 	for _, c := range cases {
 		fmt.Fprintf(&b, "{\nFile: %q,\nInput: %q,\n", c.File, c.Input)
+		if c.NotAdopted != "" {
+			fmt.Fprintf(&b, "NotAdopted: %q,\n", c.NotAdopted)
+		}
 		if c.WantFields == nil {
 			fmt.Fprintf(&b, "Unsettled: %q,\n", c.Unsettled)
 		} else {
@@ -473,6 +552,19 @@ func writeReport(b *bytes.Buffer, cases []generatedCase) {
 		reasons[reasonCategory(c.Unsettled)]++
 	}
 	fmt.Fprintf(b, "//\t%-32s %4d / %4d\n//\n", "total", settled, len(cases))
+	notAdopted := map[string]int{}
+	for _, c := range cases {
+		if c.NotAdopted != "" {
+			cat, _, _ := strings.Cut(c.NotAdopted, ";")
+			notAdopted[cat]++
+		}
+	}
+	b.WriteString("// Cases where the full normalizer would change WantFields and the change was\n")
+	b.WriteString("// refused (the content-normalized address is kept), by reason:\n//\n")
+	for _, r := range slices.Sorted(maps.Keys(notAdopted)) {
+		fmt.Fprintf(b, "//\t%4d  %s\n", notAdopted[r], r)
+	}
+	b.WriteString("//\n")
 	b.WriteString("// Cases without WantFields, by reason:\n//\n")
 	for _, r := range slices.Sorted(maps.Keys(reasons)) {
 		fmt.Fprintf(b, "//\t%4d  %s\n", reasons[r], r)

@@ -31,7 +31,7 @@ component label. The labels are defined in usaddress's documentation:
 
 ### From usaddress tags to `address.Address`
 
-Two steps turn a record into `WantFields`:
+Three steps turn a record into `WantFields`:
 
 1. **Map.** Each tag's text goes into an `address.Address` field according to the
    table below. A component that spans several words is tagged once per word,
@@ -44,6 +44,20 @@ Two steps turn a record into `WantFields`:
    decomposition Project US@ says the address should have, not usaddress's
    literal text. If the result changes when it is normalized a second time,
    the case is left unsettled (see below).
+3. **Refine.** The normalized address is passed through the full normalizer
+   (`goprojectusat.New().NormalizeAddress`), which re-reads it with the parser and
+   the ZIP's data, and the result is adopted when it is a refinement: usaddress
+   often leaves the suffix or a directional inside `StreetName` ("MENDENHALL MALL
+   ROAD"), and the full normalizer splits it out. The result is refused, and the
+   content-normalized address kept, when it changes the primary number, region,
+   postal code, secondary unit or business name, drops a directional or the city,
+   or is not itself a fixed point. A refused case carries the reason and what
+   the normalizer gave in `Case.Note` and in the generated file, and the header
+   report counts them by reason. Those are the places the parser and the fixture
+   disagree and someone should look. Note that the street-line split in an
+   adopted result is the parser's own reading, so agreement there is by
+   construction; the independent evidence is the fixture's tags for the number,
+   city, region, postal code and directionals.
 
 | usaddress tag | `address.Address` field |
 | --- | --- |
