@@ -157,6 +157,17 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 
 		a := scored[i].candidate.Address
 		b := scored[j].candidate.Address
+		// A secondary designator the street name would otherwise swallow is
+		// a designator (go-projectusat#271): COUNTY ROAD ABC, APT 12 reads
+		// the same words as a street named COUNTY ROAD ABC APT 12, and data
+		// cannot separate them when it holds neither. Take the one that
+		// split the unit off, as for a trailing directional below.
+		if unitSplitOff(a, b) {
+			return true
+		}
+		if unitSplitOff(b, a) {
+			return false
+		}
 		// A trailing directional is the postdirectional unless the street's
 		// own data says it belongs to the name (go-projectusat#257): NE,
 		// NORTHEAST, N EAST and N E after COUNTY ROAD are one directional,
@@ -176,6 +187,19 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 	})
 
 	return scored[0].candidate
+}
+
+// unitSplitOff reports whether split is the same street as whole with the
+// secondary designator and number that end whole's name read as the
+// secondary unit instead of as words of the name. A bare # is excluded: ROUTE
+// # A is a street named for its pound sign, not a route with a unit.
+func unitSplitOff(split, whole *address.Address) bool {
+	if split.SecondaryDesignator == "" || split.SecondaryDesignator == "#" || whole.SecondaryDesignator != "" {
+		return false
+	}
+	unit := strings.TrimSpace(split.SecondaryDesignator + " " + split.SecondaryNumber)
+	name, ok := strings.CutSuffix(whole.StreetName, " "+unit)
+	return ok && name == split.StreetName
 }
 
 // splitOff reports whether split is the same street as whole with whole's

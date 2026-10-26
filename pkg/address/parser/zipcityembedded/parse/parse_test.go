@@ -1212,3 +1212,32 @@ func TestASpaceInsideAStreetNameSettlesToTheSpellingTheDataHolds(t *testing.T) {
 		}
 	}
 }
+
+// A lettered or numbered county road followed by a unit reads the unit as a
+// unit when the data cannot say the unit is part of the name (#271).
+func TestACountyRoadFollowedByAUnitKeepsTheUnitSeparate(t *testing.T) {
+	cases := []struct {
+		source, name, designator, number string
+	}{
+		{"123 COUNTY ROAD ABC, APT 12, IOLA, WI 54445", "COUNTY ROAD ABC", "APT", "12"},
+		{"123 COUNTY ROAD ABC APT 12, IOLA, WI 54445", "COUNTY ROAD ABC", "APT", "12"},
+		{"123 COUNTY ROAD 12, APT 12, IOLA, WI 54445", "COUNTY ROAD 12", "APT", "12"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.StreetName != tc.name || got.SecondaryDesignator != tc.designator || got.SecondaryNumber != tc.number {
+			t.Errorf("%q: got %q|%q|%q, want %q|%q|%q", tc.source,
+				got.StreetName, got.SecondaryDesignator, got.SecondaryNumber,
+				tc.name, tc.designator, tc.number)
+		}
+	}
+}
