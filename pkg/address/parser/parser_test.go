@@ -2,10 +2,12 @@ package parser_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/PortobelloAuth/go-projectusat/pkg/address"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
+	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser/parsertest"
 	"github.com/PortobelloAuth/go-projectusat/pkg/addresstypes/ordinarystreet"
 )
 
@@ -137,5 +139,49 @@ func TestParseReturnsVerifierResult(t *testing.T) {
 	}
 	if !got.Equals(parsed) {
 		t.Errorf("Parse with default Verifier changed the custom parser's address: got %s, want %s", *got, *parsed)
+	}
+}
+
+func TestDefaultParserWithSpecSuite(t *testing.T) {
+	p, err := parser.New()
+	if err != nil {
+		t.Fatalf("could not build zipcity parser: %v", err)
+	}
+
+	suites := []struct {
+		name  string
+		cases []parsertest.Case
+	}{
+		{"SpecCases", parsertest.SpecCases},
+		{"HistoricalCases", parsertest.HistoricalCases},
+		{"OursCases", parsertest.OursCases},
+		{"ScourgifyCases", parsertest.ScourgifyCases},
+		// NOTE: we will enable the HTE and usaddress suites after they have settled
+		// and are usable as regression test suites
+		// {"HteCases", parsertest.HteCases},
+		// {"UsAddressCases", parsertest.UsAddressCases},
+	}
+
+	for _, s := range suites {
+		results, err := parsertest.Run(p, s.cases)
+		if err != nil {
+			t.Fatalf("Run() error: %s", err)
+		}
+		pass, settled, total := parsertest.CountPassAll(results)
+		if !(pass == settled && settled == total) {
+			t.Errorf("%s: %d/%d/%d (pass/settled/total)\n", s.name, pass, settled, total)
+		}
+		for _, r := range results {
+			switch {
+			case r.Err != nil:
+				t.Errorf("  ERR  [%s] %q: %v\n", r.Case.Source, r.Case.Input, r.Err)
+			case (r.Settled() || r.SettledFields()) && !(r.Pass() || r.PassFields()):
+				want := fmt.Sprintf("%s", r.Case.Want)
+				if !r.Settled() && r.SettledFields() {
+					want = fmt.Sprintf("%q", r.Case.WantFields)
+				}
+				t.Errorf("  FAIL [%s] %q\n     want: %q\n      got: %q\n   parsed: %q\n", r.Case.Source, r.Case.Input, want, r.Got, r.GotFields)
+			}
+		}
 	}
 }

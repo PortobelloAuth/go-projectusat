@@ -217,14 +217,253 @@ var OursCases = []Case{
 	},
 	{
 		Source: "ours",
-		Note:   "Via leading a street name is just VIA, not VIADUCT",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
 		Input:  "15275 Via De La Valle, Del Mar, CA 92014",
 		Want:   "15275 VIA DE LA VALLE\nDEL MAR CA 92014",
 	},
 	{
 		Source: "ours",
-		Note:   "Via leading a street name is just VIA, not VIADUCT",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
 		Input:  "15275 Via De La Valle Del Mar CA 92014",
 		Want:   "15275 VIA DE LA VALLE\nDEL MAR CA 92014",
+	},
+	// 7297 Via Colina, La Mesa, CA 91941
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "7297 Via Colina, La Mesa, CA 91941",
+		Want:   "7297 VIA COLINA\nLA MESA CA 91941",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "7297 Via Colina La Mesa CA 91941",
+		Want:   "7297 VIA COLINA\nLA MESA CA 91941",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "7297 VIA COLINA\nLA MESA CA 91941",
+		Want:   "7297 VIA COLINA\nLA MESA CA 91941",
+	},
+	// 2638 Via Toscana, Chula Vista, CA 91910
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "2638 Via Toscana, Chula Vista, CA 91910",
+		Want:   "2638 VIA TOSCANA\nCHULA VISTA CA 91910",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "2638 Via Toscana Chula Vista CA 91910",
+		Want:   "2638 VIA TOSCANA\nCHULA VISTA CA 91910",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "2638 VIA TOSCANA\nCHULA VISTA CA 91910",
+		Want:   "2638 VIA TOSCANA\nCHULA VISTA CA 91910",
+	},
+	// 523 Via Esperanza, Santa Barbara, CA 93110
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "523 Via Esperanza, Santa Barbara, CA 93110",
+		Want:   "523 VIA ESPERANZA\nSANTA BARBARA CA 93110",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "523 Vía Esperanza Santa Barbara CA 93110",
+		Want:   "523 VÍA ESPERANZA\nSANTA BARBARA CA 93110",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "523 VIA ESPERANZA\nSANTA BARBARA CA 93110",
+		Want:   "523 VIA ESPERANZA\nSANTA BARBARA CA 93110",
+	},
+	// 4665 Vía Del Los Grande, San Jose, CA 95120
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "4665 Vía Del Los Grande, San Jose, CA 95120",
+		Want:   "4665 VÍA DEL LOS GRANDE\nSAN JOSE CA 95120",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "4665 Vía Del Los Grande\nSan Jose, CA 95120",
+		Want:   "4665 VÍA DEL LOS GRANDE\nSAN JOSE CA 95120",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "4665 VIA DEL LOS GRANDE\nSAN JOSE CA 95120",
+		Want:   "4665 VIA DEL LOS GRANDE\nSAN JOSE CA 95120",
+	},
+	// 3701 Via Del Maricale, Rancho Mirage, CA 92270
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3701 Via Del Maricale, Rancho Mirage, CA 92270",
+		Want:   "3701 VIA DEL MARICALE\nRANCHO MIRAGE CA 92270",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3701 Via Del Maricale Rancho Mirage, CA 92270",
+		Want:   "3701 VIA DEL MARICALE\nRANCHO MIRAGE CA 92270",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3701 VIA DEL MARICALE RANCHO MIRAGE CA 92270",
+		Want:   "3701 VIA DEL MARICALE\nRANCHO MIRAGE CA 92270",
+	},
+	// 3123 Via Del Coronado, San Jose, CA 95132
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3123 Via Del Coronado, San Jose, CA 95132",
+		Want:   "3123 VIA DEL CORONADO\nSAN JOSE CA 95132",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3123 Via Del Coronado San Jose CA 95132",
+		Want:   "3123 VIA DEL CORONADO\nSAN JOSE CA 95132",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a Spanish street name is just VIA, not VIADUCT",
+		Input:  "3123 VIA DEL CORONADO\nSAN JOSE CA 95132",
+		Want:   "3123 VIA DEL CORONADO\nSAN JOSE CA 95132",
+	},
+	// Viaduct Ave
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "215 Viaduct Ave, Downingtown, PA 19335",
+		Want:   "215 VIADUCT AVE\nDOWNINGTOWN PA 19335",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "215 Viaduct Ave Downingtown PA 19335",
+		Want:   "215 VIADUCT AVE\nDOWNINGTOWN PA 19335",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "215 VIA AVE DOWNINGTOWN, PA 19335",
+		Want:   "215 VIADUCT AVE\nDOWNINGTOWN PA 19335",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "215 VIADUCT AVE DOWNINGTOWN PA 19335",
+		Want:   "215 VIADUCT AVE\nDOWNINGTOWN PA 19335",
+	},
+	// 5157 Viaduct Ave, Baltimore, MD 21227
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "5157 Viaduct Ave, Baltimore, MD 21227",
+		Want:   "5157 VIADUCT AVE\nBALTIMORE MD 21227",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "5157 Viaduct Ave Baltimore MD 21227",
+		Want:   "5157 VIADUCT AVE\nBALTIMORE MD 21227",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "5157 VIA AVE BALTIMORE MD 21227",
+		Want:   "5157 VIADUCT AVE\nBALTIMORE MD 21227",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "5157 VIADUCT AVE BALTIMORE MD 21227",
+		Want:   "5157 VIADUCT AVE\nBALTIMORE MD 21227",
+	},
+	// 6324 Viaduct Rd, Dane, WI 53529
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "6324 Viaduct Rd, Dane, WI 53529",
+		Want:   "6324 VIADUCT RD\nDANE WI 53529",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "6324 Viaduct Rd Dane WI 53529",
+		Want:   "6324 VIADUCT RD\nDANE WI 53529",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "6324 Via Rd Dane WI 53529",
+		Want:   "6324 VIADUCT RD\nDANE WI 53529",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "6324 VIADUCT RD DANE WI 53529",
+		Want:   "6324 VIADUCT RD\nDANE WI 53529",
+	},
+	// 354 Viaduct Rd, Mt Jewett, PA 16740
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "354 Viaduct Rd, Mt Jewett, PA 16740",
+		Want:   "354 VIADUCT RD\nMOUNT JEWETT PA 16740",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "354 Viaduct Rd Mt Jewett, PA 16740",
+		Want:   "354 VIADUCT RD\nMOUNT JEWETT PA 16740",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "354 VIA RD MT JEWETT PA 16740",
+		Want:   "354 VIADUCT RD\nMOUNT JEWETT PA 16740",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "354 VIADUCT RD MT JEWETT PA 16740",
+		Want:   "354 VIADUCT RD\nMOUNT JEWETT PA 16740",
+	},
+	// 23 Viaduct St, Susquehanna, PA 18847
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "23 Viaduct St, Susquehanna, PA 18847",
+		Want:   "23 VIADUCT ST\nSUSQUEHANNA PA 18847",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "23 Viaduct St Susquehanna PA 18847",
+		Want:   "23 VIADUCT ST\nSUSQUEHANNA PA 18847",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "23 Via St, Susquehanna, PA 18847",
+		Want:   "23 VIADUCT ST\nSUSQUEHANNA PA 18847",
+	},
+	{
+		Source: "ours",
+		Note:   "Via in an English street name is VIADUCT",
+		Input:  "23 VIADUCT ST SUSQUEHANNA PA 18847",
+		Want:   "23 VIADUCT ST\nSUSQUEHANNA PA 18847",
 	},
 }

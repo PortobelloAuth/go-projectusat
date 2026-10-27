@@ -18,13 +18,13 @@ var ScourgifyCases = []Case{
 	},
 	{
 		Source: "scourgify",
-		Note:   "VIA is both and abbreviation and a word often used in street names; VISTA is both the name of a city in California and a known street suffix",
+		Note:   "VIA is both an abbreviation and a word often used in street names; VISTA is both the name of a city in California and a known street suffix",
 		Input:  "1509 Via Christina, Vista, CA 92084",
 		Want:   "1509 VIA CHRISTINA\nVISTA CA 92084",
 	},
 	{
 		Source: "scourgify",
-		Note:   "VIA is both and abbreviation and a word often used in street names; VISTA is both the name of a city in California and a known street suffix",
+		Note:   "VIA is both an abbreviation and a word often used in street names; VISTA is both the name of a city in California and a known street suffix",
 		Input:  "1509 Via Christina Vista CA 92084",
 		Want:   "1509 VIA CHRISTINA\nVISTA CA 92084",
 	},

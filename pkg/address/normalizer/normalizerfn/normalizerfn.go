@@ -190,7 +190,6 @@ func NormalizeDetailFn(a *address.Address, o normalizeroptions.AddressNormalizat
 
 func NormalizeStreetNameFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	if len(a.StreetName) > 0 {
-		// TODO: break NormalizeStreetName up in to composable
 		out, err := NormalizeStreetName(a.StreetName, o)
 		if err != nil {
 			return nil, err
@@ -516,6 +515,14 @@ func ExpandStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormal
 	parts := strings.Split(sn, " ")
 	changed := false
 	for i, snp := range parts {
+		// a Multi-word street name starting with VIA is _very_ likely to be a
+		// Spanish street name. Do not expand it. This is a relatively unique special case where a
+		// common Spanish street prefix (VIA) is also a defined English street suffix (VIADUCT)
+		// abbreviation.
+		if i == 0 && len(parts) > 1 && snp == "VIA" {
+			continue
+		}
+
 		// A region abbreviation is what AbbreviateRegionInStreetNameFn produced
 		// on an earlier pass; reading it back as a street type (CT as COURT)
 		// would make normalization flip on every pass (#235).
