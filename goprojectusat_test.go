@@ -421,3 +421,35 @@ func ExampleUSAt_NormalizeAddress_fields() {
 	// SALT LAKE CITY
 	// UT
 }
+
+// A caller's predirectional survives normalization when the formatted line
+// would read it as the street name (#274): {E, LAKE} formats as "E LAKE",
+// which parses as the alphabet street E with suffix LK.
+func TestNormalizeAddressKeepsPredirectional(t *testing.T) {
+	u, err := goprojectusat.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := u.NormalizeAddress(&address.Address{
+		PrimaryNumber:  "10",
+		Predirectional: "E",
+		StreetName:     "LAKE",
+		City:           "DENVER",
+		Region:         "CO",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.StreetName != "EAST" || got.StreetSuffix != "LK" || got.Predirectional != "" {
+		t.Errorf("got name %q suffix %q predirectional %q, want EAST LK and none", got.StreetName, got.StreetSuffix, got.Predirectional)
+	}
+
+	again, err := u.NormalizeAddress(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.StreetName != got.StreetName || again.StreetSuffix != got.StreetSuffix || again.Predirectional != got.Predirectional {
+		t.Errorf("second pass changed %q %q %q to %q %q %q", got.Predirectional, got.StreetName, got.StreetSuffix, again.Predirectional, again.StreetName, again.StreetSuffix)
+	}
+}

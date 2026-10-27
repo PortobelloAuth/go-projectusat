@@ -9,6 +9,7 @@ import (
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/normalizer/normalizeroptions"
 	"github.com/PortobelloAuth/go-projectusat/pkg/address/parser"
 	"github.com/PortobelloAuth/go-projectusat/pkg/diacritics"
+	"github.com/PortobelloAuth/go-projectusat/pkg/directionals"
 )
 
 // NormalizingAddressType is an interface describing an AddressType that has a
@@ -76,10 +77,12 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 		if err != nil {
 			return nil, err
 		}
-		a, err = n.parser.Parse(f)
+		reparsed, err := n.parser.Parse(f)
 		if err != nil {
 			return nil, err
 		}
+		keepPredirectional(a, reparsed)
+		a = reparsed
 	}
 
 	// If the address type is an AddressNormalizingType (it implements its own Normalization
@@ -107,4 +110,29 @@ func (n *Normalizer) Normalize(a *address.Address) (*address.Address, error) {
 	}
 
 	return out.Clone(), nil
+}
+
+// keepPredirectional undoes the reparse reading a caller's predirectional as
+// the street name (#274). {Predirectional: E, StreetName: LAKE} formats as
+// "E LAKE", which parses as the alphabet street E with suffix LK, and the
+// normalized address loses its direction. The caller said E is a direction,
+// so the lone directional name is spelled out instead, the shape EAST LAKE
+// already parses to (the standard spells out a directional that is the name).
+func keepPredirectional(orig, reparsed *address.Address) {
+	if orig.Predirectional == "" || reparsed.Predirectional != "" || reparsed.StreetSuffix == "" {
+		return
+	}
+
+	pre, err := directionals.AbbreviateDirectional(orig.Predirectional)
+	if err != nil {
+		return
+	}
+	name, err := directionals.AbbreviateDirectional(reparsed.StreetName)
+	if err != nil || name != pre {
+		return
+	}
+
+	if full, err := directionals.NormalizeDirectional(pre); err == nil && full != "" {
+		reparsed.StreetName = full
+	}
 }

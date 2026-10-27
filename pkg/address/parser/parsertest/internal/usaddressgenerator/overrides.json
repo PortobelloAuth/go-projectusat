@@ -68,5 +68,16 @@
   {
     "input": "Mi K Beach Road # 2, Kenai, AK 99611",
     "reason": "Mile K is not a primary number the library has a concept of yet; left unsettled until go-projectusat#270 decides how (Aaron, #267)"
+  },
+  {
+    "input": "10 EAST LAKE, DENVER, COLORADO",
+    "reason": "EAST is the street name and LK its suffix (the standard spells out a directional that is the name); the tags give E as a predirectional and LAKE as the name, which the parser reads back as the alphabet street E (go-projectusat#274, Aaron on #267)",
+    "want": {
+      "primaryNumber": "10",
+      "streetName": "EAST",
+      "streetSuffix": "LK",
+      "city": "DENVER",
+      "region": "CO"
+    }
   }
 ]

@@ -19,7 +19,6 @@ package parsertest
 //	   3  full normalizer changed PrimaryNumber
 //	   1  full normalizer changed Region
 //	   1  full normalizer changed SecondaryNumber
-//	   1  full normalizer dropped Predirectional
 //	   1  full normalizer: parse: no address type offered a reading
 //
 // Cases without WantFields, by reason:
@@ -1472,16 +1471,15 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "10 EAST LAKE, DENVER, COLORADO",
-		NotAdopted: "full normalizer dropped Predirectional; full normalizer gave \"10 E LK DENVER CO\"",
+		File:  "labeled.xml",
+		Input: "10 EAST LAKE, DENVER, COLORADO",
 		WantFields: &address.Address{
-			Type:           &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:  "10",
-			Predirectional: "E",
-			StreetName:     "LAKE",
-			City:           "DENVER",
-			Region:         "CO",
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "10",
+			StreetName:    "EAST",
+			StreetSuffix:  "LK",
+			City:          "DENVER",
+			Region:        "CO",
 		},
 	},
 	{
