@@ -537,10 +537,17 @@ func closesStreetLine(tokens []token.Token, claims []claim.Claim, start, at int)
 // readsStreetLine reports whether the tokens from start to end read as a
 // street line: some tail and some head fit between them. It is the test a
 // boundary candidate has to pass before the words ahead of it are a business.
+//
+// A name that is nothing but a secondary unit the pool claims does not count:
+// the 150 of 900 BUSINESS 150 STE 3 is followed by a unit, not by a street
+// named STE 3, so it is a word of the street name and not a house number
+// (#277), as the unit is a unit and not a word of the name in #271.
 func readsStreetLine(tokens []token.Token, claims []claim.Claim, start, end int) bool {
 	for _, t := range tails(claims, start, end) {
-		if len(heads(tokens, claims, start, t.nameEnd)) > 0 {
-			return true
+		for _, h := range heads(tokens, claims, start, t.nameEnd) {
+			if !isSecondaryUnitLine(claims, h.nameStart, t.nameEnd) {
+				return true
+			}
 		}
 	}
 

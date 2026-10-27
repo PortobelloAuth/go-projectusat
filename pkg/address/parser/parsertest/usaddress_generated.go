@@ -16,7 +16,7 @@ package parsertest
 // refused (the content-normalized address is kept), by reason:
 //
 //	   1  full normalizer changed BusinessName
-//	   5  full normalizer changed PrimaryNumber
+//	   3  full normalizer changed PrimaryNumber
 //	   1  full normalizer changed Region
 //	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer dropped Predirectional
@@ -1084,9 +1084,8 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "900 Business 150 STE 3, Mansfield, PA 19402",
-		NotAdopted: "full normalizer changed PrimaryNumber from \"900\" to \"150\"; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
+		File:  "labeled.xml",
+		Input: "900 Business 150 STE 3, Mansfield, PA 19402",
 		WantFields: &address.Address{
 			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",
@@ -1111,9 +1110,8 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "900 Business 150 STE 3, Mansfield, PA 19402",
-		NotAdopted: "full normalizer changed PrimaryNumber from \"900\" to \"150\"; full normalizer gave \"900 BUS 150 SAINTE 3 MANSFIELD PA 19402\"",
+		File:  "labeled.xml",
+		Input: "900 Business 150 STE 3, Mansfield, PA 19402",
 		WantFields: &address.Address{
 			Type:                &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:       "900",

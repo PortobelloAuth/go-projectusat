@@ -1241,3 +1241,36 @@ func TestACountyRoadFollowedByAUnitKeepsTheUnitSeparate(t *testing.T) {
 		}
 	}
 }
+
+// A unit after a numbered route name does not make the route's number the
+// house number: 150 STE 3 is not a street named STE 3, so 900 stays the house
+// number and STE the designator, whether or not the ZIP Code is the city's
+// own (#277).
+func TestAUnitAfterANumberedRouteKeepsTheHouseNumber(t *testing.T) {
+	cases := []struct {
+		source, business, number, name, designator, unit string
+	}{
+		{"900 BUSINESS 150 STE 3, MANSFIELD, PA 16933", "", "900", "BUSINESS 150", "STE", "3"},
+		{"900 Business 150 STE 3, Mansfield, PA 19402", "", "900", "BUSINESS 150", "STE", "3"},
+		{"900 BUSINESS 150 STE 3 MANSFIELD PA 16933", "", "900", "BUSINESS 150", "STE", "3"},
+		{"ACME 900 BUSINESS 150 STE 3, MANSFIELD, PA 16933", "ACME", "900", "BUSINESS 150", "STE", "3"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.BusinessName != tc.business || got.PrimaryNumber != tc.number || got.StreetName != tc.name ||
+			got.SecondaryDesignator != tc.designator || got.SecondaryNumber != tc.unit {
+			t.Errorf("%q: got %q|%q|%q|%q|%q, want %q|%q|%q|%q|%q", tc.source,
+				got.BusinessName, got.PrimaryNumber, got.StreetName, got.SecondaryDesignator, got.SecondaryNumber,
+				tc.business, tc.number, tc.name, tc.designator, tc.unit)
+		}
+	}
+}
