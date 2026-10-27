@@ -49,7 +49,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("Run() error: %s", err))
 		}
-		pass, settled, total := parsertest.CountPass(results)
+		pass, settled, total := parsertest.CountPassAll(results)
 		fmt.Printf("%s: %d/%d/%d (pass/settled/total)\n", s.name, pass, settled, total)
 		for _, r := range results {
 			switch {
