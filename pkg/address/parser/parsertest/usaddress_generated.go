@@ -6,19 +6,17 @@ package parsertest
 //
 // Cases with WantFields, per fixture file:
 //
-//	labeled.xml                       107 /  146
+//	labeled.xml                       106 /  146
 //	multi_word_state_addresses.xml      5 /    5
 //	simple_address_patterns.xml         7 /    8
 //	us50_test_tagged.xml              646 /  687
-//	total                             765 /  846
+//	total                             764 /  846
 //
 // Cases where the full normalizer would change WantFields and the change was
 // refused (the content-normalized address is kept), by reason:
 //
 //	   1  full normalizer changed BusinessName
 //	   3  full normalizer changed PrimaryNumber
-//	   1  full normalizer changed Region
-//	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer: parse: no address type offered a reading
 //
 // Cases without WantFields, by reason:
@@ -31,6 +29,7 @@ package parsertest
 //	   6  normalizer: street suffix
 //	   1  recipient run mixes business name, person and ATTN
 //	   1  recipient run mixes person and business name
+//	   1  the street is NEW MEXICO NW with the suffix AV (directional before the suffix is part of the name, #277); the full normalizer abbreviates the state in the name (NM NORTHWEST, Appendix C) and its reparse of 3301 NM NORTHWEST AVE then reads AVENUE into the name, so the suffix is lost
 //	   2  usaddress tag CornerOf has no Address field
 //	   5  usaddress tag IntersectionSeparator has no Address field
 //	  19  usaddress tag LandmarkName has no Address field
@@ -392,45 +391,35 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3419 SAINT JOHN W ST",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "3419",
-			StreetName:      "SAINT JOHN",
-			StreetSuffix:    "ST",
-			Postdirectional: "W",
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "3419",
+			StreetName:    "SAINT JOHN WEST",
+			StreetSuffix:  "ST",
 		},
 	},
 	{
-		File:  "labeled.xml",
-		Input: "3301 NEW MEXICO NW AV",
-		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "3301",
-			StreetName:      "NEW MEXICO",
-			StreetSuffix:    "AVE",
-			Postdirectional: "NW",
-		},
+		File:      "labeled.xml",
+		Input:     "3301 NEW MEXICO NW AV",
+		Unsettled: "the street is NEW MEXICO NW with the suffix AV (directional before the suffix is part of the name, #277); the full normalizer abbreviates the state in the name (NM NORTHWEST, Appendix C) and its reparse of 3301 NM NORTHWEST AVE then reads AVENUE into the name, so the suffix is lost",
 	},
 	{
 		File:  "labeled.xml",
 		Input: "2802 BALLAST PT W BLVD",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "2802",
-			StreetName:      "BALLAST POINT",
-			StreetSuffix:    "BLVD",
-			Postdirectional: "W",
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "2802",
+			StreetName:    "BALLAST POINT WEST",
+			StreetSuffix:  "BLVD",
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "2350 WASHINGTON NE PL",
-		NotAdopted: "full normalizer changed Region from \"\" to \"NE\"; full normalizer gave \"2350 WASHINGTON PL NE\"",
+		File:  "labeled.xml",
+		Input: "2350 WASHINGTON NE PL",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "2350",
-			StreetName:      "WASHINGTON",
-			StreetSuffix:    "PL",
-			Postdirectional: "NE",
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "2350",
+			StreetName:    "WA NORTHEAST",
+			StreetSuffix:  "PL",
 		},
 	},
 	{
@@ -1021,15 +1010,15 @@ var usAddressGenerated = []usAddressCase{
 		Unsettled: "usaddress tag NotAddress has no Address field",
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "4315 WEBSTER AVENUE LH",
-		NotAdopted: "full normalizer changed SecondaryNumber from \"LH\" to \"\"; full normalizer gave \"4315 WEBSTER AVENUE LH\"",
+		File:  "labeled.xml",
+		Input: "4315 WEBSTER AVENUE LH",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "4315",
-			StreetName:      "WEBSTER",
-			StreetSuffix:    "AVE",
-			SecondaryNumber: "LH",
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber:       "4315",
+			StreetName:          "WEBSTER",
+			StreetSuffix:        "AVE",
+			SecondaryDesignator: "#",
+			SecondaryNumber:     "LH",
 		},
 	},
 	{
@@ -1065,11 +1054,10 @@ var usAddressGenerated = []usAddressCase{
 		File:  "labeled.xml",
 		Input: "3750 PRIORITY WAY SOUTH DR",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "3750",
-			StreetName:      "PRIORITY WAY",
-			StreetSuffix:    "DR",
-			Postdirectional: "S",
+			Type:          &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber: "3750",
+			StreetName:    "PRIORITY WAY SOUTH",
+			StreetSuffix:  "DR",
 		},
 	},
 	{

@@ -214,6 +214,14 @@ func NormalizePrimaryNumberFn(a *address.Address, o normalizeroptions.AddressNor
 func NormalizeSecondaryDesignatorFn(a *address.Address, o normalizeroptions.AddressNormalizationFnOptions) (*address.Address, error) {
 	out := a.Clone()
 	v := textutil.BaseField(a.SecondaryDesignator)
+	if v == "" && a.SecondaryNumber != "" {
+		// Project US@ v1.0 p.18 (Special Characters): "The pound sign (#)
+		// COULD be used as a secondary unit designator if the correct
+		// designation, such as APT or STE, is not known." Without it the
+		// number formats as a word of the street line and is lost when the
+		// line is read again (go-projectusat#277).
+		v = "#"
+	}
 	if v == "" {
 		out.SecondaryDesignator = v
 		return out, nil
