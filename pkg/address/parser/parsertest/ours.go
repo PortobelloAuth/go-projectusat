@@ -215,4 +215,16 @@ var OursCases = []Case{
 		Input:  "134 N FRONT ST SENATOBIA MS 38668",
 		Want:   "134 N FRONT ST\nSENATOBIA MS 38668",
 	},
+	{
+		Source: "ours",
+		Note:   "Via leading a street name is just VIA, not VIADUCT",
+		Input:  "15275 Via De La Valle, Del Mar, CA 92014",
+		Want:   "15275 VIA DE LA VALLE\nDEL MAR CA 92014",
+	},
+	{
+		Source: "ours",
+		Note:   "Via leading a street name is just VIA, not VIADUCT",
+		Input:  "15275 Via De La Valle Del Mar CA 92014",
+		Want:   "15275 VIA DE LA VALLE\nDEL MAR CA 92014",
+	},
 }

@@ -50,7 +50,7 @@ type Case struct {
 // Cases is the full corpus: the specification's own examples, the parity
 // cases go-projectusat used to run against every custom parser before this
 // package existed, and the hard cases the address stack has since found.
-var Cases = concat(SpecCases, HistoricalCases, OursCases, HteCases, UsAddressCases)
+var Cases = concat(SpecCases, HistoricalCases, OursCases, ScourgifyCases, HteCases, UsAddressCases)
 
 func concat(sets ...[]Case) []Case {
 	n := 0

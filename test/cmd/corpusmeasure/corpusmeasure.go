@@ -40,6 +40,7 @@ func main() {
 		{"SpecCases", parsertest.SpecCases},
 		{"HistoricalCases", parsertest.HistoricalCases},
 		{"OursCases", parsertest.OursCases},
+		{"ScourgifyCases", parsertest.ScourgifyCases},
 		{"HteCases", parsertest.HteCases},
 		{"UsAddressCases", parsertest.UsAddressCases},
 	}
