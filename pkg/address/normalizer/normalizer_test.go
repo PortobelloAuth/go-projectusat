@@ -929,3 +929,19 @@ func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
 		}
 	}
 }
+
+// A secondary number with no designator takes "#" (Project US@ p.18: the
+// pound sign COULD be used "if the correct designation ... is not known").
+// Without it the number formats as one more word of the street line and is
+// lost when the line is read again (#277).
+func TestContentNormalizerGivesABareSecondaryNumberTheHash(t *testing.T) {
+	in := &address.Address{PrimaryNumber: "4315", StreetName: "Webster", StreetSuffix: "Avenue", SecondaryNumber: "lh"}
+	got, err := normalizer.NewContentNomalizer().Normalize(in)
+	if err != nil {
+		t.Fatalf("Normalize: unexpected error: %v", err)
+	}
+	want := &address.Address{PrimaryNumber: "4315", StreetName: "WEBSTER", StreetSuffix: "AVE", SecondaryDesignator: "#", SecondaryNumber: "LH"}
+	if *got != *want {
+		t.Fatalf("Normalize = %+v, want %+v", got, want)
+	}
+}

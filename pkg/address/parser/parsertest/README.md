@@ -68,7 +68,7 @@ Three steps turn a record into `WantFields`:
 | `StreetNamePreModifier`, `StreetNamePreType`, `StreetName`, `StreetNamePostModifier` | `StreetName`, in that document order |
 | `USPSBoxType` | `StreetName`, and `Type` becomes `*pobox.POBoxAddress` |
 | `StreetNamePostType` | `StreetSuffix` |
-| `StreetNamePostDirectional` | `Postdirectional` |
+| `StreetNamePostDirectional` | `Postdirectional`; `StreetName` when a `StreetNamePostType` follows it (Project US@ p.18, #277) |
 | `OccupancyType`, `SubaddressType` | `SecondaryDesignator` |
 | `OccupancyIdentifier`, `SubaddressIdentifier` | `SecondaryNumber` |
 | `PlaceName` | `City` |
