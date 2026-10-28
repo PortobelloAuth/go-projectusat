@@ -79,5 +79,9 @@
       "city": "DENVER",
       "region": "CO"
     }
+  },
+  {
+    "input": "3301 NEW MEXICO NW AV",
+    "reason": "the street is NEW MEXICO NW with the suffix AV (directional before the suffix is part of the name, #277); the full normalizer abbreviates the state in the name (NM NORTHWEST, Appendix C) and its reparse of 3301 NM NORTHWEST AVE then reads AVENUE into the name, so the suffix is lost"
   }
 ]

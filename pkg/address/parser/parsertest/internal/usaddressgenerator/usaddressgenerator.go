@@ -413,7 +413,7 @@ func rawAddress(tags []tag) (*address.Address, string) {
 
 	a := &address.Address{}
 	isPOBox := false
-	for _, t := range tags {
+	for i, t := range tags {
 		if unsettledTags[t.Name] {
 			return nil, "usaddress tag " + t.Name + " has no Address field"
 		}
@@ -449,7 +449,16 @@ func rawAddress(tags []tag) (*address.Address, string) {
 		case "StreetNamePostType":
 			a.StreetSuffix = textutil.JoinNonEmpty(" ", a.StreetSuffix, text)
 		case "StreetNamePostDirectional":
-			a.Postdirectional = textutil.JoinNonEmpty(" ", a.Postdirectional, text)
+			// Project US@ v1.0 p.18: "If the directional word appears
+			// between the street name and the suffix, then it SHOULD
+			// appear as part of the street name" — WASHINGTON NE PL is
+			// the street WASHINGTON NE with the suffix PL, not WASHINGTON
+			// PL with the postdirectional NE (go-projectusat#277).
+			if slices.ContainsFunc(tags[i+1:], func(t tag) bool { return t.Name == "StreetNamePostType" }) {
+				a.StreetName = textutil.JoinNonEmpty(" ", a.StreetName, text)
+			} else {
+				a.Postdirectional = textutil.JoinNonEmpty(" ", a.Postdirectional, text)
+			}
 		case "OccupancyType", "SubaddressType":
 			a.SecondaryDesignator = textutil.JoinNonEmpty(" ", a.SecondaryDesignator, text)
 		case "OccupancyIdentifier", "SubaddressIdentifier":
