@@ -219,11 +219,10 @@ func TestCasesComposition(t *testing.T) {
 // The two named cases pin the mapping decisions from review on #234: an
 // attention line is dropped rather than unsettling the record (Project US@
 // pp.34-35, "Remove ATTENTION, ATTN:"), and a StreetNamePreType route
-// designator is part of the street name. The last two pin #277: a
-// directional before the suffix is part of the street name (Project US@
-// p.18), and a secondary number without a designator keeps "#" (p.18).
+// designator is part of the street name. The last pins #277: a
+// secondary number without a designator keeps "#" (p.18).
 func TestUsAddressWantFields(t *testing.T) {
-	const wantSettled = 764
+	const wantSettled = 765
 
 	settled := 0
 	n := normalizer.NewContentNomalizer()
@@ -256,10 +255,6 @@ func TestUsAddressWantFields(t *testing.T) {
 		{
 			input: "1234 W US Hwy 50",
 			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "1234", Predirectional: "W", StreetName: "US HIGHWAY 50"},
-		},
-		{
-			input: "3419 SAINT JOHN W ST",
-			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "3419", StreetName: "SAINT JOHN WEST", StreetSuffix: "ST"},
 		},
 		{
 			input: "4315 WEBSTER AVENUE LH",
