@@ -17,7 +17,6 @@ package parsertest
 //
 //	   1  full normalizer changed BusinessName
 //	   3  full normalizer changed PrimaryNumber
-//	   1  full normalizer changed Region
 //	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer: parse: no address type offered a reading
 //
@@ -422,9 +421,8 @@ var usAddressGenerated = []usAddressCase{
 		},
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "2350 WASHINGTON NE PL",
-		NotAdopted: "full normalizer changed Region from \"\" to \"NE\"; full normalizer gave \"2350 WASHINGTON PL NE\"",
+		File:  "labeled.xml",
+		Input: "2350 WASHINGTON NE PL",
 		WantFields: &address.Address{
 			Type:            &ordinarystreet.OrdinaryStreetAddress{},
 			PrimaryNumber:   "2350",

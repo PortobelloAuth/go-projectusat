@@ -112,10 +112,11 @@ func Claims(tokens []token.Token) []claim.Claim {
 }
 
 // regionConfidence rates a matched candidate. Only a single two-letter token is
-// unambiguous within this vocabulary; everything else is a name that could be
-// carrying ordinary meaning somewhere else in the address.
+// unambiguous within this vocabulary, and only when it is not also a
+// directional: NE is NORTHEAST as much as NEBRASKA (#285). Everything else is
+// a word that could be carrying ordinary meaning somewhere else in the address.
 func regionConfidence(candidate string, length int) claim.Confidence {
-	if length == 1 && len(candidate) == 2 {
+	if _, err := directionals.NormalizeDirectional(candidate); err != nil && length == 1 && len(candidate) == 2 {
 		return claim.ConfidenceExact
 	}
 

@@ -292,7 +292,7 @@ func cityReadings(tokens []token.Token, claims []claim.Claim, shape pattern, lin
 		// street line information.
 		confidence := claim.ConfidenceWeak
 		if len(digits) == 0 {
-			confidence = confidenceFor(shape, marked(tokens, lineStart, start))
+			confidence = cityConfidence(shape, marked(tokens, lineStart, start), claims, members)
 		}
 
 		assembled := assemble(claims, start, len(tokens), confidence, parts, members)
@@ -506,6 +506,19 @@ func regionPostalConfidence(region claim.Claim, marked bool) claim.Confidence {
 	}
 
 	return demote(confidence)
+}
+
+// cityConfidence rates a city reading: confidenceFor's rating for the shape,
+// charged one step on a {City} {Region} reading whose region is not certain,
+// since no postal code stands behind it. That is regionPostalConfidence's
+// charge, for the shape that has only the region to go on: 2350 WASHINGTON PL
+// NE ends in a postdirectional as readily as in Nebraska (#285).
+func cityConfidence(shape pattern, marked bool, claims []claim.Claim, members []indexedClaim) claim.Confidence {
+	confidence := confidenceFor(shape, marked)
+	if shape == patternCityRegion && claims[members[0].index].Confidence != claim.ConfidenceExact {
+		return demote(confidence)
+	}
+	return confidence
 }
 
 // demote lowers a confidence by one step on the shared scale. It is how a

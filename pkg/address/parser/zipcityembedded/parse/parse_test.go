@@ -1275,6 +1275,35 @@ func TestAUnitAfterANumberedRouteKeepsTheHouseNumber(t *testing.T) {
 	}
 }
 
+// go-projectusat#285: with no last line, a street line ending in a suffix and
+// NE is the street with its postdirectional, not a city named for the suffix
+// in Nebraska. A real city the data knows still reads as one.
+func TestATrailingNEWithNoLastLineIsThePostdirectional(t *testing.T) {
+	cases := []struct{ source, name, suffix, post, city, region string }{
+		{"2350 WASHINGTON PL NE", "WASHINGTON", "PL", "NE", "", ""},
+		{"123 MAIN ST NE", "MAIN", "ST", "NE", "", ""},
+		{"123 MAIN ST OMAHA NE", "MAIN", "ST", "", "OMAHA", "NE"},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.StreetName != tc.name || got.StreetSuffix != tc.suffix || got.Postdirectional != tc.post ||
+			got.City != tc.city || got.Region != tc.region {
+			t.Errorf("%q: got %q|%q|%q|%q|%q, want %q|%q|%q|%q|%q", tc.source,
+				got.StreetName, got.StreetSuffix, got.Postdirectional, got.City, got.Region,
+				tc.name, tc.suffix, tc.post, tc.city, tc.region)
+		}
+	}
+}
+
 // go-projectusat#284: a directional written between the street name and the
 // suffix stays in the name only where the data holds the street that way
 // (PRIORITY WAY SOUTH DR, Indianapolis). Otherwise it is the postdirectional

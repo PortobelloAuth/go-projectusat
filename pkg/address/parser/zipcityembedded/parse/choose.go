@@ -154,6 +154,17 @@ func (p *Parser) choose(r reference, candidates []*address.CandidateAddress) *ad
 		if a, b := streetConfidence(scored[i].candidate), streetConfidence(scored[j].candidate); a != b {
 			return a > b
 		}
+		// A city the data contradicts costs nothing in the score unless a
+		// competitor's city agrees (#176), but between readings the score
+		// cannot separate it loses to reading the street line alone: with no
+		// last line, 2350 WASHINGTON PL NE is the street, not a city PL in
+		// Nebraska (#285).
+		if placeholder(scored[i].candidate.Address) && scored[j].answers.city == contradicts {
+			return true
+		}
+		if placeholder(scored[j].candidate.Address) && scored[i].answers.city == contradicts {
+			return false
+		}
 
 		a := scored[i].candidate.Address
 		b := scored[j].candidate.Address
