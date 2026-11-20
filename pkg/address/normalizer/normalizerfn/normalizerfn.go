@@ -549,13 +549,21 @@ func ExpandStreetTypeInStreetNameFn(sn string, o normalizeroptions.AddressNormal
 
 func AbbreviateRegionInStreetNameFn(sn string, o normalizeroptions.AddressNormalizationFnOptions) (string, error) {
 	// - region name abbreviation (when other words are also present)
-	regioninfo, _ := region.Info(sn, false)
+	// If the whole street name is substitutable with the full region name, we
+	// should not abbreviate it. Nor where only directionals follow the region:
+	// WASHINGTON NE PL is WASHINGTON with a directional read into its name, not
+	// a WA street, and NM NORTHWEST loses its suffix when it is read back
+	// (#286). See OnlyDirectionsFollow.
+	parts := strings.Split(sn, " ")
+	name := len(parts)
+	for name > 1 && OnlyDirectionsFollow(parts[name-2:]) {
+		name--
+	}
+	regioninfo, _ := region.Info(strings.Join(parts[:name], " "), false)
 	if regioninfo != nil && regioninfo.PossibleStreetName {
-		// If the whole street name is substitutable with the full region name, we should not abbreviate it
 		return sn, nil
 	}
 
-	parts := strings.Split(sn, " ")
 	newparts := make([]string, 0)
 	changed := false
 	for i := 0; i < len(parts); i++ {

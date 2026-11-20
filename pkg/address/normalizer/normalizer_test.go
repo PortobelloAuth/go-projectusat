@@ -809,6 +809,35 @@ func TestContentNormalizerDoesNotReexpandAnAbbreviatedRegion(t *testing.T) {
 	}
 }
 
+// go-projectusat#286: a region followed by nothing but directionals is the
+// whole street name with a directional read into it, not a region inside a
+// longer name. WASHINGTON NE is not WA NORTHEAST, and NEW MEXICO NW is not NM
+// NORTHWEST, which the parser then read back without its suffix.
+func TestContentNormalizerKeepsARegionFollowedOnlyByDirectionals(t *testing.T) {
+	n := normalizer.NewContentNomalizer()
+	for _, tc := range []struct{ streetName, wantName string }{
+		{"WASHINGTON NE", "WASHINGTON NORTHEAST"},
+		{"NEW MEXICO NW", "NEW MEXICO NORTHWEST"},
+		// A region with a word that is not a direction still abbreviates.
+		{"WESTERN MONTANA DIVIDE", "WESTERN MT DIVIDE"},
+	} {
+		got, err := n.Normalize(&address.Address{
+			PrimaryNumber: "2350",
+			StreetName:    tc.streetName,
+			StreetSuffix:  "PL",
+			City:          "WASHINGTON",
+			Region:        "DC",
+			Postal:        "20018",
+		})
+		if err != nil {
+			t.Fatalf("Normalize(streetName=%q): unexpected error: %v", tc.streetName, err)
+		}
+		if got.StreetName != tc.wantName {
+			t.Errorf("StreetName for %q = %q, want %q", tc.streetName, got.StreetName, tc.wantName)
+		}
+	}
+}
+
 // go-projectusat#235 identifies a specific case where re-normalizing a normalized street name
 // causes it to change. We want to prevent that.
 func TestContentNormalizerStreetNameIdempotent(t *testing.T) {
