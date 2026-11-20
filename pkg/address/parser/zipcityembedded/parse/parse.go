@@ -228,9 +228,19 @@ func (p *Parser) read(tokens []token.Token, lastlinepatch bool) (*address.Candid
 	}
 	chosen := p.choose(r, candidates)
 	// clean up the fake last line, if it was used
-	if chosen.Address.City == "LASTLINE" && chosen.Address.Region == "DC" {
+	if placeholder(chosen.Address) {
 		chosen.Address.City = ""
 		chosen.Address.Region = ""
 	}
 	return chosen, claims
+}
+
+// placeholder reports whether a reading's last line is the fake LASTLINE, DC
+// read adds to a street line that has none. It names no real place, so there
+// is nothing to ask zipcity about it: every answer would be a contradiction or
+// a false positive, and a false positive is enough to carry a reading — 3301
+// NEW MEXICO NW AV read whole as a street name was "found" in LASTLINE, DC as
+// W NM NORTHWEST AVENUE (#284).
+func placeholder(a *address.Address) bool {
+	return a.City == "LASTLINE" && a.Region == "DC"
 }

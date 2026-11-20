@@ -1274,3 +1274,36 @@ func TestAUnitAfterANumberedRouteKeepsTheHouseNumber(t *testing.T) {
 		}
 	}
 }
+
+// go-projectusat#284: a directional written between the street name and the
+// suffix stays in the name only where the data holds the street that way
+// (PRIORITY WAY SOUTH DR, Indianapolis). Otherwise it is the postdirectional
+// written out of place, as the data holds WASHINGTON PL NE and NEW MEXICO AVE
+// NW. With nothing for the data to say, p.17 keeps it in the name (BAY WEST
+// DR), and with no last line the data has nothing to say.
+func TestADirectionalBeforeTheSuffixIsPlacedByTheData(t *testing.T) {
+	cases := []struct{ source, name, suffix, post string }{
+		{"2350 WASHINGTON NE PL\nWASHINGTON DC 20018", "WASHINGTON", "PL", "NE"},
+		{"3301 NEW MEXICO NW AV\nWASHINGTON DC 20016", "NEW MEXICO", "AVE", "NW"},
+		{"3750 PRIORITY WAY SOUTH DR\nINDIANAPOLIS IN 46240", "PRIORITY WAY SOUTH", "DR", ""},
+		{"2350 WASHINGTON NE PL", "WASHINGTON NE", "PL", ""},
+		{"3301 NEW MEXICO NW AV", "NEW MEXICO NW", "AVE", ""},
+		{"3750 PRIORITY WAY SOUTH DR", "PRIORITY WAY SOUTH", "DR", ""},
+	}
+
+	p, err := parse.New()
+	if err != nil {
+		t.Fatalf("unable to instantiate parser: %s", err)
+	}
+	for _, tc := range cases {
+		got, err := p.Parse(tc.source)
+		if err != nil {
+			t.Errorf("%q: %v", tc.source, err)
+			continue
+		}
+		if got.StreetName != tc.name || got.StreetSuffix != tc.suffix || got.Postdirectional != tc.post {
+			t.Errorf("%q: got %q|%q|%q, want %q|%q|%q", tc.source,
+				got.StreetName, got.StreetSuffix, got.Postdirectional, tc.name, tc.suffix, tc.post)
+		}
+	}
+}

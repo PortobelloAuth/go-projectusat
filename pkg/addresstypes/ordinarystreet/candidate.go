@@ -618,6 +618,8 @@ func lineStart(tokens []token.Token, at int) int {
 type tail struct {
 	claims  []claim.Claim
 	nameEnd int
+	// misplaced is a postdirectional read ahead of the suffix. See tails.
+	misplaced bool
 }
 
 // tails returns every reading of the elements that close the street line.
@@ -673,6 +675,25 @@ func tails(claims []claim.Claim, from, to int) []tail {
 					}
 
 					out = append(out, tail{claims: withSuffix, nameEnd: nameEnd})
+
+					// A directional between the name and the suffix is part
+					// of the name (p.17: BAY WEST DR), but it is also read
+					// as a postdirectional written out of place, as the data
+					// holds WASHINGTON PL NE for WASHINGTON NE PL (#284).
+					// That reading is misplaced and rated one step lower,
+					// so only the data can carry it past the name.
+					if post != nil || suffix == nil {
+						continue
+					}
+					for _, early := range endingAt(claims, claim.PartPostdirectional, nameEnd, from)[1:] {
+						if early.Start() > from {
+							out = append(out, tail{
+								claims:    append(append([]claim.Claim{}, withSuffix...), *early),
+								nameEnd:   early.Start(),
+								misplaced: true,
+							})
+						}
+					}
 				}
 			}
 		}
@@ -839,6 +860,11 @@ func placements(tokens []token.Token, claims []claim.Claim, from, to int) []clai
 	var out []claim.Claim
 
 	for _, t := range tails(claims, from, to) {
+		// A misplaced postdirectional is not a slot the name declined to
+		// fill: p.17 puts that directional in the name.
+		if t.misplaced {
+			continue
+		}
 		out = append(out, t.claims...)
 		for _, h := range heads(tokens, claims, from, t.nameEnd) {
 			out = append(out, h.claims...)
@@ -1027,6 +1053,11 @@ func streetClaim(claims, placed []claim.Claim, h head, t tail, name nameReading)
 // the library knows, and drops the same one step. COUNTY ROAD is a highway
 // used as a street name, so COUNTY with the suffix RD is the weaker reading of
 // it (p.17, #155). See splitsName.
+//
+// A misplaced postdirectional drops the same step. p.17 reads a directional
+// between the name and the suffix as part of the name, so the reading that
+// moves it after the suffix is the weaker one until the data says otherwise
+// (#284). See tails.
 func streetConfidence(claims, placed []claim.Claim, h head, t tail, name nameReading) claim.Confidence {
 	confidence := claim.ConfidenceLikely
 	if h.number != nil {
@@ -1035,7 +1066,7 @@ func streetConfidence(claims, placed []claim.Claim, h head, t tail, name nameRea
 
 	swallows := !name.corroborated && !isDirectional(placed, name.part) &&
 		absorbs(placed, unplaced(h, t), name.part.Start, name.part.End())
-	if !swallows && !splitsName(claims, t, name) && !splitsCompound(claims, h, name) {
+	if !swallows && !t.misplaced && !splitsName(claims, t, name) && !splitsCompound(claims, h, name) {
 		return confidence
 	}
 

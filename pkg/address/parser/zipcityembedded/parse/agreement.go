@@ -87,6 +87,9 @@ func gateOne(ans agreement, confirmed bool) agreement {
 // address's and not the data's — see choose's gating of questionAnswers.
 func (p *Parser) agreement(r reference, a *address.Address) questionAnswers {
 	var qa questionAnswers
+	if placeholder(a) {
+		return qa
+	}
 
 	if ans, ok := p.cityAgreement(r, a.Postal, a.City, a.Region); ok {
 		qa.city = ans
