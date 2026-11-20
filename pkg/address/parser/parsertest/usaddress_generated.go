@@ -17,7 +17,6 @@ package parsertest
 //
 //	   1  full normalizer changed BusinessName
 //	   3  full normalizer changed PrimaryNumber
-//	   1  full normalizer changed SecondaryNumber
 //	   1  full normalizer: parse: no address type offered a reading
 //
 // Cases without WantFields, by reason:
@@ -1019,15 +1018,15 @@ var usAddressGenerated = []usAddressCase{
 		Unsettled: "usaddress tag NotAddress has no Address field",
 	},
 	{
-		File:       "labeled.xml",
-		Input:      "4315 WEBSTER AVENUE LH",
-		NotAdopted: "full normalizer changed SecondaryNumber from \"LH\" to \"\"; full normalizer gave \"4315 WEBSTER AVENUE LH\"",
+		File:  "labeled.xml",
+		Input: "4315 WEBSTER AVENUE LH",
 		WantFields: &address.Address{
-			Type:            &ordinarystreet.OrdinaryStreetAddress{},
-			PrimaryNumber:   "4315",
-			StreetName:      "WEBSTER",
-			StreetSuffix:    "AVE",
-			SecondaryNumber: "LH",
+			Type:                &ordinarystreet.OrdinaryStreetAddress{},
+			PrimaryNumber:       "4315",
+			StreetName:          "WEBSTER",
+			StreetSuffix:        "AVE",
+			SecondaryDesignator: "#",
+			SecondaryNumber:     "LH",
 		},
 	},
 	{

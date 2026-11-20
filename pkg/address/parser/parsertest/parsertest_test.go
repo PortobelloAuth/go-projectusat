@@ -219,7 +219,8 @@ func TestCasesComposition(t *testing.T) {
 // The two named cases pin the mapping decisions from review on #234: an
 // attention line is dropped rather than unsettling the record (Project US@
 // pp.34-35, "Remove ATTENTION, ATTN:"), and a StreetNamePreType route
-// designator is part of the street name.
+// designator is part of the street name. The last pins #277: a
+// secondary number without a designator keeps "#" (p.18).
 func TestUsAddressWantFields(t *testing.T) {
 	const wantSettled = 765
 
@@ -254,6 +255,10 @@ func TestUsAddressWantFields(t *testing.T) {
 		{
 			input: "1234 W US Hwy 50",
 			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "1234", Predirectional: "W", StreetName: "US HIGHWAY 50"},
+		},
+		{
+			input: "4315 WEBSTER AVENUE LH",
+			want:  &address.Address{Type: &ordinarystreet.OrdinaryStreetAddress{}, PrimaryNumber: "4315", StreetName: "WEBSTER", StreetSuffix: "AVE", SecondaryDesignator: "#", SecondaryNumber: "LH"},
 		},
 	} {
 		c, ok := findCase(parsertest.UsAddressCases, tc.input)
